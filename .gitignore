@@ -9,6 +9,16 @@ work
 *.ipr
 .idea
 
+# Python venv
+chatbot-core/venv/
+chatbot-core/.env/
+**/__pycache__/
+**/*.py[cod]
+
+# Data collection results
+chatbot-core/data/*.csv
+chatbot-core/data/*.json
+
 # Eclipse project files
 .settings
 .classpath
