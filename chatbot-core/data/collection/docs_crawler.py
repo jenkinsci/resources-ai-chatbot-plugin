@@ -78,7 +78,7 @@ def start_crawl():
     print("Crawling ended")
 
     print("Saving results in json")
-    with open("jenkins_docs.json", "w", encoding="utf-8") as f:
+    with open("../raw/jenkins_docs.json", "w", encoding="utf-8") as f:
         json.dump(page_content, f, ensure_ascii=False, indent=2)
         
 if __name__ == "__main__":

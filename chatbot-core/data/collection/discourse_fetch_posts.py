@@ -3,6 +3,8 @@ import json
 
 BASE_URL = "https://community.jenkins.io"
 FILE_NAME = "../raw/topics_with_posts.json"
+FILTERED_TOPICS_PATH = "../raw/filtered_discourse_topics.json"
+
 
 def fetch_topic_posts(topic_id):
     """Fetch all posts in a topic using the topic endpoint."""
@@ -46,7 +48,7 @@ def process_topics(topics):
 
 def main():
     topics = []
-    with open("../raw/filtered_discourse_topics.json", "r", encoding="utf-8") as f:
+    with open(FILTERED_TOPICS_PATH, "r", encoding="utf-8") as f:
         topics = json.load(f)
 
     data = process_topics(topics)

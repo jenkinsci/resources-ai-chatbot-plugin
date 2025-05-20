@@ -6,6 +6,7 @@ import json
 BASE_URL = "https://community.jenkins.io"
 CATEGORY_SLUG = "using-jenkins"
 CATEGORY_ID = 7 # 'Using Jenkins' Category
+OUTPUT_PATH = "../raw/discourse_topic_list.json"
 
 
 def fetch_page(category_slug, category_id, page):
@@ -76,7 +77,7 @@ def get_category_topics(category_slug, category_id):
             break
     
     print(f"Explored {len(explored_topics.keys())} topics")
-    with open("discourse_topic_list.json", "w", encoding="utf-8") as f:
+    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(explored_topics, f, ensure_ascii=False, indent=2)
     
 if __name__ == "__main__":
