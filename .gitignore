@@ -16,8 +16,8 @@ chatbot-core/.env/
 **/*.py[cod]
 
 # Data collection results
-chatbot-core/data/*.csv
-chatbot-core/data/*.json
+chatbot-core/data/**/*.csv
+chatbot-core/data/**/*.json
 
 # Eclipse project files
 .settings
