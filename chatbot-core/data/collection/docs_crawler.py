@@ -47,7 +47,6 @@ def crawl(url):
         response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser")
 
-        #content = extract_page_content(soup)
         content = extract_page_content_container(soup)
         if content:
             page_content[url] = content
@@ -56,6 +55,9 @@ def crawl(url):
         
         # Find all links in the page
         links = soup.find_all("a", href=True)
+        if '.html' not in url and not url.endswith('/'):
+            url += '/'
+        
         for link in links:
             href = link['href']
             full_url = urljoin(url, href)
