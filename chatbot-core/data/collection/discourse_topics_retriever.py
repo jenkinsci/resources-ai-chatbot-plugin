@@ -1,8 +1,6 @@
 import requests
 import json
 
-# CONFIG_PATH = os.path.join(os.path.dirname(__file__), "../../config/config.yml") --> To read from config file
-
 BASE_URL = "https://community.jenkins.io"
 CATEGORY_SLUG = "using-jenkins"
 CATEGORY_ID = 7 # 'Using Jenkins' Category
@@ -25,7 +23,10 @@ def extract_topics(data):
     more_topics_url = data["topic_list"].get("more_topics_url", "")
     return topics, more_topics_url
 
-def get_number_correct_topics(topics):
+def get_wrong_and_correct_topics(topics):
+    """Get the right and wrong topics with respect to the category. At the moment the 
+        non desired picked category is the one with id 9, that represent a sub-category of 'Using Jenkins'
+    """
     right_topics = []
     wrong_topics = []
     for topic in topics:
@@ -48,11 +49,10 @@ def get_category_topics(category_slug, category_id):
         data = fetch_page(category_slug, category_id, page)
         topics, more_topics_url = extract_topics(data)
 
-        right_category_topics, wrong_category_topics = get_number_correct_topics(topics)
+        right_category_topics, wrong_category_topics = get_wrong_and_correct_topics(topics)
         
-        # Save the topics or perform any desired processing
         print(f"Page {page} - Found {len(topics)} topics")
-        print(f"Right category Topics {len(right_category_topics)} - Wrong category Topics {len(wrong_category_topics)} topics")
+        print(f"Right category Topics {len(right_category_topics)} - Wrong category Topics {len(wrong_category_topics)}")
         
         for topic in right_category_topics:
             id_topic = topic["id"]
