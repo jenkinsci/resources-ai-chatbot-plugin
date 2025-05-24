@@ -9,6 +9,10 @@ TODO Describe what your plugin does here
 TODO Tell users how to configure your plugin here, include screenshots, pipeline examples and 
 configuration-as-code examples.
 
+## Developer Documentation
+
+Development-related documentation can be found in the [`docs/`](docs/) directory.
+
 ## Issues
 
 TODO Decide where you're going to host your issues, the default is Jenkins JIRA, but you can also enable GitHub issues,
