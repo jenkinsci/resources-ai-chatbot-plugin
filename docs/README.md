@@ -17,8 +17,8 @@ These scripts gather information from three key sources:
 
 ### Setup Instructions
 
-> **Note**: Python **3.10.12** was used during development.  
-> Please use **Python 3.10.12 or later**. Ensure your installation includes support for the `venv` module.
+> **Note**:
+> Please use **Python 3.11 or later**. Ensure your installation includes support for the `venv` module.
 
 To set up the environment and run the scripts:
 
