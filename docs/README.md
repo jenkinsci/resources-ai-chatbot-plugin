@@ -2,6 +2,17 @@
 
 This documentation folder contains resources and instructions related to the development of the RAG-based chatbot plugin for Jenkins.
 
+## Directory Structure
+
+Below is a brief explanation of the key subdirectories:
+
+- `chatbot-core/`: Core logic of the chatbot.
+  - `data/`: Data-related files and scripts.
+    - `collection/`: Scripts to collect data from Jenkins Docs, Discourse, and StackOverflow.
+    - `raw/`: Output directory for collected data.
+  - `requirements.txt`: Python dependencies.
+- `docs/`: Developer documentation.
+
 ## Data Collection: Setup & Usage
 
 The data collection scripts are located under:
