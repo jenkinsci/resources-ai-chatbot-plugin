@@ -61,7 +61,7 @@ The script `docs_crawler.py` recursively crawls the [Jenkins official documentat
 **To run:**
 
 ```bash
-python data/collection/jenkins_docs_crawler.py
+python data/collection/docs_crawler.py
 ```
 
 > **Note**: Make sure you're in the chatbot-core directory and your virtual environment is activated before running this or any script.
