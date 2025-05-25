@@ -8,7 +8,7 @@ Below is a brief explanation of the key subdirectories:
 
 - `chatbot-core/`: Core logic of the chatbot.
   - `data/`: Data-related files and scripts.
-    - `collection/`: Scripts to collect data from Jenkins Docs, Discourse, and StackOverflow.
+    - `collection/`: Scripts to collect data from Jenkins Docs, Jenkins Plugins, Discourse, StackOverflow.
     - `raw/`: Output directory for collected data.
   - `requirements.txt`: Python dependencies.
 - `docs/`: Developer documentation.
@@ -165,4 +165,36 @@ This script reads the exported CSV and converts it into a JSON format. The resul
 **To run:**
 ```bash
 python data/collection/utils/convert_stack_threads.py
+```
+#### Jenkins Plugins
+
+This pipeline fetches the documentation content of the Jenkins plugins hosted on [https://plugins.jenkins.io/](https://plugins.jenkins.io/).
+
+The collection process consists of two main scripts:
+
+##### 1. Retrieve plugin names
+
+**Script**: `fetch_list_plugins.py`
+
+Fetches the list of all available plugins from the [Jenkins update site](https://updates.jenkins.io/experimental/latest/) and saves their names (without `.hpi` extension).
+
+- **Output**: `plugin_names.json` (stored in `chatbot-core/data/raw`)
+
+**To run:**
+```bash
+python data/collection/fetch_list_plugins.py
+```
+
+##### 2. Fetch plugin documentation
+
+**Script**: `jenkins_plugin_fetch.py`
+
+Uses the list of plugin names to fetch documentation content from each plugin's page on [plugins.jenkins.io](https://plugins.jenkins.io). It extracts the main `<div class="content">` section from each page, which contains the content we are interested in.
+
+- **Input**: `plugin_names.json`
+- **Output**: `plugin_docs.json` (stored in `chatbot-core/data/raw`)
+
+**To run:**
+```bash
+python data/collection/jenkins_plugin_fetch.py
 ```
