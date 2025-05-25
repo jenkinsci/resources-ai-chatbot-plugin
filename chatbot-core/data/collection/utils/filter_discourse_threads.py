@@ -16,7 +16,7 @@ def filter_discourse_threads():
         filtered_topics = []
 
         for id, topic in data.items():
-            if topic["has_accepted_answer"] == True:
+            if topic["has_accepted_answer"]:
                 accepted_answers += 1
                 filtered_topics.append(topic)
             if topic["posts_count"] == 1:
