@@ -1,12 +1,16 @@
+"""Chunk StackOverflow threads into structured blocks with metadata."""
+# pylint: disable=R0801
+
 import os
-import json
-import uuid
 from bs4 import BeautifulSoup
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from utils import(
+from chunking_utils import(
     extract_code_blocks,
     get_logger,
-    assign_code_blocks_to_chunks
+    assign_code_blocks_to_chunks,
+    save_chunks,
+    read_json_file,
+    build_chunk_dict,
+    get_text_splitter
 )
 
 logger = get_logger()
@@ -17,84 +21,109 @@ OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "processed", "chunks_stackoverflow_
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 100
+CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[CODE_BLOCK_(\d+)\]\]"
+PLACEHOLDER_TEMPLATE = "[[CODE_BLOCK_{}]]"
 
 def clean_html(html):
+    """
+    Parses and cleans HTML content using BeautifulSoup.
+
+    Args:
+        html (str): Raw HTML string containing question and answer.
+
+    Returns:
+        BeautifulSoup: Parsed HTML object.
+    """
     return BeautifulSoup(html, "lxml")
 
 def process_thread(thread, text_splitter):
+    """
+    Processes a single StackOverflow Q&A thread:
+    - Combines question and answer bodies
+    - Parses HTML
+    - Extracts code blocks and replaces them with placeholders
+    - Splits plain text into overlapping chunks
+    - Assigns relevant code blocks to each chunk
+
+    Args:
+        thread (dict): StackOverflow thread dictionary.
+        text_splitter (RecursiveCharacterTextSplitter): Chunking utility.
+
+    Returns:
+        list[dict]: List of chunk objects with text, metadata, and code blocks.
+    """
     question_id = thread.get("Question ID")
-    title = thread.get("Question Title", "Untitled")
-    tags = thread.get("Tags", "")
-    creation_date = thread.get("CreationDate", "")
-    question_score = thread.get("Question Score", 0)
-    answer_score = thread.get("Answer Score", 0)
     question_body = thread.get("Question Body", "")
     answer_body = thread.get("Answer Body", "")
 
     if question_body == "" or answer_body == "":
-        logger.warning(f"Question {question_id} is missing question/answer content. Extracting 0 chunks from it.")
+        logger.warning(
+            "Question %d is missing question/answer content. Extracting 0 chunks from it.", 
+            question_id
+        )
         return []
 
     question_and_answer = f"<div>{question_body}</div><div>{answer_body}</div>"
     soup = clean_html(question_and_answer)
 
-    code_blocks = extract_code_blocks(soup, "code")
+    code_blocks = extract_code_blocks(soup, "code", PLACEHOLDER_TEMPLATE)
 
-    full_text = soup.get_text(separator=" ", strip=True)
+    full_text = soup.get_text(separator="\n", strip=True)
 
     chunks = text_splitter.split_text(full_text)
-    processed_chunks = assign_code_blocks_to_chunks(chunks, code_blocks, r"\[\[CODE_BLOCK_(\d+)\]\]")
+    processed_chunks = assign_code_blocks_to_chunks(
+        chunks,
+        code_blocks,
+        CODE_BLOCK_PLACEHOLDER_PATTERN,
+        logger
+    )
 
     return [
-        {
-            "id": str(uuid.uuid4()),
-            "chunk_text": chunk["chunk_text"],
-            "metadata": {
+        build_chunk_dict(
+            chunk["chunk_text"],
+            {
+                "data_source": "stackoverflow_threads",
                 "question_id": question_id,
-                "title": title,
-                "tags": tags,
-                "creation_date": creation_date,
-                "question_score": question_score,
-                "answer_score": answer_score
+                "title": thread.get("Question Title", "Untitled"),
+                "tags": thread.get("Tags", ""),
+                "creation_date": thread.get("CreationDate", ""),
+                "question_score": thread.get("Question Score", 0),
+                "answer_score": thread.get("Answer Score", 0)
             },
-            "code_blocks": chunk["code_blocks"]
-        }
+            chunk["code_blocks"]
+        )
         for chunk in processed_chunks
     ]
 
 def extract_chunks(threads):
+    """
+    Processes a list of StackOverflow threads into structured chunks.
+
+    Args:
+        threads (list): List of StackOverflow thread dicts.
+
+    Returns:
+        list[dict]: All extracted chunks from all threads.
+    """
     all_chunks = []
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap= CHUNK_OVERLAP,
-        separators=["\n\n", "\n", " ", ""]
-    )
+    text_splitter = get_text_splitter(CHUNK_SIZE, CHUNK_OVERLAP)
 
     for thread in threads:
         chunks = process_thread(thread, text_splitter)
         all_chunks.extend(chunks)
-    
+
     return all_chunks
 
 def main():
-    try:
-        with open(INPUT_PATH, "r", encoding="utf-8") as f:
-            threads = json.load(f)
-    except Exception as e:
-        logger.error(f"Unexpected error while reading from {INPUT_PATH}: {e}")
+    """Main entry point."""
+    threads = read_json_file(INPUT_PATH, logger)
+    if not threads:
         return
 
-    logger.info(f"Chunking from {len(threads)} stackoverflow threads.")
+    logger.info("Chunking from %d stackoverflow threads.", len(threads))
     all_chunks = extract_chunks(threads)
 
-    try:
-        with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-            json.dump(all_chunks, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logger.error(f"Unexpected error while writing to {OUTPUT_PATH}: {e}")
-        return
-
-    logger.info(f"Written {len(all_chunks)} StackOverflow chunks to {OUTPUT_PATH}")
+    save_chunks(OUTPUT_PATH, all_chunks, logger)
 
 if __name__ == "__main__":
     main()

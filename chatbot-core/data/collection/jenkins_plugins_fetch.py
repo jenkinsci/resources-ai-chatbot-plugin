@@ -1,8 +1,9 @@
-import requests
+"""Script to fetch and store documentation content for Jenkins plugins."""
 import json
-from bs4 import BeautifulSoup
 import os
 import time
+import requests
+from bs4 import BeautifulSoup
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "plugin_names.json")
@@ -20,7 +21,8 @@ def fetch_plugin_content(plugin_name, retries=3):
         retries (int): Number of retry attempts on failure.
         
     Returns:
-        str or None: The HTML content of the plugin's <div class="content">, or None if not found or failed.
+        str or None: The HTML content of the plugin's <div class="content">,
+        or None if not found or failed.
     """
     url = f"https://plugins.jenkins.io/{plugin_name}/"
     for attempt in range(retries):
@@ -32,9 +34,9 @@ def fetch_plugin_content(plugin_name, retries=3):
             content_div = soup.find("div", class_="content")
             if content_div:
                 return str(content_div)
-            else:
-                print(f"No content found for {plugin_name}")
-                return None
+
+            print(f"No content found for {plugin_name}")
+            return None
 
         except requests.RequestException as e:
             print(f"Error fetching {plugin_name} (attempt {attempt + 1}): {e}")

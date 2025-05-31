@@ -1,5 +1,7 @@
-import requests
+"""Module for retrieving and filtering topics from the 'Using Jenkins' category on Discourse."""
+
 import json
+import requests
 
 BASE_URL = "https://community.jenkins.io"
 CATEGORY_SLUG = "using-jenkins"
@@ -13,7 +15,7 @@ def fetch_page(category_slug, category_id, page):
         url = f"{BASE_URL}/c/{category_slug}/{category_id}.json?page={page}"
     else:
         url = f"{BASE_URL}/c/{category_slug}/{category_id}.json"
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     response.raise_for_status()
     return response.json()
 
@@ -25,16 +27,17 @@ def extract_topics(data):
 
 def get_wrong_and_correct_topics(topics):
     """Get the right and wrong topics with respect to the category. At the moment the 
-        non desired picked category is the one with id 9, that represent a sub-category of 'Using Jenkins'
+        non desired picked category is the one with id 9, that represent a sub-category 
+        of 'Using Jenkins'
     """
     right_topics = []
     wrong_topics = []
     for topic in topics:
-        if topic["category_id"] == 7 or topic["category_id"] == 8:# 8 is the sub-category ask a question
+        # 8 is the sub-category ask a question
+        if topic["category_id"] == 7 or topic["category_id"] == 8:
             right_topics.append(topic)
         else:
             wrong_topics.append(topic)
-    
     return right_topics, wrong_topics
 
 
@@ -50,13 +53,14 @@ def get_category_topics(category_slug, category_id):
         topics, more_topics_url = extract_topics(data)
 
         right_category_topics, wrong_category_topics = get_wrong_and_correct_topics(topics)
-        
+
         print(f"Page {page} - Found {len(topics)} topics")
-        print(f"Right category Topics {len(right_category_topics)} - Wrong category Topics {len(wrong_category_topics)}")
-        
+        print(f"Right category Topics {len(right_category_topics)} "
+            f"- Wrong category Topics {len(wrong_category_topics)}")
+
         for topic in right_category_topics:
             id_topic = topic["id"]
-            if id_topic not in explored_topics.keys():
+            if id_topic not in explored_topics:
                 explored_topics[id_topic] = topic
 
         explored_pages.add(page)
@@ -75,10 +79,10 @@ def get_category_topics(category_slug, category_id):
         if page in explored_pages:
             print(f"Already explored page {page}.")
             break
-    
+
     print(f"Explored {len(explored_topics.keys())} topics")
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(explored_topics, f, ensure_ascii=False, indent=2)
-    
+
 if __name__ == "__main__":
     get_category_topics(CATEGORY_SLUG, CATEGORY_ID)

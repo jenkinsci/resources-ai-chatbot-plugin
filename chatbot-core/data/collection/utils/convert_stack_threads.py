@@ -1,11 +1,15 @@
+"""Script to convert Stack Overflow CSV thread data to a JSON format."""
+
 import json
 import pandas as pd
 
-# The QueryResults.csv is obtained by running the desired query on the data explorer tool of StackExchange
-THREADS_CSV_PATH = "../../raw/QueryResults.csv" 
+# The QueryResults.csv is obtained by running the desired query
+# on the data explorer tool of StackExchange
+THREADS_CSV_PATH = "../../raw/QueryResults.csv"
 OUTPUT_JSON_PATH = "../../raw/stack_overflow_threads.json"
 
 def convert_stack_threads():
+    """Read CSV thread data and export it as a structured JSON file."""
     df = pd.read_csv(THREADS_CSV_PATH)
 
     data = df.to_dict(orient="records")

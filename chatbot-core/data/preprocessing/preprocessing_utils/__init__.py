@@ -1,4 +1,4 @@
-# utils/__init__.py
+"""Initialize the utils package by exposing key helper functions."""
 
 from .filter_functions import (
     remove_container_by_class,

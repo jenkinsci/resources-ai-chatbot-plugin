@@ -1,3 +1,5 @@
+"""Utility functions for parsing and cleaning HTML content using BeautifulSoup."""
+
 from bs4 import BeautifulSoup, Comment
 
 def extract_page_content_container(soup, class_name):
@@ -33,7 +35,7 @@ def remove_container_by_class(content, class_name):
     content_div = soup.find("div", class_=class_name)
 
     if content_div:
-        content_div.decompose() 
+        content_div.decompose()
 
     return str(soup)
 
@@ -49,7 +51,7 @@ def remove_tags(content, tags_to_remove=None):
     - str: Cleaned HTML content with specified tags removed.
     """
     if tags_to_remove is None:
-        tags_to_remove = ["img", "script", "style", "iframe", "object", "embed", "form"]  # Default tags to remove
+        tags_to_remove = ["img", "script", "style", "iframe", "object", "embed", "form"]
 
     soup = BeautifulSoup(content, "lxml")
 
@@ -100,12 +102,12 @@ def remove_edge_navigation_blocks(content):
                 div_to_remove.extract()
             is_navigation_block_found = True
             break
-    
+
     if not is_navigation_block_found:
         feedback_div = container.find("div", id="feedback")
         if feedback_div:
             feedback_div.decompose()
-        
+
     return str(soup)
 
 def remove_html_comments(content):

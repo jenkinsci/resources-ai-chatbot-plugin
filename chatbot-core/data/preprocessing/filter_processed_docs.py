@@ -1,7 +1,10 @@
-from bs4 import BeautifulSoup
+
+"""Filter Jenkins documentation pages based on content length and link density."""
+
 import json
 import os
-from utils import(
+from bs4 import BeautifulSoup
+from preprocessing_utils import(
     get_visible_text_length,
     get_logger
 )
@@ -28,9 +31,9 @@ def link_ratio(content):
     soup = BeautifulSoup(content, "html.parser")
     links = soup.find_all("a")
     text = soup.get_text(separator=" ", strip=True)
-    text_length = max(len(text), 1) 
+    text_length = max(len(text), 1)
     chunks = max(text_length / 7, 1)
-    
+
     return len(links) / chunks
 
 def normalize_url(url):
@@ -65,11 +68,12 @@ def normalize_url_keys(doc_dict):
     for url, content in doc_dict.items():
         normalized_url = normalize_url(url)
         if normalized_url in result:
-            logger.warning(f"Duplicate normalized URL found: {normalized_url}.")        
+            logger.warning("Duplicate normalized URL found: %s.", normalized_url)
         result[normalized_url] = content
     return result
 
 def main():
+    """Main entry point."""
     docs = {}
 
     try:
@@ -78,28 +82,31 @@ def main():
             developer_docs = normalize_url_keys(data["developer_docs"])
             non_developer_docs = normalize_url_keys(data["non_developer_docs"])
             docs = developer_docs | non_developer_docs
-    except Exception as e:
-        logger.error(f"Unexpected error while reading from {INPUT_PATH}: {e}")
+    except (FileNotFoundError, OSError) as e:
+        logger.error("File error while reading %s: %s", INPUT_PATH, e)
+        return
+    except json.JSONDecodeError as e:
+        logger.error("JSON decode error in %s: %s", INPUT_PATH, e)
         return
 
     urls_to_remove = set()
-    # Filtering the urls whose content size < MIN_VISIBLE_TEXT_LENGTH or has 'too many' links compared to the size of the content(ratio > MAX_LINK_RATIO)
     for url, content in docs.items():
-        if ('extensions' not in url) and (get_visible_text_length(content) < MIN_VISIBLE_TEXT_LENGTH or link_ratio(content) > MAX_LINK_RATIO):
-            logger.info(f"Filtering the url: {url}.")
+        if ('extensions' not in url) and (get_visible_text_length(content) < MIN_VISIBLE_TEXT_LENGTH
+            or link_ratio(content) > MAX_LINK_RATIO):
+            logger.info("Filtering the url: %s.", url)
             urls_to_remove.add(url)
 
-    logger.info(f'There are {len(urls_to_remove)} urls to remove.')
+    logger.info('There are %d urls to remove.', len(urls_to_remove))
 
     cleaned_docs = {url: content for url, content in docs.items() if url not in urls_to_remove}
 
-    logger.info(f"Cleaned docs contain {len(cleaned_docs)} pages after filtering.")
+    logger.info("Cleaned docs contain %d pages after filtering.", len(cleaned_docs))
 
     try:
         with open(OUTPUT_PATH, "w", encoding='utf-8') as f:
             json.dump(cleaned_docs, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logger.error(f"Unexpected error while writing to {OUTPUT_PATH}: {e}")
+    except OSError as e:
+        logger.error("File error while writing %s: %s", OUTPUT_PATH, e)
         return
 
 

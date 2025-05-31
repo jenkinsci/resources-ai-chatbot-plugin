@@ -1,3 +1,5 @@
+"""Script to filter Discourse threads with accepted answers from a topic list."""
+
 import json
 import os
 
@@ -5,6 +7,7 @@ DISCOURSE_TOPIC_LIST_PATH = "../../raw/discourse_topic_list.json"
 OUTPUT_PATH = "../../raw/filtered_discourse_topics.json"
 
 def filter_discourse_threads():
+    """Filter topics that have accepted answers and exclude unanswered threads."""
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
     with open(DISCOURSE_TOPIC_LIST_PATH, "r", encoding="utf-8") as f:
@@ -15,16 +18,18 @@ def filter_discourse_threads():
 
         filtered_topics = []
 
-        for id, topic in data.items():
+        for topic in data.values():
             if topic["has_accepted_answer"]:
                 accepted_answers += 1
                 filtered_topics.append(topic)
             if topic["posts_count"] == 1:
                 non_answered_topics += 1
 
-        print(f"There are {len(data.keys()) - non_answered_topics} answered topics over {len(data.keys())}")
-        print(f"There are {accepted_answers} topics with accepted answers over {len(data.keys()) - non_answered_topics} answered topics")
-        
+        print(f"There are {len(data.keys()) - non_answered_topics} answered "
+            f"topics over {len(data.keys())}")
+        print(f"There are {accepted_answers} topics with accepted answers "
+            f"over {len(data.keys()) - non_answered_topics} answered topics")
+
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
             json.dump(filtered_topics, f, ensure_ascii=False, indent=2)
 

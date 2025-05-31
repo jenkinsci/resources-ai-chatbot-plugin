@@ -1,7 +1,9 @@
+"""Preprocess Jenkins documentation by extracting and cleaning HTML content."""
+
 import json
-from bs4 import BeautifulSoup
 import os
-from utils import (
+from bs4 import BeautifulSoup
+from preprocessing_utils import (
     remove_container_by_class,
     remove_tags,
     extract_page_content_container,
@@ -36,16 +38,21 @@ def filter_content(urls, data, is_developer_content):
 
     for url in urls:
         if url not in data:
-            logger.warning(f"URL not found in data: {url}")
+            logger.warning("URL not found in data: %s", url)
             continue
         content = data[url]
         soup = BeautifulSoup(content, "lxml")
 
         content_extracted = extract_page_content_container(soup, config["class_to_extract"])
         if content_extracted == "":
-            logger.warning(f'NO {config["class_to_extract"]} FOUND IN A {"" if is_developer_content else "NON"} DEVELOPER PAGE! Skipping page: {url}')
+            logger.warning(
+                "NO %s FOUND IN A %sDEVELOPER PAGE! Skipping page: %s",
+                config["class_to_extract"],
+                "" if is_developer_content else "NON ",
+                url
+            )
             continue
-        
+
         # Remove eventually toc(table of content)
         content_without_toc = remove_container_by_class(content_extracted, "toc")
 
@@ -53,7 +60,10 @@ def filter_content(urls, data, is_developer_content):
         content_filtered_by_tags = remove_tags(content_without_toc)
 
         # Remove eventually navigation blocks (for docs under /developer this is not necessary)
-        content_without_navigation_blocks = content_filtered_by_tags if is_developer_content else remove_edge_navigation_blocks(content_filtered_by_tags)
+        content_without_navigation_blocks = (
+            content_filtered_by_tags if is_developer_content
+            else remove_edge_navigation_blocks(content_filtered_by_tags)
+        )
 
         content_without_comments = remove_html_comments(content_without_navigation_blocks)
 
@@ -77,18 +87,22 @@ def get_config(is_developer_content):
         return {
             "class_to_extract": "col-8"
         }
-    else:
-        return {
-            "class_to_extract": "col-lg-9"
-        }
+
+    return {
+        "class_to_extract": "col-lg-9"
+    }
 
 
 def main():
+    """Main entry point."""
     try:
         with open(INPUT_DOCS_PATH, "r", encoding='utf-8') as f:
             data = json.load(f)
-    except Exception as e:
-        logger.error(f"Unexpected error while reading from {INPUT_DOCS_PATH}: {e}")
+    except (FileNotFoundError, OSError) as e:
+        logger.error("File error while reading %s: %s", INPUT_DOCS_PATH, e)
+        return
+    except json.JSONDecodeError as e:
+        logger.error("JSON decode error in %s: %s", INPUT_DOCS_PATH, e)
         return
 
     developer_urls, non_developer_urls = split_type_docs(data, logger)
@@ -105,8 +119,8 @@ def main():
     try:
         with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
             json.dump(output, f, ensure_ascii=False, indent=4)
-    except Exception as e:
-        logger.error(f"Unexpected error writing to {OUTPUT_PATH}: {e}")
+    except OSError as e:
+        logger.error("File error while  writing %s: %s", OUTPUT_PATH, e)
         return
 
 if __name__ == "__main__":

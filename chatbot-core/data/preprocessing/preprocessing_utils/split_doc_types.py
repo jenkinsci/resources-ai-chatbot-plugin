@@ -1,6 +1,6 @@
-import json
+"""Utility to split documentation pages into developer and non-developer categories."""
+
 from bs4 import BeautifulSoup
-import os
 
 def extract_page_content_container(soup, class_name):
     """
@@ -27,27 +27,27 @@ def split_type_docs(data, logger):
     Returns:
     - tuple: (developer_urls, non_developer_urls), both as lists of URLs.
     """
-    logger.info(f'There are {len(data)} pages')
+    logger.info("There are %d pages", len(data))
 
     non_developer_urls = []
     developer_urls = []
     soups = {}
 
-    # Every doc page that is not in the /developer part has the content in the col-lg-9 class 
+    # Every doc page that is not in the /developer part has the content in the col-lg-9 class
     for url, content in data.items():
         soup = BeautifulSoup(content, "lxml")
         if extract_page_content_container(soup, "col-lg-9"):
             non_developer_urls.append(url)
         else:
             soups[url] = soup
-    
-    logger.info(f'Non-developer docs (col-lg-9): {len(non_developer_urls)}')
 
-    # Every doc page that is in the /developer part has the content in the col-8 class 
+    logger.info("Non-developer docs (col-lg-9): %d", len(non_developer_urls))
+
+    # Every doc page that is in the /developer part has the content in the col-8 class
     for url, soup_c in soups.items():
         if extract_page_content_container(soup_c, "col-8"):
             developer_urls.append(url)
-    
-    logger.info(f'Developer docs (col-8): {len(developer_urls)}')
+
+    logger.info("Developer docs (col-8): %d", len(developer_urls))
 
     return developer_urls, non_developer_urls

@@ -1,3 +1,5 @@
+"""Logger configuration for chunking scripts."""
+
 import logging
 
 logging.basicConfig(
@@ -7,4 +9,7 @@ logging.basicConfig(
 )
 
 def get_logger():
+    """
+    Returns a logger instance 
+    """
     return logging.getLogger()
