@@ -3,7 +3,7 @@
 import json
 import os
 from bs4 import BeautifulSoup
-from utils import (
+from preprocessing_utils import (
     remove_container_by_class,
     remove_tags,
     extract_page_content_container,

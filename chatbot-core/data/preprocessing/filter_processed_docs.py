@@ -4,7 +4,7 @@
 import json
 import os
 from bs4 import BeautifulSoup
-from utils import(
+from preprocessing_utils import(
     get_visible_text_length,
     get_logger
 )

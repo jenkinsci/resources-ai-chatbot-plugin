@@ -19,6 +19,10 @@ chatbot-core/.env/
 chatbot-core/data/**/*.csv
 chatbot-core/data/**/*.json
 
+# Built frontend files
+src/main/webapp/static/*
+!src/main/webapp/static/.gitkeep
+
 # Eclipse project files
 .settings
 .classpath
