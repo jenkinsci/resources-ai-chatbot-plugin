@@ -4,9 +4,10 @@ Query interface for retrieving the most relevant embedded text chunks using a FA
 
 from rag.embedding.embedding_utils import load_embedding_model, embed_documents
 from rag.retriever.retriever_utils import load_vector_index, search_index
-from rag.rag_utils import get_logger
+from utils import LoggerFactory
 
-logger = get_logger("RAG")
+logger_factory = LoggerFactory.instance()
+logger = logger_factory.get_logger("retrieve")
 
 def get_relevant_documents(query, top_k=5):
     """

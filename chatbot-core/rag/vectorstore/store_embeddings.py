@@ -8,7 +8,7 @@ import numpy as np
 import faiss
 from rag.embedding import embed_docs
 from rag.vectorstore.vectorstore_utils import save_faiss_index, save_metadata
-from rag.rag_utils import get_logger
+from utils import LoggerFactory
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
 INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_index.idx")
@@ -66,7 +66,8 @@ def run_indexing(nlist, nprobe, logger):
 
 def main():
     """Main entry point."""
-    logger = get_logger("EMBEDDING-STORAGE")
+    logger_factory = LoggerFactory.instance()
+    logger = logger_factory.get_logger("embedding-storage")
 
     run_indexing(nlist=N_LIST, nprobe=N_PROBE, logger=logger)
 
