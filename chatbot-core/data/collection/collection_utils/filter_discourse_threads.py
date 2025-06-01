@@ -30,11 +30,11 @@ def filter_discourse_threads():
             if topic["posts_count"] == 1:
                 non_answered_topics += 1
 
-        logger.info("There are %d answered topics over %d", 
+        logger.info("There are %d answered topics over %d",
             len(data.keys()) - non_answered_topics,
             len(data.keys())
         )
-        logger.info("There are %d topics with accepted answers over %d answered topics", 
+        logger.info("There are %d topics with accepted answers over %d answered topics",
             accepted_answers,
             len(data.keys()) - non_answered_topics
         )

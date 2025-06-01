@@ -1,6 +1,7 @@
 """Script to convert Stack Overflow CSV thread data to a JSON format."""
 
 import json
+import os
 import pandas as pd
 
 # The QueryResults.csv is obtained by running the desired query
