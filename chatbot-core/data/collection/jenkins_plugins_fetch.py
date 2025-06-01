@@ -4,6 +4,10 @@ import os
 import time
 import requests
 from bs4 import BeautifulSoup
+from utils import LoggerFactory
+
+logger_factory = LoggerFactory.instance()
+logger = logger_factory.get_logger("collection")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "plugin_names.json")
@@ -35,14 +39,14 @@ def fetch_plugin_content(plugin_name, retries=3):
             if content_div:
                 return str(content_div)
 
-            print(f"No content found for {plugin_name}")
+            logger.warning("No content found for %s", plugin_name)
             return None
 
         except requests.RequestException as e:
-            print(f"Error fetching {plugin_name} (attempt {attempt + 1}): {e}")
+            logger.error("Error fetching %s (attempt %d): %s", plugin_name, attempt + 1, e)
             time.sleep(1.5 * (attempt + 1))
 
-    print(f"Failed to fetch {plugin_name} after {retries} attempts")
+    logger.error("Failed to fetch %s after %d attempts", plugin_name, retries)
     return None
 
 def collect_plugin_docs(plugin_names):
@@ -57,7 +61,7 @@ def collect_plugin_docs(plugin_names):
     """
     result = {}
     for idx, plugin_name in enumerate(plugin_names):
-        print(f"[{idx+1}/{len(plugin_names)}] Fetching {plugin_name}...")
+        logger.info("[%d/%d] Fetching %s...", idx + 1, len(plugin_names), plugin_name)
         content = fetch_plugin_content(plugin_name)
         if content:
             result[plugin_name] = content
@@ -77,7 +81,7 @@ def main():
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(collected_docs, f, indent=2, ensure_ascii=False)
 
-    print(f"Saved {len(collected_docs)} plugins to {OUTPUT_PATH}")
+    logger.info("Saved %d plugins to %s", len(collected_docs), OUTPUT_PATH)
 
 if __name__ == "__main__":
     main()

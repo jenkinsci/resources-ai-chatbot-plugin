@@ -4,6 +4,10 @@ import json
 import os
 import requests
 from bs4 import BeautifulSoup
+from utils import LoggerFactory
+
+logger_factory = LoggerFactory.instance()
+logger = logger_factory.get_logger("collection")
 
 URL = "https://updates.jenkins.io/experimental/latest/"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +20,7 @@ def fetch_plugin_names():
     Returns:
         List[str]: List of raw plugin file names (e.g., 'git.hpi', 'docker-slaves.hpi').
     """
-    print("Fetching plugin index page...")
+    logger.info("Fetching plugin index page...")
     response = requests.get(URL, timeout=10)
     response.raise_for_status()
 
@@ -33,7 +37,7 @@ def fetch_plugin_names():
                 if plugin_name:
                     plugin_list.append(plugin_name)
 
-    print(f"Found {len(plugin_list)} plugins.")
+    logger.info("Found %d plugins.", len(plugin_list))
     return plugin_list
 
 def save_plugin_names(plugin_names_with_extension):
@@ -46,7 +50,7 @@ def save_plugin_names(plugin_names_with_extension):
 
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(plugin_names, f, indent=2, ensure_ascii=False)
-    print(f"Saved {len(plugin_names)} plugin names to {OUTPUT_PATH}")
+    logger.info("Saved %d plugin names to %s", len(plugin_names), OUTPUT_PATH)
 
 if __name__ == "__main__":
     plugins = fetch_plugin_names()
