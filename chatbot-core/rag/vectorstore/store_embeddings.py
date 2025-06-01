@@ -1,26 +1,73 @@
+"""
+Embeds document chunks, builds a FAISS IVF index,
+and stores both the index and associated metadata to disk.
+"""
+
 import numpy as np
 import os
 import faiss
 from rag.embedding import embed_docs
 from rag.vectorstore.vectorstore_utils import save_faiss_index, save_metadata
+from rag.rag_utils import get_logger
 
-VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings", "vectorstore")
+logger = get_logger("EMBEDDING-STORAGE")
+
+VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
 INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_index.idx")
 METADATA_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_metadata.pkl")
 
-def main():
-    vectors, metadata = embed_docs.main()
+N_LIST = 256
+N_PROBE = 20
 
-    # Convert vectors to float32 for FAISS
+
+def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
+    """
+    Build and return a FAISS IndexIVFFlat index from the given vectors.
+
+    Args:
+        vectors (np.ndarray): 2D array of shape (n_samples, dim) with float32 vectors.
+        nlist (int): Number of clusters (centroids) to use in the index.
+        nprobe (int): Number of clusters to probe during a search.
+        logger (logging.Logger): Logger for status messages.
+
+    Returns:
+        faiss.IndexIVFFlat: A trained FAISS IVF index with added vectors.
+    """
+    d = vectors.shape[1]
+    quantizer = faiss.IndexFlatL2(d)
+    index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_L2)
+
+    logger.info("FAISS index training started...")
+    index.train(vectors)
+    logger.info("FAISS index training completed.")
+    index.nprobe = nprobe
+    index.add(vectors)
+
+    return index
+
+
+def run_indexing(nlist, nprobe):
+    """
+    Main pipeline: embed documents, build FAISS index, and save index + metadata.
+
+    Args:
+        nlist (int): Number of clusters for FAISS IVF index.
+        nprobe (int): Number of clusters to search during queries.
+    """
+    logger.info("Starting document embedding...")
+    vectors, metadata = embed_docs(logger)
     vectors_np = np.array(vectors).astype("float32")
 
-    index = faiss.IndexFlatL2(vectors_np.shape[1])
-    index.add(vectors_np)
+    index = build_faiss_ivf_index(vectors_np, nlist=nlist, nprobe=nprobe, logger=logger)
 
-    save_faiss_index(index, INDEX_PATH)
-    save_metadata(metadata, METADATA_PATH)
+    save_faiss_index(index, INDEX_PATH, logger)
+    save_metadata(metadata, METADATA_PATH, logger)
 
-    print(f"Stored {len(vectors)} vectors to FAISS at {INDEX_PATH}")
+    print(f"Stored {len(vectors)} vectors to FAISS (IVFFlat) at {INDEX_PATH}")
+
+
+def main():
+    run_indexing(nlist=N_LIST, nprobe=N_PROBE)
 
 if __name__ == "__main__":
     main()

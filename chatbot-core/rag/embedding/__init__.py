@@ -1,1 +1,3 @@
-from .embed_docs import main
+from .embed_docs import (
+    embed_docs
+)
