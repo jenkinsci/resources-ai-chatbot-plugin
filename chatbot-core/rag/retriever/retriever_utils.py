@@ -26,7 +26,7 @@ def load_vector_index(logger):
 
     return index, metadata
 
-def search_index(query_vector, index, metadata, top_k=5, logger):
+def search_index(query_vector, index, metadata, logger, top_k):
     """
     Search the FAISS index with a query vector and return the top-k closest metadata results.
 
@@ -51,6 +51,9 @@ def search_index(query_vector, index, metadata, top_k=5, logger):
                 "score": float(distances[0][i])
             })
         else:
-            logger.error("FAISS returned index %d out of range (metadata size: %d)", idx, len(metadata))
+            logger.error("FAISS returned index %d out of range (metadata size: %d)",
+                idx,
+                len(metadata)
+            )
 
     return results
