@@ -12,6 +12,10 @@ Below is a brief explanation of the key subdirectories:
     - `preprocessing/`: Scripts to clean, filter, the collected data before chunking.
     - `raw/`: Output directory for collected data.
     - `processed/`: Output directory for cleaned and filtered data.
+  - `rag/`: Core logic of the RAG
+    - `embedding/`: Scripts to embed the chunks.
+    - `vectorestore/`: Scripts to store the embeddings into a vector database.
+    - `retrieval/`: Scripts to perform the semantic research across the vectore database.
   - `requirements.txt`: Python dependencies.
 - `docs/`: Developer documentation.
 
@@ -490,3 +494,117 @@ python data/chunking/extract_chunk_stack.py
 ### Utility Functions
 
 Several of the chunking scripts rely on shared helper functions to handle common tasks such as code block extraction, chunk-to-code matching, and title parsing. These utilities are defined in:`chatbot-core/data/chunking/utils/`.
+
+## Embedding
+
+The embedding-related scripts are located in: `chatbot-core/rag/embedding/`
+
+This phase converts preprocessed and chunked text documents into dense vector representations using a transformer-based model. These embeddings are later stored in a vector database to support semantic search and retrieval for the chatbot.
+
+> **Note**: These scripts are not standalone entry points and are used as utility modules by downstream indexing and retrieval components.
+
+---
+
+### Model Used
+
+- **Model**: `sentence-transformers/all-MiniLM-L6-v2`  
+  This lightweight embedding model offers a good trade-off between speed and semantic performance. The vector's output dimension is 384.
+
+---
+
+### Script: `embed_chunks.py`
+
+#### Purpose
+
+Loads all previously generated text chunks from the `processed/` directory, computes their embeddings using the selected model, and returns both:
+
+- A list of embedding vectors
+- The corresponding metadata (including code blocks)
+
+### Script: `embedding_utils.py`
+
+#### Purpose
+
+Provides utility functions for loading and using SentenceTransformer models.
+
+#### Key Functions
+
+- **`load_embedding_model(model_name)`**  
+  Loads a SentenceTransformer model by name.
+
+- **`embed_documents(texts, model, batch_size=32)`**  
+  Encodes a list of text strings into dense vectors. Supports batching and shows a progress bar during embedding.
+
+## Vector Store
+
+The vector store module is responsible for building, saving, and loading a **FAISS index** along with associated metadata for later retrieval. All logic related to persistent vector storage lives in: `chatbot-core/rag/vectorstore/`
+
+This phase follows the **embedding** step and precedes the **retrieval** phase. It stores the document embeddings in a FAISS **IVF (Inverted File) index** to allow fast approximate nearest-neighbor search. Indeed it trade-off some accuracy for a faster retrieval.
+
+### Index Type
+
+- **FAISS Index**: `IndexIVFFlat` with `L2` distance
+- **Number of clusters (`nlist`)**
+- **Number of clusters to probe during search (`nprobe`)** 
+These are tunable hyperparameters. For the number of clusters faiss offers a guideline that can be found [here](https://github.com/facebookresearch/faiss/wiki/Guidelines-to-choose-an-index). Given our use case the ideal would be to stay between 4 x sqrt(#vectors) and 16 x sqrt(#vectors).`nprobe` should be instead tuned.
+
+### Script: `store_embeddings.py`
+
+#### Purpose
+
+Embeds all preprocessed chunks, builds a FAISS index (`IndexIVFFlat`), and stores:
+- The trained FAISS index to disk
+- The metadata aligned to each vector
+
+#### To Run
+
+> **Note**: Make sure you have installed all the dependencies listed in `requirements.txt`.
+> To try out it is encouraged to comment out the most heavy chunk files(Jenkins Docs and Jenkins Plugin Docs) in `embed_chunks`, since embedding all the chunks is quite computationally heavy.
+
+```bash
+python rag/vectorstore/store_embeddings.py
+```
+
+This will:
+
+- Load all processed chunk files
+- Compute embeddings using the `all-MiniLM-L6-v2` SentenceTransformer model
+- Build a FAISS IVF index (with `nlist=256`, `nprobe=20`)
+- Save:
+  - `faiss_index.idx` to `data/embeddings/`
+  - `faiss_metadata.pkl` to `data/embeddings/`
+
+### Script: `vectorstore_utils.py`
+
+#### Purpose
+
+Provides utility functions for **saving and loading**:
+- FAISS index files
+- Metadata associated with each vector
+
+## Retrieval
+
+The retrieval module enables querying the FAISS vector index to find the most semantically relevant document chunks based on a natural language input. This phase is responsible for fetching context-rich results from the indexed embedding space, which are then used to inform the chatbot’s responses.
+
+All related scripts are located under: `chatbot-core/rag/retrieval/`
+
+### Script: `retrieve.py`
+
+#### Purpose
+
+Given a query string, this script:
+- Loads the same SentenceTransformer model used during indexing
+- Loads the FAISS vector index and associated metadata
+- Embeds the query into a vector
+- Searches the index to retrieve the top `k` most relevant chunks
+- Returns the matched results and their similarity scores
+
+> **Note**: This script is not meant to be executed directly, but rather imported and called from another module
+
+### Script: `retriever_utils.py`
+
+#### Purpose
+
+Provides helper functions for:
+- Loading the FAISS index and associated metadata from disk
+- Performing vector search using a query embedding

@@ -11,7 +11,7 @@ logger = logger_factory.get_logger("retrieve")
 
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-def get_relevant_documents(query, top_k=5):
+def get_relevant_documents(query, top_k=5, logger):
     """
     Retrieve the top-k most relevant chunks for a given natural language query.
 
@@ -29,6 +29,6 @@ def get_relevant_documents(query, top_k=5):
         return []
 
     query_vector = embed_documents([query], model)[0]
-    results = search_index(query_vector, index, metadata, top_k=top_k)
+    results = search_index(query_vector, index, metadata, top_k=top_k, logger)
 
     return results
