@@ -20,15 +20,12 @@ def get_relevant_documents(query, top_k=5):
         list[dict]: A list of metadata entries corresponding to the most relevant chunks.
     """
     model = load_embedding_model()
-    index, metadata = load_vector_index()
+    index, metadata = load_vector_index(logger)
+
+    if not index or not metadata:
+        return []
 
     query_vector = embed_documents([query], model)[0]
     results = search_index(query_vector, index, metadata, top_k=top_k)
 
     return results
-
-if __name__ == "__main__":
-    query = input("Enter your query: ")
-    results = get_relevant_documents(query)
-    logger.info("Top Relevant Chunks: \n")
-    logger.info(results)

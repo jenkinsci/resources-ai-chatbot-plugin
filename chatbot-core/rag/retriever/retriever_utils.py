@@ -3,16 +3,15 @@ Utilities for loading the FAISS vector index and performing similarity search
 to retrieve relevant document chunks based on a query vector.
 """
 
-import faiss
+import os
 import numpy as np
 from rag.vectorstore.vectorstore_utils import load_faiss_index, load_metadata
-import os
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
 INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_index.idx")
 METADATA_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_metadata.pkl")
 
-def load_vector_index():
+def load_vector_index(logger):
     """
     Load the FAISS index and associated metadata from disk.
 

@@ -3,14 +3,12 @@ Embeds document chunks, builds a FAISS IVF index,
 and stores both the index and associated metadata to disk.
 """
 
-import numpy as np
 import os
+import numpy as np
 import faiss
 from rag.embedding import embed_docs
 from rag.vectorstore.vectorstore_utils import save_faiss_index, save_metadata
 from rag.rag_utils import get_logger
-
-logger = get_logger("EMBEDDING-STORAGE")
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
 INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_index.idx")
@@ -38,15 +36,15 @@ def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
     index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_L2)
 
     logger.info("FAISS index training started...")
-    index.train(vectors)
+    index.train(vectors)  # pylint: disable=no-value-for-parameter
     logger.info("FAISS index training completed.")
     index.nprobe = nprobe
-    index.add(vectors)
+    index.add(vectors)  # pylint: disable=no-value-for-parameter
 
     return index
 
 
-def run_indexing(nlist, nprobe):
+def run_indexing(nlist, nprobe, logger):
     """
     Main pipeline: embed documents, build FAISS index, and save index + metadata.
 
@@ -67,7 +65,10 @@ def run_indexing(nlist, nprobe):
 
 
 def main():
-    run_indexing(nlist=N_LIST, nprobe=N_PROBE)
+    """Main entry point."""
+    logger = get_logger("EMBEDDING-STORAGE")
+
+    run_indexing(nlist=N_LIST, nprobe=N_PROBE, logger=logger)
 
 if __name__ == "__main__":
     main()

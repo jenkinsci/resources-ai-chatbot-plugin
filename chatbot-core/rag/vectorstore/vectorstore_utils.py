@@ -3,10 +3,9 @@ Utility functions for saving and loading FAISS indices and associated metadata.
 Handles persistence and logging for vector search storage.
 """
 
-import faiss
-import pickle
 import os
-import numpy as np
+import pickle
+import faiss
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
 os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
@@ -23,7 +22,7 @@ def save_faiss_index(index, path, logger):
     try:
         faiss.write_index(index, path)
         logger.info("FAISS index saved to %s", path)
-    except (OSError, faiss.FaissException) as e:
+    except (OSError) as e:
         logger.error("Failed to save FAISS index to %s: %s", path, e)
 
 def load_faiss_index(path, logger):
@@ -44,8 +43,6 @@ def load_faiss_index(path, logger):
         return index
     except (OSError, FileNotFoundError) as e:
         logger.error("File error while loading FAISS index from %s: %s", path, e)
-    except faiss.FaissException as e:
-        logger.error("FAISS internal error when loading index from %s: %s", path, e)
     return None
 
 def save_metadata(metadata, path, logger):
