@@ -6,10 +6,6 @@ from .extract_functions import(
     assign_code_blocks_to_chunks
 )
 
-from .logger import(
-    get_logger
-)
-
 from .common import(
     save_chunks,
     read_json_file,

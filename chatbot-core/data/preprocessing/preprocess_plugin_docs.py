@@ -3,15 +3,16 @@
 import json
 import os
 from bs4 import BeautifulSoup
-from preprocessing_utils import (
+from data.preprocessing.preprocessing_utils import (
     remove_tags,
     remove_html_comments,
     get_visible_text_length,
-    get_logger,
     strip_html_body_wrappers
 )
+from utils import LoggerFactory
 
-logger = get_logger()
+logger_factory = LoggerFactory.instance()
+logger = logger_factory.get_logger("preprocessing")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "plugin_docs.json")

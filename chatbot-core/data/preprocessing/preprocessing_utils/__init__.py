@@ -13,7 +13,3 @@ from .filter_functions import (
 from .split_doc_types import(
     split_type_docs
 )
-
-from .logger import(
-    get_logger
-)

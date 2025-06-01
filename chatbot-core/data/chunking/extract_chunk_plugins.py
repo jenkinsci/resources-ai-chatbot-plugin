@@ -3,17 +3,18 @@
 
 import os
 from bs4 import BeautifulSoup
-from chunking_utils import(
+from data.chunking.chunking_utils import(
     extract_code_blocks,
-    get_logger,
     assign_code_blocks_to_chunks,
     save_chunks,
     read_json_file,
     build_chunk_dict,
     get_text_splitter
 )
+from utils import LoggerFactory
 
-logger = get_logger()
+logger_factory = LoggerFactory.instance()
+logger = logger_factory.get_logger("chunking")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_PATH = os.path.join(SCRIPT_DIR, "..", "processed", "processed_plugin_docs.json")

@@ -1,15 +1,15 @@
-
 """Filter Jenkins documentation pages based on content length and link density."""
 
 import json
 import os
 from bs4 import BeautifulSoup
-from preprocessing_utils import(
-    get_visible_text_length,
-    get_logger
+from data.preprocessing.preprocessing_utils import(
+    get_visible_text_length
 )
+from utils import LoggerFactory
 
-logger = get_logger()
+logger_factory = LoggerFactory.instance()
+logger = logger_factory.get_logger("preprocessing")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_PATH = os.path.join(SCRIPT_DIR, "..", "processed", "processed_jenkins_docs.json")
