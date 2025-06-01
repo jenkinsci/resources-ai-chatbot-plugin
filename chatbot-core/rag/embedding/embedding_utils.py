@@ -4,17 +4,15 @@ Utility functions for loading a sentence transformer model and embedding text do
 
 from sentence_transformers import SentenceTransformer
 
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-
-def load_embedding_model():
+def load_embedding_model(model_name):
     """
     Load the sentence transformer model for generating text embeddings.
 
     Returns:
         SentenceTransformer: The loaded embedding model.
     """
-    print(f"Loading embedding model: {MODEL_NAME}")
-    return SentenceTransformer(MODEL_NAME)
+    print(f"Loading embedding model: {model_name}")
+    return SentenceTransformer(model_name)
 
 def embed_documents(texts, model, batch_size=32):
     """

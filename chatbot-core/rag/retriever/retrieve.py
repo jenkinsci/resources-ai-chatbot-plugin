@@ -9,6 +9,8 @@ from utils import LoggerFactory
 logger_factory = LoggerFactory.instance()
 logger = logger_factory.get_logger("retrieve")
 
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+
 def get_relevant_documents(query, top_k=5):
     """
     Retrieve the top-k most relevant chunks for a given natural language query.
@@ -20,7 +22,7 @@ def get_relevant_documents(query, top_k=5):
     Returns:
         list[dict]: A list of metadata entries corresponding to the most relevant chunks.
     """
-    model = load_embedding_model()
+    model = load_embedding_model(MODEL_NAME)
     index, metadata = load_vector_index(logger)
 
     if not index or not metadata:

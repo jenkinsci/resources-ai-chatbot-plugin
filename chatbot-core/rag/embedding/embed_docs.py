@@ -2,12 +2,14 @@
 Loads text chunks from preprocessed JSON files, embeds them using SentenceTransformers,
 and returns both embeddings and associated metadata.
 """
+
 import os
 import json
 from .embedding_utils import load_embedding_model, embed_documents
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROCESSED_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "processed")
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 CHUNK_FILES = [
     "chunks_docs.json",
     "chunks_plugin_docs.json",
@@ -76,7 +78,7 @@ def embed_docs(logger):
             "code_blocks": code_blocks
         })
 
-    model = load_embedding_model()
+    model = load_embedding_model(MODEL_NAME)
     vectors = embed_documents(texts, model)
 
     return vectors, metadata
