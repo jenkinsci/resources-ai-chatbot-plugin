@@ -6,7 +6,7 @@ and stores both the index and associated metadata to disk.
 import os
 import numpy as np
 import faiss
-from rag.embedding import embed_docs
+from rag.embedding import embed_chunks
 from rag.vectorstore.vectorstore_utils import save_faiss_index, save_metadata
 from utils import LoggerFactory
 
@@ -53,7 +53,7 @@ def run_indexing(nlist, nprobe, logger):
         nprobe (int): Number of clusters to search during queries.
     """
     logger.info("Starting document embedding...")
-    vectors, metadata = embed_docs(logger)
+    vectors, metadata = embed_chunks(logger)
     vectors_np = np.array(vectors).astype("float32")
 
     index = build_faiss_ivf_index(vectors_np, nlist=nlist, nprobe=nprobe, logger=logger)

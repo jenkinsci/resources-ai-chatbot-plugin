@@ -1,5 +1,5 @@
 """Defining embedding package."""
 
-from .embed_docs import (
-    embed_docs
+from .embed_chunks import (
+    embed_chunks
 )

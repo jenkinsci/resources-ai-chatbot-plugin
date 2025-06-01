@@ -47,7 +47,7 @@ def collect_all_chunks(logger):
         all_chunks.extend(chunks)
     return all_chunks
 
-def embed_docs(logger):
+def embed_chunks(logger):
     """
     Embed all loaded text chunks and return vectors and associated metadata.
 
