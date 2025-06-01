@@ -12,6 +12,7 @@ Below is a brief explanation of the key subdirectories:
     - `preprocessing/`: Scripts to clean, filter, the collected data before chunking.
     - `raw/`: Output directory for collected data.
     - `processed/`: Output directory for cleaned and filtered data.
+  - `utils/`: Contains utils for the chatbot-core directory(e.g. logger).
   - `requirements.txt`: Python dependencies.
 - `docs/`: Developer documentation.
 
@@ -44,6 +45,10 @@ To set up the environment and run the scripts:
 4. Install the dependencies
     ```bash
     pip install -r requirements.txt
+    ```
+5. Set the `PYTHONPATH` to the current directory(`chatbot-core/`):
+    ```bash
+    export PYTHONPATH=$(pwd)
     ```
 
 ## Data Collection
@@ -98,7 +103,7 @@ python data/collection/discourse_topics_retriever.py
 
 #### 2. Filter topics
 
-**Script**: `utils/filter_discourse_threads.py`
+**Script**: `collection_utils/filter_discourse_threads.py`
 
 Filters the previously collected topics, keeping only those with an accepted answer.
 
@@ -107,7 +112,7 @@ Filters the previously collected topics, keeping only those with an accepted ans
 
 **To run:**
 ```bash
-python data/collection/utils/filter_discourse_threads.py
+python data/collection/collection_utils/filter_discourse_threads.py
 ```
 
 #### 3. Fetch post content
@@ -156,7 +161,7 @@ The result can be downloaded as aCSV file and have to be placed in the following
 
 #### 2. Convert CSV to JSON
 
-**Script**: `utils/convert_stack_threads.py`
+**Script**: `collection_utils/convert_stack_threads.py`
 
 This script reads the exported CSV and converts it into a JSON format. The resulting JSON file will contain a list of question-answer pairs with metadata.
 
@@ -165,7 +170,7 @@ This script reads the exported CSV and converts it into a JSON format. The resul
 
 **To run:**
 ```bash
-python data/collection/utils/convert_stack_threads.py
+python data/collection/collection_utils/convert_stack_threads.py
 ```
 ### Jenkins Plugins
 
