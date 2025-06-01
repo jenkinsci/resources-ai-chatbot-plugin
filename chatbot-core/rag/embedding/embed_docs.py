@@ -59,14 +59,22 @@ def embed_docs(logger):
     chunks = collect_all_chunks(logger)
     logger.info("Collected %d chunks.", len(chunks))
     texts = [chunk["chunk_text"] for chunk in chunks]
-    metadata = [
-        {
+    metadata = []
+    for chunk in chunks:
+        chunk_metadata = chunk.get("metadata", {})
+        code_blocks = chunk.get("code_blocks", [])
+
+        if not chunk_metadata or not code_blocks:
+            logger.warning(
+                "Chunk %s has empty metadata or code_blocks.",
+                chunk.get("id")
+            )
+
+        metadata.append({
             "id": chunk["id"],
-            "metadata": chunk.get("metadata", {}),
-            "code_blocks": chunk.get("code_blocks", [])
-        }
-        for chunk in chunks
-    ]
+            "metadata": chunk_metadata,
+            "code_blocks": code_blocks
+        })
 
     model = load_embedding_model()
     vectors = embed_documents(texts, model)
