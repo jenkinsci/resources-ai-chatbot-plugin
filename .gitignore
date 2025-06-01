@@ -19,6 +19,10 @@ chatbot-core/.env/
 chatbot-core/data/**/*.csv
 chatbot-core/data/**/*.json
 
+# Embeddings
+chatbot-core/data/embeddings/*
+!chatbot-core/data/embeddings/.gitkeep
+
 # Eclipse project files
 .settings
 .classpath
