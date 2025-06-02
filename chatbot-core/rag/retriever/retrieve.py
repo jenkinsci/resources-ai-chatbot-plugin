@@ -16,7 +16,9 @@ def get_relevant_documents(query, logger, top_k=5):
         top_k (int): Number of top results to retrieve. Defaults to 5.
 
     Returns:
-        list[dict]: A list of metadata entries corresponding to the most relevant chunks.
+        tuple(list[dict]: A list of metadata entries corresponding to the most relevant chunks.
+             , list[dict]: A list of scores corresponding to the most relevant chunks.
+             )
     """
     model = load_embedding_model(MODEL_NAME)
     index, metadata = load_vector_index(logger)
@@ -25,6 +27,6 @@ def get_relevant_documents(query, logger, top_k=5):
         return []
 
     query_vector = embed_documents([query], model)[0]
-    results = search_index(query_vector, index, metadata, logger, top_k)
+    data, scores = search_index(query_vector, index, metadata, logger, top_k)
 
-    return results
+    return data, scores
