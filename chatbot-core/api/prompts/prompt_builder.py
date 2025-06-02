@@ -29,6 +29,7 @@ def build_prompt(user_query: str, context: str) -> str:
             User Question:
             {user_query.strip()}
 
-            Answer:"""
+            Answer:
+            """
 
     return prompt

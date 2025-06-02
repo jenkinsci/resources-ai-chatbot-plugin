@@ -2,7 +2,7 @@ api:
   prefix: "/api/chatbot"
 
 llm:
-  model_path: "./models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+  model_path: "api/models/mistral/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
   max_tokens: 128
   context_length: 2048
   threads: 8
