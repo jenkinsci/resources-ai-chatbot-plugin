@@ -2,9 +2,14 @@
 
 import json
 import os
+from utils import LoggerFactory
 
-DISCOURSE_TOPIC_LIST_PATH = "../../raw/discourse_topic_list.json"
-OUTPUT_PATH = "../../raw/filtered_discourse_topics.json"
+logger_factory = LoggerFactory.instance()
+logger = logger_factory.get_logger("collection")
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DISCOURSE_TOPIC_LIST_PATH = os.path.join(SCRIPT_DIR, "..", "..", "raw", "discourse_topic_list.json")
+OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "..", "raw", "filtered_discourse_topics.json")
 
 def filter_discourse_threads():
     """Filter topics that have accepted answers and exclude unanswered threads."""
@@ -25,10 +30,14 @@ def filter_discourse_threads():
             if topic["posts_count"] == 1:
                 non_answered_topics += 1
 
-        print(f"There are {len(data.keys()) - non_answered_topics} answered "
-            f"topics over {len(data.keys())}")
-        print(f"There are {accepted_answers} topics with accepted answers "
-            f"over {len(data.keys()) - non_answered_topics} answered topics")
+        logger.info("There are %d answered topics over %d",
+            len(data.keys()) - non_answered_topics,
+            len(data.keys())
+        )
+        logger.info("There are %d topics with accepted answers over %d answered topics",
+            accepted_answers,
+            len(data.keys()) - non_answered_topics
+        )
 
         with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
             json.dump(filtered_topics, f, ensure_ascii=False, indent=2)
