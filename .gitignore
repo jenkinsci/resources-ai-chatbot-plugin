@@ -23,6 +23,9 @@ chatbot-core/data/**/*.json
 chatbot-core/data/embeddings/*
 !chatbot-core/data/embeddings/.gitkeep
 
+# Local model
+chatbot-core/api/models/**/*.gguf
+
 # Eclipse project files
 .settings
 .classpath
