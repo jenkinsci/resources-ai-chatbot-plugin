@@ -1,0 +1,16 @@
+api:
+  prefix: "/api/chatbot"
+
+llm:
+  model_path: "./models/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+  max_tokens: 128
+  context_length: 2048
+  threads: 8
+  gpu_layers: 0
+
+retrieval:
+  top_k: 3
+
+cors:
+  allowed_origins:
+    - "*"
