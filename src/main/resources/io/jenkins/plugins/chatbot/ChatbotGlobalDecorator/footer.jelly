@@ -1,0 +1,5 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+  <div id="chatbot-root"></div>
+  <script type="module" src="${rootURL}/plugin/resources-ai-chatbot/static/assets/index.js"></script>
+</j:jelly>

@@ -1,0 +1,11 @@
+{
+  "toggleButtonLabel": "💬",
+  "title": "Jenkins AI Assistant",
+  "placeholder": "Type your message...",
+  "noInputWarningMessage": "Please enter a message before sending.",
+  "generatingMessage": "Generating...",
+  "clearChat": "Clear chat",
+  "errorMessage": "Sorry, I had trouble responding.",
+  "noResponseMessage": "No response",
+  "sendMessage": "Send"
+}

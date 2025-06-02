@@ -6,6 +6,8 @@ on:
       - "main"
       - "master"
     types: [opened, synchronize, reopened]
+    paths:
+      - 'chatbot-core/**'
 
 jobs:
   build:
