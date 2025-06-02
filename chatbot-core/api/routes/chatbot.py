@@ -26,4 +26,4 @@ async def chatbot_reply(request: ChatRequest):
     Returns:
         ChatResponse: The chatbot's generated reply.
     """
-    return get_chatbot_reply(request.message)
+    return get_chatbot_reply(request.session_id, request.message)

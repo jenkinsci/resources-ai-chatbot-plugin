@@ -10,6 +10,7 @@ class ChatRequest(BaseModel):
     """
     Represents a user message submitted to the chatbot.
     """
+    session_id: str 
     message: str
 
 class ChatResponse(BaseModel):

@@ -1,28 +1,45 @@
 """
 Constructs the prompt used for querying the LLM, including system-level instructions,
-context retrieved from the knowledge base, and the user's question.
+chat history, context retrieved from the knowledge base, and the user's question.
 """
+
+from langchain.memory import ConversationBufferMemory
 
 system_instruction = """
 You are JenkinsBot, an expert AI assistant specialized in Jenkins and its ecosystem.
 You help users with Jenkins, CI/CD pipelines, plugin usage, configuration, and troubleshooting.
-Always answer clearly and accurately using the provided context.
-If the answer is not in the context, say "I'm not able to answer based on the available information."
-Do not hallucinate or make up answers.
+
+Use the provided context (retrieved from Jenkins documentation and plugin metadata) to answer questions accurately.
+Also consider the prior conversation history to maintain context across turns.
+
+If the answer is not in the context or history, reply with:
+"I'm not able to answer based on the available information."
+
+Do not hallucinate or invent facts.
 """
 
-def build_prompt(user_query: str, context: str) -> str:
+def build_prompt(user_query: str, context: str, memory: ConversationBufferMemory) -> str:
     """
-    Build the full prompt by combining system instructions, context, and user question.
+    Build the full prompt by combining system instructions, chat history, context, and user question.
 
     Args:
         user_query (str): The raw question from the user.
         context (str): The relevant retrieved chunks to ground the answer.
+        memory (ConversationBufferMemory): LangChain memory holding prior chat turns.
 
     Returns:
         str: A structured prompt for the language model.
     """
+    history = ""
+    if memory:
+        for msg in memory.chat_memory.messages:
+            role = "User" if msg.type == "human" else "Jenkins Assistant"
+            history += f"{role}: {msg.content}\n"
+    
     prompt = f"""{system_instruction}
+            Chat History:
+            {history}
+
             Context:
             {context}
 

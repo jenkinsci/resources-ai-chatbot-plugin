@@ -1,25 +1,34 @@
 import re
-from api.models.model import llm_provider
+from api.models.llama_cpp_provider import llm_provider
 from api.config.loader import CONFIG
 from api.prompts.prompt_builder import build_prompt
 from api.models.chat import ChatResponse
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
+from api.services.memory import get_or_create_memory
 
 logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
 retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 
-def get_chatbot_reply(user_input: str) -> ChatResponse:
+def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
+    logger.info("New message from session '%s'", session_id)
     logger.info("Handling the user query: %s", user_input)
+
+    memory = get_or_create_memory(session_id)
+
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
 
-    prompt = build_prompt(user_input, context)
+    prompt = build_prompt(user_input, context, memory)
 
     logger.info("Generating answer with prompt: %s", prompt)
     reply = generate_answer(prompt)
+
+    memory.chat_memory.add_user_message(user_input)
+    memory.chat_memory.add_ai_message(reply)
+
     return ChatResponse(reply=reply)
 
 
