@@ -1,15 +1,25 @@
+"""
+Handles in-memory chat session state (conversation memory).
+Provides utility functions for session lifecycle.
+"""
+
+import uuid
 from langchain.memory import ConversationBufferMemory
 
-# session_id --> memory object
-session_memory_store = {}
+# sessionId --> history
+_sessions = {}
 
-def get_or_create_memory(session_id: str) -> ConversationBufferMemory:
-    """
-    Retrieve existing memory for a session or create a new one.
-    """
-    if session_id not in session_memory_store:
-        session_memory_store[session_id] = ConversationBufferMemory(
-            memory_key="history",
-            return_messages=True
-        )
-    return session_memory_store[session_id]
+def init_session() -> str:
+    session_id = str(uuid.uuid4())
+    _sessions[session_id] = ConversationBufferMemory(return_messages=True)
+    return session_id
+
+def get_session(session_id: str) -> ConversationBufferMemory | None:
+    return _sessions.get(session_id)
+
+def delete_session(session_id: str) -> bool:
+    print(_sessions)
+    return _sessions.pop(session_id, None) is not None
+
+def session_exists(session_id: str) -> bool:
+    return session_id in _sessions

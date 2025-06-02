@@ -2,10 +2,10 @@ import re
 from api.models.llama_cpp_provider import llm_provider
 from api.config.loader import CONFIG
 from api.prompts.prompt_builder import build_prompt
-from api.models.chat import ChatResponse
+from api.models.schemas import ChatResponse
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
-from api.services.memory import get_or_create_memory
+from api.services.memory import get_session
 
 logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
@@ -16,7 +16,7 @@ def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
     logger.info("New message from session '%s'", session_id)
     logger.info("Handling the user query: %s", user_input)
 
-    memory = get_or_create_memory(session_id)
+    memory = get_session(session_id)
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)

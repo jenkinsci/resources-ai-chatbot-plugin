@@ -3,7 +3,7 @@ api:
 
 llm:
   model_path: "api/models/mistral/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
-  max_tokens: 128
+  max_tokens: 512
   context_length: 2048
   threads: 8
   gpu_layers: 0
