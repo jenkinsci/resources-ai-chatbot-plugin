@@ -1,12 +1,18 @@
 """Module for retrieving and filtering topics from the 'Using Jenkins' category on Discourse."""
 
 import json
+import os
 import requests
+from utils import LoggerFactory
+
+logger_factory = LoggerFactory.instance()
+logger = logger_factory.get_logger("collection")
 
 BASE_URL = "https://community.jenkins.io"
 CATEGORY_SLUG = "using-jenkins"
 CATEGORY_ID = 7 # 'Using Jenkins' Category
-OUTPUT_PATH = "../raw/discourse_topic_list.json"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "discourse_topic_list.json")
 
 
 def fetch_page(category_slug, category_id, page):
@@ -48,15 +54,17 @@ def get_category_topics(category_slug, category_id):
     explored_topics = {}
 
     while True:
-        print(f"Fetching page {page}...")
+        logger.info("Fetching page %d...", page)
         data = fetch_page(category_slug, category_id, page)
         topics, more_topics_url = extract_topics(data)
 
         right_category_topics, wrong_category_topics = get_wrong_and_correct_topics(topics)
 
-        print(f"Page {page} - Found {len(topics)} topics")
-        print(f"Right category Topics {len(right_category_topics)} "
-            f"- Wrong category Topics {len(wrong_category_topics)}")
+        logger.info("Page %d - Found %d topics", page, len(topics))
+        logger.info("Right category Topics %d - Wrong category Topics %d",
+            len(right_category_topics),
+            len(wrong_category_topics)
+        )
 
         for topic in right_category_topics:
             id_topic = topic["id"]
@@ -66,21 +74,21 @@ def get_category_topics(category_slug, category_id):
         explored_pages.add(page)
 
         if not more_topics_url:
-            print("No more topics to explore.")
+            logger.info("No more topics to explore.")
             break
 
         # Extract the next page number from the more_topics_url
         try:
             page = int(more_topics_url.split('page=')[-1])
         except (IndexError, ValueError):
-            print("Failed to parse next page number.")
+            logger.error("Failed to parse next page number.")
             break
 
         if page in explored_pages:
-            print(f"Already explored page {page}.")
+            logger.info("Already explored page %d.", page)
             break
 
-    print(f"Explored {len(explored_topics.keys())} topics")
+    logger.info("Explored %d topics", len(explored_topics.keys()))
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(explored_topics, f, ensure_ascii=False, indent=2)
 

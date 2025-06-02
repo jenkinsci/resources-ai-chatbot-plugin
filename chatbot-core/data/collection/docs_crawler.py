@@ -1,9 +1,17 @@
 """Module for crawling and collecting content from Jenkins documentation pages."""
 
 import json
+import os
 from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
+from utils import LoggerFactory
+
+logger_factory = LoggerFactory.instance()
+logger = logger_factory.get_logger("collection")
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "../raw/jenkins_docs.json")
 
 # Home URL of jenkins doc
 BASE_URL = "https://www.jenkins.io/doc/"
@@ -38,7 +46,7 @@ def crawl(url):
     if url in visited_urls:
         return
 
-    print(f"Visiting: {url}")
+    logger.info("Visiting: %s", url)
     try:
         visited_urls.add(url)
 
@@ -64,20 +72,19 @@ def crawl(url):
                 crawl(full_url)
 
     except requests.RequestException as e:
-        print(f"Error accessing {url}: {e}")
+        logger.error("Error accessing %s: %s", url, e)
 
 def start_crawl():
     """Start the crawling process from the base URL."""
-    print("Crawling started")
+    logger.info("Crawling started")
     crawl(BASE_URL)
-    print(f"Total pages found: {len(visited_urls)}")
-    print(f"Total pages with content: {len(page_content)}")
-    print("Non canonic content page structure links:")
-    print(non_canonic_content_urls)
-    print("Crawling ended")
+    logger.info("Total pages found: %d", len(visited_urls))
+    logger.info("Total pages with content: %d", len(page_content))
+    logger.info("Non canonic content page structure links: %s", non_canonic_content_urls)
+    logger.info("Crawling ended")
 
-    print("Saving results in json")
-    with open("../raw/jenkins_docs.json", "w", encoding="utf-8") as f:
+    logger.info("Saving results in json")
+    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         json.dump(page_content, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
