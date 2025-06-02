@@ -25,6 +25,6 @@ def get_relevant_documents(query, logger, top_k=5):
         return []
 
     query_vector = embed_documents([query], model)[0]
-    results = search_index(query_vector, index, metadata, logger, top_k)
+    data, scores = search_index(query_vector, index, metadata, logger, top_k)
 
-    return results
+    return data, scores

@@ -56,4 +56,10 @@ def search_index(query_vector, index, metadata, logger, top_k):
                 len(metadata)
             )
 
-    return results
+    data = []
+    scores = []
+    for result in results:
+        data.append(result["metadata"])
+        scores.append(result["score"])
+
+    return data, scores

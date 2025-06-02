@@ -65,15 +65,17 @@ def embed_chunks(logger):
     for chunk in chunks:
         chunk_metadata = chunk.get("metadata", {})
         code_blocks = chunk.get("code_blocks", [])
+        chunk_text = chunk.get("chunk_text", "")
 
-        if not chunk_metadata or not code_blocks:
+        if not chunk_metadata or not chunk_text:
             logger.warning(
-                "Chunk %s has empty metadata or code_blocks.",
+                "Chunk %s has empty metadata or text.",
                 chunk.get("id")
             )
 
         metadata.append({
             "id": chunk["id"],
+            "chunk_text": chunk_text,
             "metadata": chunk_metadata,
             "code_blocks": code_blocks
         })
