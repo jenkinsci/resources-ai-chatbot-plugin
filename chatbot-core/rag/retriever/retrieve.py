@@ -20,13 +20,13 @@ def get_relevant_documents(query, logger, top_k=5):
              , list[dict]: A list of scores corresponding to the most relevant chunks.
              )
     """
-    model = load_embedding_model(MODEL_NAME)
+    model = load_embedding_model(MODEL_NAME, logger)
     index, metadata = load_vector_index(logger)
 
     if not index or not metadata:
         return []
 
-    query_vector = embed_documents([query], model)[0]
+    query_vector = embed_documents([query], model, logger)[0]
     data, scores = search_index(query_vector, index, metadata, logger, top_k)
 
     return data, scores

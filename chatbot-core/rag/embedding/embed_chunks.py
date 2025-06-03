@@ -80,7 +80,7 @@ def embed_chunks(logger):
             "code_blocks": code_blocks
         })
 
-    model = load_embedding_model(MODEL_NAME)
-    vectors = embed_documents(texts, model)
+    model = load_embedding_model(MODEL_NAME, logger)
+    vectors = embed_documents(texts, model, logger)
 
     return vectors, metadata

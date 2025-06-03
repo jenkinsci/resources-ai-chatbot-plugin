@@ -61,7 +61,7 @@ def run_indexing(nlist, nprobe, logger):
     save_faiss_index(index, INDEX_PATH, logger)
     save_metadata(metadata, METADATA_PATH, logger)
 
-    print(f"Stored {len(vectors)} vectors to FAISS (IVFFlat) at {INDEX_PATH}")
+    logger.info(f"Stored {len(vectors)} vectors to FAISS (IVFFlat) at {INDEX_PATH}")
 
 
 def main():
