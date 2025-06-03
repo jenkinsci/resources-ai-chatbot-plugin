@@ -4,17 +4,17 @@ Utility functions for loading a sentence transformer model and embedding text do
 
 from sentence_transformers import SentenceTransformer
 
-def load_embedding_model(model_name):
+def load_embedding_model(model_name, logger):
     """
     Load the sentence transformer model for generating text embeddings.
 
     Returns:
         SentenceTransformer: The loaded embedding model.
     """
-    print(f"Loading embedding model: {model_name}")
+    logger.info(f"Loading embedding model: {model_name}")
     return SentenceTransformer(model_name)
 
-def embed_documents(texts, model, batch_size=32):
+def embed_documents(texts, model, logger, batch_size=32):
     """
     Embed a list of text documents into dense vector representations using the given model.
 
@@ -26,5 +26,5 @@ def embed_documents(texts, model, batch_size=32):
     Returns:
         List[np.ndarray]: A list of embedding vectors (one per input document).
     """
-    print(f"Embedding {len(texts)} documents")
+    logger.info(f"Embedding {len(texts)} documents")
     return model.encode(texts, batch_size=batch_size, show_progress_bar=True)

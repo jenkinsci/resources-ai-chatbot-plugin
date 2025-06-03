@@ -534,10 +534,10 @@ Provides utility functions for loading and using SentenceTransformer models.
 
 #### Key Functions
 
-- **`load_embedding_model(model_name)`**  
+- **`load_embedding_model(model_name, logger)`**  
   Loads a SentenceTransformer model by name.
 
-- **`embed_documents(texts, model, batch_size=32)`**  
+- **`embed_documents(texts, model, logger, batch_size=32)`**  
   Encodes a list of text strings into dense vectors. Supports batching and shows a progress bar during embedding.
 
 ## Vector Store
