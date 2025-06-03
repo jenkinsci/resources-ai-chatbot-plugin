@@ -14,6 +14,7 @@ from api.models.llm_provider import LLMProvider
 
 llm_config = CONFIG["llm"]
 
+# pylint: disable=too-few-public-methods
 class LlamaCppProvider(LLMProvider):
     """
     LLMProvider implementation for local llama.cpp models.

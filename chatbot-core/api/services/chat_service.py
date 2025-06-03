@@ -7,9 +7,9 @@ from api.models.llama_cpp_provider import llm_provider
 from api.config.loader import CONFIG
 from api.prompts.prompt_builder import build_prompt
 from api.models.schemas import ChatResponse
+from api.services.memory import get_session
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
-from api.services.memory import get_session
 
 logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
@@ -102,7 +102,7 @@ def make_placeholder_replacer(code_iter, item_id):
     Returns:
         Callable[[re.Match], str]: A function to replace placeholders.
     """
-    def replace(match):
+    def replace(_match):
         try:
             return next(code_iter)
         except StopIteration:

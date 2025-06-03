@@ -8,15 +8,14 @@ the chat service logic.
 
 from fastapi import APIRouter, HTTPException
 from api.models.schemas import (
-    ChatRequest, 
+    ChatRequest,
     ChatResponse,
-    SessionResponse, 
+    SessionResponse,
     DeleteResponse
 )
 from api.services.chat_service import get_chatbot_reply
 from api.services.memory import (
     init_session,
-    get_session,
     delete_session,
     session_exists
 )
@@ -55,7 +54,7 @@ def chatbot_reply(session_id: str, request: ChatRequest):
     """
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
-    
+
     return get_chatbot_reply(session_id, request.message)
 
 

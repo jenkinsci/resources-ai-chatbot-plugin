@@ -5,7 +5,7 @@ chat history, context retrieved from the knowledge base, and the user's question
 
 from langchain.memory import ConversationBufferMemory
 
-system_instruction = """
+SYSTEM_INSTRUCTION = """
 You are JenkinsBot, an expert AI assistant specialized in Jenkins and its ecosystem.
 You help users with Jenkins, CI/CD pipelines, plugin usage, configuration, and troubleshooting.
 
@@ -20,7 +20,7 @@ Do not hallucinate or invent facts.
 
 def build_prompt(user_query: str, context: str, memory: ConversationBufferMemory) -> str:
     """
-    Build the full prompt by combining system instructions, chat history, context, and user question.
+    Build the full prompt by combining system instructions, chat history, context,and user question.
 
     Args:
         user_query (str): The raw question from the user.
@@ -35,8 +35,8 @@ def build_prompt(user_query: str, context: str, memory: ConversationBufferMemory
         for msg in memory.chat_memory.messages:
             role = "User" if msg.type == "human" else "Jenkins Assistant"
             history += f"{role}: {msg.content}\n"
-    
-    prompt = f"""{system_instruction}
+
+    prompt = f"""{SYSTEM_INSTRUCTION}
             Chat History:
             {history}
 

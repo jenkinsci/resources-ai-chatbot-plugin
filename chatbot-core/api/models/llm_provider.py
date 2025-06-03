@@ -6,6 +6,7 @@ Defines an abstract class for all callable LLMs.
 
 from abc import ABC, abstractmethod
 
+# pylint: disable=too-few-public-methods
 class LLMProvider(ABC):
     """
     Abstract class for LLM providers. 
@@ -17,4 +18,3 @@ class LLMProvider(ABC):
         """
         Generate a response given a prompt.
         """
-        pass
