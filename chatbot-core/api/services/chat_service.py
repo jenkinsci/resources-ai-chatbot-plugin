@@ -1,3 +1,7 @@
+"""
+Chat service layer responsible for processing the requests forwarded by the controller.
+"""
+
 import re
 from api.models.llama_cpp_provider import llm_provider
 from api.config.loader import CONFIG
@@ -13,6 +17,17 @@ retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 
 def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
+    """
+    Main chatbot entry point. Retrieves context, constructs a prompt with memory,
+    and generates an LLM response. Also updates the memory with the latest exchange.
+
+    Args:
+        session_id (str): The unique ID for the chat session.
+        user_input (str): The latest user message.
+
+    Returns:
+        ChatResponse: The generated assistant response.
+    """
     logger.info("New message from session '%s'", session_id)
     logger.info("Handling the user query: %s", user_input)
 
@@ -33,6 +48,16 @@ def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
 
 
 def retrieve_context(user_input: str) -> str:
+    """
+    Retrieves the most relevant document chunks for a user query
+    and reconstructs them by replacing placeholder tokens with actual code blocks.
+
+    Args:
+        user_input (str): The input query string.
+
+    Returns:
+        str: Combined, reconstructed context text.
+    """
     data_retrieved, _ = get_relevant_documents(
         user_input,
         top_k=retrieval_config["top_k"],
@@ -53,10 +78,30 @@ def retrieve_context(user_input: str) -> str:
 
 
 def generate_answer(prompt: str) -> str:
+    """
+    Generates a completion from the language model for the given prompt.
+
+    Args:
+        prompt (str): The full prompt to send to the LLM.
+
+    Returns:
+        str: The model's generated text response.
+    """
     return llm_provider.generate(prompt=prompt, max_tokens=llm_config["max_tokens"])
 
 
 def make_placeholder_replacer(code_iter, item_id):
+    """
+    Returns a function to replace code block placeholders in retrieved text
+    with actual code snippets from the original document.
+
+    Args:
+        code_iter (iterator): Iterator over code snippets.
+        item_id (str): The ID of the document chunk (used for logging).
+
+    Returns:
+        Callable[[re.Match], str]: A function to replace placeholders.
+    """
     def replace(match):
         try:
             return next(code_iter)

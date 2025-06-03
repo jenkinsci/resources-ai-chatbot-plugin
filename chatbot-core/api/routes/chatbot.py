@@ -27,7 +27,12 @@ router = APIRouter()
 @router.post("/sessions", response_model=SessionResponse)
 def start_chat():
     """
+    POST endpoint to create new sessions.
+
     Start a new chat session and return its unique session_id.
+
+    Returns:
+        SesionResponse: The unique session id.
     """
     session_id = init_session()
     return SessionResponse(session_id=session_id)
@@ -36,7 +41,7 @@ def start_chat():
 @router.post("/sessions/{session_id}/message", response_model=ChatResponse)
 def chatbot_reply(session_id: str, request: ChatRequest):
     """
-    POST endpoint to handle chatbot queries.
+    POST endpoint to handle chatbot replies.
 
     Receives a user message and returns the assistant's reply.
     Validates that the session exists before processing.
