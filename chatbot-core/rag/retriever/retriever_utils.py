@@ -39,6 +39,14 @@ def search_index(query_vector, index, metadata, logger, top_k):
     Returns:
         List[dict]: A list of metadata entries with similarity scores.
     """
+    if query_vector is None or not isinstance(query_vector, np.ndarray):
+        logger.error("Invalid query vector received.")
+        return [], []
+
+    if index.ntotal == 0:
+        logger.warning("FAISS index is empty. No search will be performed.")
+        return [], []
+
     query_vector = np.array(query_vector).astype("float32").reshape(1, -1)
     distances, indices = index.search(query_vector, top_k)
     results = []
