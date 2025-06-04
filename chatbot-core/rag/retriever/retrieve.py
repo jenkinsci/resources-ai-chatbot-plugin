@@ -21,7 +21,7 @@ def get_relevant_documents(query, model, logger, top_k=5):
         tuple[list[dict], list[float]]: Retrieved metadata and similarity scores.
     """
     if not query.strip():
-        logger.warning("Empty query received.") 
+        logger.warning("Empty query received.")
         return [], []
 
     index, metadata = load_vector_index(logger)
