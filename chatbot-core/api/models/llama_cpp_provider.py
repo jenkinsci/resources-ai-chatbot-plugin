@@ -55,8 +55,8 @@ class LlamaCppProvider(LLMProvider):
                 )
             return output["choices"][0]["text"].strip()
         except ValueError as e:
-            logger.exception("Invalid model configuration: %s", e)
-            raise RuntimeError("LLM model could not be initialized. Check the model path.")
+            logger.error("Invalid model configuration: %s", e)
+            raise RuntimeError("LLM model could not be initialized. Check the model path.") from e
         except Exception as e: # pylint: disable=broad-exception-caught
             logger.error("Unexpected error during LLM generation: %s", e)
             return "Sorry, something went wrong during generation."
