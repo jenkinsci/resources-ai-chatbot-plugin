@@ -4,10 +4,12 @@ Provides utility functions for session lifecycle.
 """
 
 import uuid
+from threading import Lock
 from langchain.memory import ConversationBufferMemory
 
 # sessionId --> history
 _sessions = {}
+_lock = Lock()
 
 def init_session() -> str:
     """
@@ -17,7 +19,8 @@ def init_session() -> str:
         str: A newly generated UUID representing the session ID.
     """
     session_id = str(uuid.uuid4())
-    _sessions[session_id] = ConversationBufferMemory(return_messages=True)
+    with _lock:
+        _sessions[session_id] = ConversationBufferMemory(return_messages=True)
     return session_id
 
 def get_session(session_id: str) -> ConversationBufferMemory | None:
@@ -30,7 +33,9 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
     Returns:
         ConversationBufferMemory | None: The memory object if found, else None.
     """
-    return _sessions.get(session_id)
+    with _lock:
+        memory = _sessions.get(session_id)
+    return memory
 
 def delete_session(session_id: str) -> bool:
     """
@@ -42,7 +47,9 @@ def delete_session(session_id: str) -> bool:
     Returns:
         bool: True if the session existed and was deleted, False otherwise.
     """
-    return _sessions.pop(session_id, None) is not None
+    with _lock:
+        deleted = _sessions.pop(session_id, None) is not None
+    return deleted
 
 def session_exists(session_id: str) -> bool:
     """
@@ -54,4 +61,6 @@ def session_exists(session_id: str) -> bool:
     Returns:
         bool: True if the session exists, False otherwise.
     """
-    return session_id in _sessions
+    with _lock:
+        exists = session_id in _sessions
+    return exists
