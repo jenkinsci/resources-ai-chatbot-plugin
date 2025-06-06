@@ -30,11 +30,13 @@ def build_prompt(user_query: str, context: str, memory: ConversationBufferMemory
     Returns:
         str: A structured prompt for the language model.
     """
-    history = ""
     if memory:
-        for msg in memory.chat_memory.messages:
-            role = "User" if msg.type == "human" else "Jenkins Assistant"
-            history += f"{role}: {msg.content}\n"
+        history = "\n".join(
+            f"{'User' if msg.type == 'human' else 'Jenkins Assistant'}: {msg.content}"
+            for msg in memory.chat_memory.messages
+        )
+    else:
+        history = ""
 
     prompt = f"""{SYSTEM_INSTRUCTION}
             Chat History:

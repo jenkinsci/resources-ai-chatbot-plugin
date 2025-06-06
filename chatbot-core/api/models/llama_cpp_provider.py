@@ -29,7 +29,7 @@ class LlamaCppProvider(LLMProvider):
             n_ctx=llm_config["context_length"],
             n_threads=llm_config["threads"],
             n_gpu_layers=llm_config["gpu_layers"],
-            verbose=False
+            verbose=llm_config["verbose"]
         )
         self.lock = Lock()
 

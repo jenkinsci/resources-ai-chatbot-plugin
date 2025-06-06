@@ -67,7 +67,7 @@ def retrieve_context(user_input: str) -> str:
     for item in data_retrieved:
         text = item.get("chunk_text", "")
         if text:
-            code_iter = iter(item["code_blocks"])
+            code_iter = iter(item.get("code_blocks", []))
             replace = make_placeholder_replacer(code_iter, item["id"])
             text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
 
