@@ -20,7 +20,8 @@ class ChatRequest(BaseModel):
     message: str
 
     @field_validator("message")
-    def message_must_not_be_empty(cls, v):
+    def message_must_not_be_empty(cls, v): # pylint: disable=no-self-argument
+        """Validator that checks that a message is not empty."""
         if not v.strip():
             raise ValueError("Message cannot be empty.")
         return v

@@ -58,6 +58,6 @@ class LlamaCppProvider(LLMProvider):
             return "Sorry, an internal error has occured while generating a response."
         except Exception as e:
             logger.error("Unexpected error during LLM generation: %s", e)
-            return "Sorry, something went wrong during generation.
+            return "Sorry, something went wrong during generation."
 
 llm_provider = LlamaCppProvider()

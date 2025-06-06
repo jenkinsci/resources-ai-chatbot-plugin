@@ -85,8 +85,11 @@ def retrieve_context(user_input: str) -> str:
             context_texts.append(text)
         else:
             logger.warning("Text of chunk with ID %s is missing", item_id)
-    return "\n\n".join(context_texts) if context_texts else retrieval_config["empty_context_message"]
-
+    return (
+        "\n\n".join(context_texts)
+        if context_texts
+        else retrieval_config["empty_context_message"]
+    )
 
 def generate_answer(prompt: str) -> str:
     """
