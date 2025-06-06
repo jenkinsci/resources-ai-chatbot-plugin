@@ -32,6 +32,8 @@ def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
     logger.info("Handling the user query: %s", user_input)
 
     memory = get_session(session_id)
+    if memory is None:
+        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
@@ -56,7 +58,8 @@ def retrieve_context(user_input: str) -> str:
         user_input (str): The input query string.
 
     Returns:
-        str: Combined, reconstructed context text.
+        str: Combined, reconstructed context text. Returns retrieval_config["empty_context_message"]
+        if any context have been retrieved.
     """
     data_retrieved, _ = get_relevant_documents(
         user_input,
@@ -64,21 +67,25 @@ def retrieve_context(user_input: str) -> str:
         logger=logger
     )
     if not data_retrieved:
-        logger.warning("The data retrieved is empty.")
+        logger.warning(retrieval_config["empty_context_message"])
         return "No context available."
 
     context_texts = []
     for item in data_retrieved:
+        item_id = item.get("id", "")
         text = item.get("chunk_text", "")
+        if not item_id:
+            logger.warning("Id of retrieved context not found. Skipping element.")
+            continue
         if text:
             code_iter = iter(item.get("code_blocks", []))
-            replace = make_placeholder_replacer(code_iter, item["id"])
+            replace = make_placeholder_replacer(code_iter, item_id)
             text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
 
             context_texts.append(text)
         else:
-            logger.warning("Text of chunk with ID %s is missing", item["id"])
-    return "\n\n".join(context_texts)
+            logger.warning("Text of chunk with ID %s is missing", item_id)
+    return "\n\n".join(context_texts) if context_texts else retrieval_config["empty_context_message"]
 
 
 def generate_answer(prompt: str) -> str:

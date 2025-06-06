@@ -11,6 +11,7 @@ llm:
 
 retrieval:
   top_k: 3
+  empty_context_message: "No context available."
 
 cors:
   allowed_origins:

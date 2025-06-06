@@ -13,6 +13,7 @@ from api.config.loader import CONFIG
 from api.models.llm_provider import LLMProvider
 
 llm_config = CONFIG["llm"]
+logger = LoggerFactory.instance().get_logger("llm")
 
 # pylint: disable=too-few-public-methods
 class LlamaCppProvider(LLMProvider):
@@ -44,12 +45,19 @@ class LlamaCppProvider(LLMProvider):
         Returns:
             str: The generated text response.
         """
-        with self.lock:
-            output = self.llm(
-                prompt=prompt,
-                max_tokens=max_tokens,
-                echo=False
-            )
-        return output["choices"][0]["text"].strip()
+        try:
+            with self.lock:
+                output = self.llm(
+                    prompt=prompt,
+                    max_tokens=max_tokens,
+                    echo=False
+                )
+            return output["choices"][0]["text"].strip()
+        except RuntimeError as e:
+            logger.error("LLM runtime error during generation: %s", e)
+            return "Sorry, an internal error has occured while generating a response."
+        except Exception as e:
+            logger.error("Unexpected error during LLM generation: %s", e)
+            return "Sorry, something went wrong during generation.
 
 llm_provider = LlamaCppProvider()
