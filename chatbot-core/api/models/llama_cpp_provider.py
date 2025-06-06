@@ -11,6 +11,7 @@ from threading import Lock
 from llama_cpp import Llama
 from api.config.loader import CONFIG
 from api.models.llm_provider import LLMProvider
+from utils import LoggerFactory
 
 llm_config = CONFIG["llm"]
 logger = LoggerFactory.instance().get_logger("llm")
@@ -53,10 +54,10 @@ class LlamaCppProvider(LLMProvider):
                     echo=False
                 )
             return output["choices"][0]["text"].strip()
-        except RuntimeError as e:
-            logger.error("LLM runtime error during generation: %s", e)
-            return "Sorry, an internal error has occured while generating a response."
-        except Exception as e:
+        except ValueError as e:
+            logger.exception("Invalid model configuration: %s", e)
+            raise RuntimeError("LLM model could not be initialized. Check the model path.")
+        except Exception as e: # pylint: disable=broad-exception-caught
             logger.error("Unexpected error during LLM generation: %s", e)
             return "Sorry, something went wrong during generation."
 
