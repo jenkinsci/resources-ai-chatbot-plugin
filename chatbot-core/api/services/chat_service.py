@@ -63,6 +63,10 @@ def retrieve_context(user_input: str) -> str:
         top_k=retrieval_config["top_k"],
         logger=logger
     )
+    if not data_retrieved:
+        logger.warning("The data retrieved is empty.")
+        return "No context available."
+
     context_texts = []
     for item in data_retrieved:
         text = item.get("chunk_text", "")

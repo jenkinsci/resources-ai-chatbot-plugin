@@ -32,9 +32,9 @@ def build_prompt(user_query: str, context: str, memory: ConversationBufferMemory
     """
     if memory:
         history = "\n".join(
-            f"{'User' if msg.type == 'human' else 'Jenkins Assistant'}: {msg.content}"
+            f"{'User' if msg.type == 'human' else 'Jenkins Assistant'}: {msg.content or ''}"
             for msg in memory.chat_memory.messages
-        )
+        ) if memory.chat_memory.messages  else ""
     else:
         history = ""
 
