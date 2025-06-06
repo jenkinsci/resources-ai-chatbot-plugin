@@ -6,7 +6,7 @@ This module acts as a "controller" connecting the HTTP layer to
 the chat service logic.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from api.models.schemas import (
     ChatRequest,
     ChatResponse,
@@ -24,7 +24,7 @@ router = APIRouter()
 
 
 @router.post("/sessions", response_model=SessionResponse)
-def start_chat():
+def start_chat(response: Response):
     """
     POST endpoint to create new sessions.
 
@@ -34,6 +34,8 @@ def start_chat():
         SesionResponse: The unique session id.
     """
     session_id = init_session()
+    response.headers["Location"] = f"/sessions/{session_id}/message"
+    
     return SessionResponse(session_id=session_id)
 
 
