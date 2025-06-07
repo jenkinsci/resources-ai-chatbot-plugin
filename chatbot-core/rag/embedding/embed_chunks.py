@@ -11,10 +11,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROCESSED_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "processed")
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 CHUNK_FILES = [
-    #"chunks_docs.json",
-    #"chunks_plugin_docs.json",
+    "chunks_docs.json",
+    "chunks_plugin_docs.json",
     "chunks_discourse_docs.json",
-    #"chunks_stackoverflow_threads.json"
+    "chunks_stackoverflow_threads.json"
 ]
 
 def load_chunks_from_file(path, logger):
@@ -44,6 +44,7 @@ def collect_all_chunks(logger):
         chunks = load_chunks_from_file(path, logger)
         if not chunks:
             logger.warning("No chunks available from %s.", file_name)
+            continue
         all_chunks.extend(chunks)
     return all_chunks
 
@@ -63,6 +64,7 @@ def embed_chunks(logger):
     texts = [chunk["chunk_text"] for chunk in chunks]
     metadata = []
     for chunk in chunks:
+        chunk_id = chunk.get("id")
         chunk_metadata = chunk.get("metadata", {})
         code_blocks = chunk.get("code_blocks", [])
         chunk_text = chunk.get("chunk_text", "")
@@ -70,11 +72,12 @@ def embed_chunks(logger):
         if not chunk_metadata or not chunk_text:
             logger.warning(
                 "Chunk %s has empty metadata or text.",
-                chunk.get("id")
+                chunk_id
             )
+            continue
 
         metadata.append({
-            "id": chunk["id"],
+            "id": chunk_id,
             "chunk_text": chunk_text,
             "metadata": chunk_metadata,
             "code_blocks": code_blocks
