@@ -5,8 +5,6 @@ Query interface for retrieving the most relevant embedded text chunks using a FA
 from rag.embedding.embedding_utils import embed_documents
 from rag.retriever.retriever_utils import load_vector_index, search_index
 
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-
 def get_relevant_documents(query, model, logger, top_k=5):
     """
     Retrieve the top-k most relevant chunks for a given natural language query.

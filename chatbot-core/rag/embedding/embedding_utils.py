@@ -26,5 +26,7 @@ def embed_documents(texts, model, logger, batch_size=32):
     Returns:
         List[np.ndarray]: A list of embedding vectors (one per input document).
     """
+    if not isinstance(model, SentenceTransformer):
+        raise TypeError("Model must be a SentenceTransformer instance.")
     logger.info(f"Embedding {len(texts)} documents")
     return model.encode(texts, batch_size=batch_size, show_progress_bar=True)

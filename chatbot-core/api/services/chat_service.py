@@ -8,6 +8,7 @@ from api.config.loader import CONFIG
 from api.prompts.prompt_builder import build_prompt
 from api.models.schemas import ChatResponse
 from api.services.memory import get_session
+from api.models.embedding_model import EMBEDDING_MODEL
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
 
@@ -63,8 +64,9 @@ def retrieve_context(user_input: str) -> str:
     """
     data_retrieved, _ = get_relevant_documents(
         user_input,
-        top_k=retrieval_config["top_k"],
-        logger=logger
+        EMBEDDING_MODEL,
+        logger=logger,
+        top_k=retrieval_config["top_k"]
     )
     if not data_retrieved:
         logger.warning(retrieval_config["empty_context_message"])
