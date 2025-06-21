@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Chatbot } from './components/Chatbot';
 
-const footerRoot = document.getElementById('chatbot-root')!;
+const footerRoot = document.getElementById('root')!;
 
 createRoot(footerRoot).render(
   <StrictMode>

@@ -1,11 +1,17 @@
 {
   "toggleButtonLabel": "💬",
+  "sidebarLabel": "☰",
   "title": "Jenkins AI Assistant",
   "placeholder": "Type your message...",
   "noInputWarningMessage": "Please enter a message before sending.",
   "generatingMessage": "Generating...",
-  "clearChat": "Clear chat",
+  "clearChat": "Delete chat",
   "errorMessage": "Sorry, I had trouble responding.",
   "noResponseMessage": "No response",
-  "sendMessage": "Send"
+  "sendMessage": "Send",
+  "welcomeMessage": "Welcome to Jenkins AI Assistant",
+  "welcomeDescription": "Create a new chat to get started",
+  "createNewChat": "Start Chatting!",
+  "sidebarCreateNewChat": "+ Create New Chat",
+  "sidebarNoActiveChats": "No active chats yet"
 }

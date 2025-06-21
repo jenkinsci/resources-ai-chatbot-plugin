@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { type Message } from '../model/Message';
-import { fetchChatbotReply } from '../api/chatbot';
+import { type ChatSession } from '../model/ChatSession';
+import { fetchChatbotReply, createChatSession, deleteChatSession } from '../api/chatbot';
 import { Header } from './Header';
 import { Messages } from './Messages';
+import { Sidebar } from './Sidebar';
 import { Input } from './Input';
 import { chatbotStyles } from '../styles/styles';
 import { getChatbotText } from '../data/chatbotTexts';
+import { loadChatbotSessions, loadChatbotLastSessionId } from '../utils/chatbotStorage';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -14,44 +17,163 @@ import { v4 as uuidv4 } from 'uuid';
 export const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(loadChatbotLastSessionId);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   /**
-   * Messages shown in the chat.
-   * Initialized from sessionStorage to keep messages between refreshes.
+   * Saving the chat sessions in the session storage only 
+   * when the component umounts to avoid continuos savings.
    */
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = sessionStorage.getItem('chatbot-messages');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [loading, setLoading] = useState(false);
-
   useEffect(() => {
-    sessionStorage.setItem('chatbot-messages', JSON.stringify(messages));
-  }, [messages]);
+    const handleBeforeUnload = () => {
+      sessionStorage.setItem('chatbot-sessions', JSON.stringify(sessions));
+      sessionStorage.setItem('chatbot-last-session-id', currentSessionId || '');
+    };
 
-  const clearMessages = () => {
-    setMessages([]);
-    // Once backend is ready, add logic to clear history chat
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [sessions, currentSessionId]);
+
+  /**
+   * Returns the messages of a chat session.
+   * @param sessionId The sessionId of the chat session.
+   * @returns The messages of the chat with id equals to sessionId
+   */
+  const getSessionMessages = (sessionId: string | null)  => {
+    if (currentSessionId === null){
+      console.error("No current session")
+      return []
+    }
+    const chatSession = sessions.find(item => item.id === sessionId);
+
+    if (chatSession){
+      return chatSession.messages;
+    }
+    
+    console.error(`No session found with sessionId ${sessionId}`)
+    return []
+  }
+
+  /**
+   * Handles the delete process of a chat session.
+   */
+  const handleDeleteChat = async () => {
+    if (currentSessionId === null){
+      console.error("No current session active")
+      return
+    }
+
+    await deleteChatSession(currentSessionId);
+    const updatedSessions = sessions.filter(s => s.id !== currentSessionId);
+    setSessions(updatedSessions)
+    if (updatedSessions.length === 0) {
+      setCurrentSessionId(null);
+    } else {
+      setCurrentSessionId(updatedSessions[0].id)
+    }
   };
 
+  /**
+   * Handles the creation process of a chat session.
+   */
+  const handleNewChat = async () => {
+    const id = await createChatSession();
+    
+    if (id === "") {
+      console.error("Add error showage for a couple of seconds.")
+      return
+    }
+    const newSession: ChatSession = { id, messages: [], createdAt: new Date().toISOString(), isLoading: false };
+    setSessions(prev => [newSession, ...prev]);
+    setCurrentSessionId(id);
+  };
+
+  const appendMessageToCurrentSession = (message: Message) => {
+    setSessions(prevSessions =>
+      prevSessions.map(session =>
+        session.id === currentSessionId
+          ? { ...session, messages: [...session.messages, message] }
+          : session
+      )
+    );
+  };
+
+  /**
+   * Handles the send process in a chat session.
+   */
   const sendMessage = async () => {
     const trimmed = input.trim();
-    if (!trimmed) return;
-
+    if (!trimmed || !currentSessionId) {
+      console.error("No sessions available.")
+      return;
+    }
+    if (!trimmed) {
+      console.error("Empty message provided.")
+      return;
+    }
     const userMessage: Message = {
       id: uuidv4(),
       sender: 'user',
       text: trimmed,
     };
 
-    setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setLoading(true);
+    setSessions(prevSessions =>
+      prevSessions.map(session =>
+        session.id === currentSessionId
+          ? { ...session, isLoading: true }
+          : session
+      )
+    );
+    appendMessageToCurrentSession(userMessage);
 
-    const botReply = await fetchChatbotReply(trimmed);
-    setLoading(false);
-    setMessages(prev => [...prev, botReply]);
+    const botReply = await fetchChatbotReply(currentSessionId!, trimmed);
+    setSessions(prevSessions =>
+      prevSessions.map(session =>
+        session.id === currentSessionId
+          ? { ...session, isLoading: false }
+          : session
+      )
+    );
+    appendMessageToCurrentSession(botReply);
   };
+
+  const getChatLoading = () : boolean => {
+    const currentChat = sessions.find(chat => chat.id === currentSessionId);
+
+    return currentChat ? currentChat.isLoading : false;
+  }
+
+  const openSideBar = () => {
+    setIsSidebarOpen(!isSidebarOpen)
+  }
+
+  const onSwitchChat = (chatSessionId: string) => {
+    openSideBar();
+    setCurrentSessionId(chatSessionId)
+  }
+
+  const getWelcomePage = () => {
+    return(
+      <div
+        style={chatbotStyles.containerWelcomePage}
+      >
+        <div style={chatbotStyles.boxWelcomePage}>
+          <h2 style={chatbotStyles.welcomePageH2}>{getChatbotText("welcomeMessage")}</h2>
+          <p>{getChatbotText("welcomeDescription")}</p>
+          <button style={chatbotStyles.welcomePageNewChatButton}
+          onClick={handleNewChat}
+          >
+            {getChatbotText("createNewChat")}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -64,11 +186,25 @@ export const Chatbot = () => {
 
       {isOpen && (
         <div
-           style={chatbotStyles.container}
+           style={{...chatbotStyles.container}}
         >
-          <Header clearMessages={clearMessages} />
-          <Messages messages={messages} loading={loading} />
-          <Input input={input} setInput={setInput} onSend={sendMessage} />
+          {isSidebarOpen && (
+            <Sidebar
+              onClose={() => setIsSidebarOpen(false)}
+              onCreateChat={handleNewChat}
+              onSwitchChat={onSwitchChat}
+              chatList={sessions}
+              activeChatId={currentSessionId}
+            />
+          )}
+          <Header isChat={currentSessionId !== null} openSideBar={openSideBar} clearMessages={handleDeleteChat} />
+          {(currentSessionId !== null) ?
+            <>
+              <Messages messages={getSessionMessages(currentSessionId)} loading={getChatLoading()} />
+              <Input input={input} setInput={setInput} onSend={sendMessage} />
+            </>
+            : getWelcomePage()
+          }
         </div>
       )}
     </>

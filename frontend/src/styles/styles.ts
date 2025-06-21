@@ -7,6 +7,7 @@ import { type CSSProperties } from 'react';
  */
 export const chatbotStyles = {  
   // Chatbot
+
   toggleButton: {
     position: 'fixed',
     bottom: '3rem',
@@ -37,7 +38,33 @@ export const chatbotStyles = {
     boxShadow: '0 0 20px rgba(0,0,0,0.2)',
   } as CSSProperties,
 
+  containerWelcomePage: {
+    height: '70%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+  } as CSSProperties,
+
+  boxWelcomePage: { 
+    textAlign: 'center', 
+    color: '#888' 
+  } as CSSProperties,
+
+  welcomePageH2: { 
+    marginBottom: '0.5rem' 
+  } as CSSProperties,
+
+  welcomePageNewChatButton: {
+    backgroundColor:"#0073e6",
+    padding: "1rem",
+    borderRadius: "1rem",
+    color: '#ffffff',
+    cursor: 'pointer',
+    border: 0
+  } as CSSProperties,
+
   // Input
+
   inputContainer: {
     padding: '0.75rem',
     borderTop: '1px solid #eee',
@@ -93,7 +120,14 @@ export const chatbotStyles = {
     color: 'black',
     cursor: 'pointer',
     fontSize: '14px',
-  },
+  } as CSSProperties,
+
+  openSidebarButton: {
+    background: 'transparent',
+    border: 'none',
+    fontSize: '1.5rem',
+    cursor: 'pointer',
+  } as CSSProperties,
 
   // Messages
 
@@ -121,5 +155,71 @@ export const chatbotStyles = {
     maxWidth: '80%',
     wordWrap: 'break-word',
     fontSize: '1rem'
+  } as CSSProperties),
+
+  // Sidebar
+
+  sidebarContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '96%',
+    width: '250px',
+    backgroundColor: 'rgba(240, 240, 240, 0.9)',
+    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+    zIndex: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    padding: '1rem',
+  } as CSSProperties,
+
+  sidebarCloseButtonContainer: { 
+    display: 'flex', 
+    justifyContent: 'flex-end' 
+  } as CSSProperties,
+
+  sidebarCloseButton: {
+    background: 'none',
+    border: 'none',
+    fontSize: '1.5rem',
+    cursor: 'pointer',
+    color: '#555',
+    marginBottom: '1rem'
+  } as CSSProperties,
+
+  sidebarCreateNewChatButton: {
+    marginBottom: '1rem',
+    padding: '0.75rem',
+    borderRadius: '0.5rem',
+    border: 'none',
+    backgroundColor: '#0073e6',
+    color: '#fff',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    fontWeight: '500'
+  } as CSSProperties,
+
+  sidebarListChatsContainer: { 
+    overflowY: 'auto', 
+    flex: 1 
+  } as CSSProperties,
+
+  sidebarNoChatsText: { 
+    color: '#666', 
+    textAlign: 'center' 
+  } as CSSProperties,
+
+  sidebarChatContainer: (isActive: boolean): CSSProperties => ({
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0.75rem',
+    marginBottom: '0.5rem',
+    borderRadius: '0.5rem',
+    backgroundColor: isActive ? '#d0e7ff' : '#fff',
+    borderLeft: isActive ? '4px solid #0073e6' : '4px solid transparent',
+    fontWeight: isActive ? 'bold' : 'normal',
+    color: isActive ? '#0073e6' : '#333',
+    cursor: 'pointer',
+    transition: 'background 0.2s, border-left 0.2s',
   } as CSSProperties),
 };
