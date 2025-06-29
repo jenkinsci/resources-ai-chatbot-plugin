@@ -61,4 +61,4 @@ class LlamaCppProvider(LLMProvider):
             logger.error("Unexpected error during LLM generation: %s", e)
             return "Sorry, something went wrong during generation."
 
-llm_provider = LlamaCppProvider()
+llm_provider = None if CONFIG["is_test_mode"] else LlamaCppProvider()

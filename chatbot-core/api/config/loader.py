@@ -6,6 +6,9 @@ Loads config.yml into a dictionary and exposes it as CONFIG.
 
 import os
 import yaml
+from utils import LoggerFactory
+
+logger = LoggerFactory.instance().get_logger("api")
 
 def load_config():
     """
@@ -14,8 +17,20 @@ def load_config():
     Returns:
         dict: Parsed configuration values.
     """
-    config_path = os.path.join(os.path.dirname(__file__), "config.yml")
+    file_dir = os.path.dirname(__file__)
+    config_dev_path = os.path.join(file_dir, "config.yml")
+    config_testing_path = os.path.join(file_dir, "config-testing.yml")
+
+    if os.path.isfile(config_testing_path):
+        logger.info("#### Loading test configuration ####")
+        config_path = config_testing_path
+    else:
+        logger.info("#### Loading dev configuration ####")
+        config_path = config_dev_path
+
     with open(config_path, "r", encoding='utf-8') as f:
-        return yaml.safe_load(f)
+        config = yaml.safe_load(f)
+
+    return config
 
 CONFIG = load_config()

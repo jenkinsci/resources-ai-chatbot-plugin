@@ -26,6 +26,9 @@ chatbot-core/data/embeddings/*
 # Local model
 chatbot-core/api/models/**/*.gguf
 
+# Coverage report
+chatbot-core/.coverage
+
 # Built frontend files
 src/main/webapp/static/*
 !src/main/webapp/static/.gitkeep

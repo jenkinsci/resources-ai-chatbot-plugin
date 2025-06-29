@@ -1,7 +1,7 @@
 api:
   prefix: "/api/chatbot"
 
-is_test_mode: false
+is_test_mode: true
 
 llm:
   model_path: "api/models/mistral/mistral-7b-instruct-v0.2.Q4_K_M.gguf"

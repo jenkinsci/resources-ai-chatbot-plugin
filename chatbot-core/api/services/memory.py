@@ -64,3 +64,8 @@ def session_exists(session_id: str) -> bool:
     with _lock:
         exists = session_id in _sessions
     return exists
+
+def reset_sessions():
+    """Helper fucntion to clear all sessions. Useful for testing."""
+    with _lock:
+        _sessions.clear()
