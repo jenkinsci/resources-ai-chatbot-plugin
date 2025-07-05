@@ -1,10 +1,5 @@
 name: Tests
 
-permissions:
-  contents: write
-  checks: write
-  pull-requests: write
-
 on:
   pull_request:
     branches:
@@ -37,7 +32,3 @@ jobs:
           PYTHONPATH: ${{github.workspace}}/chatbot-core
         run: |
           pytest --cov-report "xml:coverage.xml" --cov=. tests/unit
-      - name: Pytest coverage comment
-        uses: MishaKav/pytest-coverage-comment@main
-        with:
-          pytest-xml-coverage-path: chatbot-core/coverage.xml
