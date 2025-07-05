@@ -61,7 +61,6 @@ def embed_chunks(logger):
     """
     chunks = collect_all_chunks(logger)
     logger.info("Collected %d chunks.", len(chunks))
-    texts = [chunk["chunk_text"] for chunk in chunks]
     metadata = []
     for chunk in chunks:
         chunk_id = chunk.get("id")
@@ -83,6 +82,7 @@ def embed_chunks(logger):
             "code_blocks": code_blocks
         })
 
+    texts = [el["chunk_text"] for el in metadata]
     model = load_embedding_model(MODEL_NAME, logger)
     vectors = embed_documents(texts, model, logger)
 

@@ -31,6 +31,13 @@ def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
     Returns:
         faiss.IndexIVFFlat: A trained FAISS IVF index with added vectors.
     """
+    if not isinstance(vectors, np.ndarray):
+        raise TypeError("Vectors must be an instance of numpy.ndarray.")
+    if vectors.ndim != 2:
+        raise ValueError(f"Vectors must be 2D, got shape {vectors.shape}.")
+    if vectors.dtype != np.float32:
+        raise TypeError(f"Vectors must be float32, got dtype {vectors.dtype}.")
+
     d = vectors.shape[1]
     quantizer = faiss.IndexFlatL2(d)
     index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_L2)

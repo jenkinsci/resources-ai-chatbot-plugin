@@ -25,7 +25,7 @@ def get_relevant_documents(query, model, logger, top_k=5):
     index, metadata = load_vector_index(logger)
 
     if not index or not metadata:
-        return []
+        return [], []
 
     query_vector = embed_documents([query], model, logger)[0]
     data, scores = search_index(query_vector, index, metadata, logger, top_k)

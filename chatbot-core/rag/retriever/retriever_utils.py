@@ -47,6 +47,14 @@ def search_index(query_vector, index, metadata, logger, top_k):
         logger.warning("FAISS index is empty. No search will be performed.")
         return [], []
 
+    if index.ntotal != len(metadata):
+        logger.warning(
+            "Index contains %d vectors but metadata has %d entries." \
+            " Some results may be missing or inconsistent.",
+            index.ntotal,
+            len(metadata)
+        )
+
     query_vector = np.array(query_vector).astype("float32").reshape(1, -1)
     distances, indices = index.search(query_vector, top_k)
     results = []

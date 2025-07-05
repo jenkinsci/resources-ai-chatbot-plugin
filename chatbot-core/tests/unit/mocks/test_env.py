@@ -2,6 +2,7 @@
 
 import pytest
 from fastapi import FastAPI
+from sentence_transformers import SentenceTransformer
 from api.routes.chatbot import router
 
 @pytest.fixture
@@ -55,3 +56,52 @@ def mock_delete_session(mocker):
 def mock_get_chatbot_reply(mocker):
     """Mock the get_chatbot_reply function."""
     return mocker.patch("api.routes.chatbot.get_chatbot_reply")
+
+@pytest.fixture
+def mock_sentence_transformer(mocker):
+    """Mock the SentenceTransformer class constructor."""
+    return mocker.patch("rag.embedding.embedding_utils.SentenceTransformer")
+
+@pytest.fixture
+def mock_model_encode(mocker):
+    """Fixture to create a mock SentenceTransformer model with encode function."""
+    mock_model = mocker.create_autospec(SentenceTransformer)
+    return mock_model
+
+@pytest.fixture
+def mock_collect_all_chunks(mocker):
+    """Mock collect_all_chunks function."""
+    return mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+
+@pytest.fixture
+def mock_load_embedding_model(mocker):
+    """Mock load_embedding_model function."""
+    return mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+
+@pytest.fixture
+def mock_embed_documents(mocker):
+    """Mock embed_documents function."""
+    return mocker.patch("rag.embedding.embed_chunks.embed_documents")
+
+@pytest.fixture
+def patched_chunk_files(mocker):
+    """Fixture to patch CHUNK_FILES."""
+    return mocker.patch(
+        "rag.embedding.embed_chunks.CHUNK_FILES",
+        ["file1.json", "file2.json", "file3.json"]
+    )
+
+@pytest.fixture
+def mock_load_chunks_from_file(mocker):
+    """Mock load_chunks_from_file function."""
+    return mocker.patch("rag.embedding.embed_chunks.load_chunks_from_file")
+
+@pytest.fixture
+def mock_save_faiss_index(mocker):
+    """Mock save_faiss_index function."""
+    return mocker.patch("rag.vectorstore.store_embeddings.save_faiss_index")
+
+@pytest.fixture
+def mock_save_metadata(mocker):
+    """Mock save_metadata function."""
+    return mocker.patch("rag.vectorstore.store_embeddings.save_metadata")
