@@ -31,4 +31,8 @@ jobs:
         env:
           PYTHONPATH: ${{github.workspace}}/chatbot-core
         run: |
-          pytest tests/unit
+          pytest --cov-report "xml:coverage.xml" --cov=. tests/unit
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-xml-coverage-path: ./coverage.xml
