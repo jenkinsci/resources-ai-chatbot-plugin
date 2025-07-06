@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from "../config";
 
 /**
  * Generic utility to call chatbot API endpoints.
@@ -13,7 +13,7 @@ export const callChatbotApi = async <T>(
   endpoint: string,
   options: RequestInit,
   fallbackErrorValue: T,
-  timeoutMs: number
+  timeoutMs: number,
 ): Promise<T> => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -31,9 +31,11 @@ export const callChatbotApi = async <T>(
 
     return await response.json();
   } catch (error: unknown) {
-    if (error instanceof DOMException && error.name == 'AbortError'){
-      console.error(`API request to ${endpoint} timed out aftr ${timeoutMs}ms.`);
-    }else{
+    if (error instanceof DOMException && error.name == "AbortError") {
+      console.error(
+        `API request to ${endpoint} timed out aftr ${timeoutMs}ms.`,
+      );
+    } else {
       console.error(`API error calling ${endpoint}:`, error);
     }
     return fallbackErrorValue;

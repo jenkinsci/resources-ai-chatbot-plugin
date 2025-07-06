@@ -1,5 +1,5 @@
-import { getChatbotText } from '../data/chatbotTexts';
-import { chatbotStyles } from '../styles/styles';
+import { getChatbotText } from "../data/chatbotTexts";
+import { chatbotStyles } from "../styles/styles";
 
 /**
  * Props for the Header component.
@@ -15,11 +15,13 @@ interface HeaderProps {
  * a button to clear the current conversation. It receives a callback to handle
  * message clearing, typically triggered by user interaction.
  */
-export const Header = ({ currentSessionId, clearMessages, openSideBar }: HeaderProps) => {
-  return(
-  <div
-    style={chatbotStyles.chatbotHeader}
-  >
+export const Header = ({
+  currentSessionId,
+  clearMessages,
+  openSideBar,
+}: HeaderProps) => {
+  return (
+    <div style={chatbotStyles.chatbotHeader}>
       <button
         onClick={openSideBar}
         style={chatbotStyles.openSidebarButton}
@@ -27,13 +29,14 @@ export const Header = ({ currentSessionId, clearMessages, openSideBar }: HeaderP
       >
         {getChatbotText("sidebarLabel")}
       </button>
-      {(currentSessionId !== null) && 
-      <button
-        onClick={() => clearMessages(currentSessionId)}
-        style={chatbotStyles.clearButton}
-      >
-        {getChatbotText("clearChat")}
-      </button>
-      }
-  </div>
-)};
+      {currentSessionId !== null && (
+        <button
+          onClick={() => clearMessages(currentSessionId)}
+          style={chatbotStyles.clearButton}
+        >
+          {getChatbotText("clearChat")}
+        </button>
+      )}
+    </div>
+  );
+};

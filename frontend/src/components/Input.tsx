@@ -1,6 +1,6 @@
-import React from 'react';
-import { getChatbotText } from '../data/chatbotTexts';
-import { chatbotStyles } from '../styles/styles';
+import React from "react";
+import { getChatbotText } from "../data/chatbotTexts";
+import { chatbotStyles } from "../styles/styles";
 
 /**
  * Props for the Input component.
@@ -18,7 +18,7 @@ interface InputProps {
  */
 export const Input = ({ input, setInput, onSend }: InputProps) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       onSend();
     }
@@ -28,8 +28,8 @@ export const Input = ({ input, setInput, onSend }: InputProps) => {
     <div style={chatbotStyles.inputContainer}>
       <textarea
         value={input}
-        placeholder={getChatbotText('placeholder')}
-        onChange={e => setInput(e.target.value)}
+        placeholder={getChatbotText("placeholder")}
+        onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         style={chatbotStyles.input}
       />
@@ -38,7 +38,7 @@ export const Input = ({ input, setInput, onSend }: InputProps) => {
         disabled={!input.trim()}
         style={chatbotStyles.sendButton(input)}
       >
-        {getChatbotText('sendMessage')}
+        {getChatbotText("sendMessage")}
       </button>
     </div>
   );

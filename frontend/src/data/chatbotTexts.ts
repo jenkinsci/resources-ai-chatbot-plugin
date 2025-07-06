@@ -1,4 +1,4 @@
-import rawTexts from './chatbotTexts.json';
+import rawTexts from "./chatbotTexts.json";
 
 /**
  * Retrieves a text from the chatbotTexts JSON file.
@@ -7,5 +7,5 @@ import rawTexts from './chatbotTexts.json';
  * @returns The associated message string
  */
 export const getChatbotText = (key: keyof typeof rawTexts): string => {
-    return rawTexts[key];
+  return rawTexts[key];
 };

@@ -1,4 +1,4 @@
-import { type ChatSession } from '../model/ChatSession';
+import { type ChatSession } from "../model/ChatSession";
 
 /**
  * Loads the saved chatbot sessions from sessionStorage.
@@ -10,7 +10,7 @@ import { type ChatSession } from '../model/ChatSession';
  * @returns {ChatSession[]} An array of chat sessions, or an empty array if none are found or parsing fails.
  */
 export const loadChatbotSessions = (): ChatSession[] => {
-  const saved = sessionStorage.getItem('chatbot-sessions');
+  const saved = sessionStorage.getItem("chatbot-sessions");
   if (saved && saved.length > 0) {
     try {
       return JSON.parse(saved);
@@ -32,16 +32,21 @@ export const loadChatbotSessions = (): ChatSession[] => {
  * @returns {string | null} The last active session ID, the first available session ID, or null if no sessions exist.
  */
 export const loadChatbotLastSessionId = (): string | null => {
-    const sessions: ChatSession[] = loadChatbotSessions();
-    if (sessions && sessions.length > 0){
-        const lastSessionId = sessionStorage.getItem('chatbot-last-session-id');
+  const sessions: ChatSession[] = loadChatbotSessions();
+  if (sessions && sessions.length > 0) {
+    const lastSessionId = sessionStorage.getItem("chatbot-last-session-id");
 
-        if (lastSessionId && sessions.find(session => session.id === lastSessionId)) {
-            return lastSessionId;
-        }
-        console.warn("No last session id found: setting the current session to the first item.");
-        return sessions[0].id;
+    if (
+      lastSessionId &&
+      sessions.find((session) => session.id === lastSessionId)
+    ) {
+      return lastSessionId;
     }
+    console.warn(
+      "No last session id found: setting the current session to the first item.",
+    );
+    return sessions[0].id;
+  }
 
-    return null;
+  return null;
 };
