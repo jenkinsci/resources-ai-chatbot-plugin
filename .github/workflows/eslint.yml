@@ -1,4 +1,4 @@
-name: Lint Frontend
+name: Static Analysis Frontend
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   lint:
-    name: Run ESLint for Frontend
+    name: Run ESLint and Prettier
     runs-on: ubuntu-latest
 
     defaults:
@@ -31,3 +31,6 @@ jobs:
 
       - name: Run linter
         run: npm run lint
+      
+      - name: Check Prettier formatting
+        run: npm run format:check
