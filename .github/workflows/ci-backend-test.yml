@@ -26,9 +26,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Run tests with pytest
+      - name: Run unit tests
         working-directory: chatbot-core
         env:
           PYTHONPATH: ${{github.workspace}}/chatbot-core
         run: |
           pytest tests/unit
+      - name: Run integration tests
+        working-directory: chatbot-core
+        env:
+          PYTHONPATH: ${{github.workspace}}/chatbot-core
+        run: |
+          pytest tests/integration
