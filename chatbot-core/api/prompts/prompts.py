@@ -118,8 +118,8 @@ Decomposed questions:
 RETRIEVER_AGENT_PROMPT = """
 You are JenkinsBot, an expert assistant for Jenkins and its ecosystem.
 You have access to the following tools to retrieve relevant information:
-1. search_jenkins_docs(query) - Retrieves information from official Jenkins documentation. Use this for core Jenkins concepts, features, configuration, and usage.
-2. search_plugin_docs(query, plugin_name) - Retrieves information from official documentation related to a specific Jenkins plugin. Use this when the user query involves a known or suspected plugin. If the plugin name is unclear or unknown, pass null for the plugin_name.
+1. search_jenkins_docs(query, keywords) - Retrieves information from official Jenkins documentation. Use this for core Jenkins concepts, features, configuration, and usage. You must also extract appropriate keywords from the query to fill the keywords parameter.
+2. search_plugin_docs(query, keywords, plugin_name) - Retrieves information from official documentation related to a specific Jenkins plugin. Use this when the user query involves a known or suspected plugin. If the plugin name is unclear or unknown, pass null for the plugin_name. You must also extract appropriate keywords from the query to fill the keywords parameter.
 3. search_stackoverflow_threads(query) - Retrieves discussions from StackOverflow related to Jenkins issues. Ideal for troubleshooting specific errors, unexpected behavior, or edge cases.
 4. search_community_threads(query) - Retrieves Jenkins-related posts from community forums. Also ideal for troubleshooting, user workarounds, or undocumented use cases.
 
@@ -143,8 +143,20 @@ Why does my Slack plugin stop working after a pipeline failure?
 
 Tool calls:
 [
-  {{"tool": "search_plugin_docs", "params": {{"plugin_name": "slack", "query": "jenkins slack plugin stops working after pipeline failure"}}}},
-  {{"tool": "search_stackoverflow_threads", "params": {{"query": "jenkins slack plugin stops working after pipeline failure"}}}}
+  {{
+    "tool": "search_plugin_docs",
+    "params": {{
+      "query": "jenkins slack plugin stops working after pipeline failure",
+      "keywords": "slack plugin pipeline failure",
+      "plugin_name": "slack"
+    }}
+  }},
+  {{
+    "tool": "search_stackoverflow_threads",
+    "params": {{
+      "query": "jenkins slack plugin stops working after pipeline failure"
+    }}
+  }}
 ]
 ###
 Here is another example:
@@ -154,9 +166,26 @@ After upgrading Jenkins, I get an error about a missing dependency in one of my 
 
 Tool calls:
 [
-  {{"tool": "search_plugin_docs", "params": {{"plugin_name": null, "query": "jenkins plugin missing dependency error after upgrade"}}}},
-  {{"tool": "search_stackoverflow_threads", "params": {{"query": "jenkins plugin dependency error after upgrade"}}}},
-  {{"tool": "search_community_threads", "params": {{"query": "jenkins plugin dependency resolution failure after upgrade"}}}}
+  {{
+    "tool": "search_plugin_docs",
+    "params": {{
+      "query": "jenkins plugin missing dependency error after upgrade",
+      "keywords": "plugin missing dependency upgrade",
+      "plugin_name": null
+    }}
+  }},
+  {{
+    "tool": "search_stackoverflow_threads",
+    "params": {{
+      "query": "jenkins plugin dependency error after upgrade"
+    }}
+  }},
+  {{
+    "tool": "search_community_threads",
+    "params": {{
+      "query": "jenkins plugin dependency resolution failure after upgrade"
+    }}
+  }}
 ]
 
 ###

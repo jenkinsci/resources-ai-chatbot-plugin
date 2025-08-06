@@ -11,6 +11,7 @@ def test_get_relevant_documents_empty_query(mocker):
         query="   ",
         model=model,
         logger=mock_logger,
+        source_name="plugins",
         top_k=3
     )
 
@@ -33,6 +34,7 @@ def test_get_relevant_documents_no_index(mocker):
         query="some valid query",
         model=model,
         logger=mock_logger,
+        source_name="plugins",
         top_k=3
     )
 
@@ -54,6 +56,7 @@ def test_get_relevant_documents_no_metadata(mocker):
         query="some valid query",
         model=model,
         logger=mock_logger,
+        source_name="plugins",
         top_k=3
     )
 
@@ -89,6 +92,7 @@ def test_get_relevant_documents_success(mocker):
         query=query,
         model=model,
         logger=mock_logger,
+        source_name="plugins",
         top_k=1
     )
 

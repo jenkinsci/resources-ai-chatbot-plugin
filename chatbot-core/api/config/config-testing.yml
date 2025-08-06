@@ -6,6 +6,9 @@ is_test_mode: true
 llm:
   model_path: "api/models/mistral/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
   max_tokens: 512
+  max_tokens_query_classifier: 5
+  max_tokens_retriever_agent: 35
+  max_tokens_query_context_relevance: 50
   context_length: 2048
   threads: 8
   gpu_layers: 0
@@ -14,8 +17,18 @@ llm:
 retrieval:
   embedding_model_name: "sentence-transformers/all-MiniLM-L6-v2"
   top_k: 3
+  top_k_docs: 6
+  top_k_plugins: 5
+  top_k_semantic: 20
+  top_k_keyword: 20
+  semantic_threshold: 1.5
+  keyword_threshold: 2
   empty_context_message: "No context available."
   max_reformulate_iterations: 1
+
+tool_names:
+  plugins: "plugins"
+  jenkins_docs: "docs"
 
 cors:
   allowed_origins:

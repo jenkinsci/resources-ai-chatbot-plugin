@@ -11,8 +11,8 @@ from rag.vectorstore.vectorstore_utils import save_faiss_index, save_metadata
 from utils import LoggerFactory
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
-INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_index.idx")
-METADATA_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_metadata.pkl")
+INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "plugins_index.idx")
+METADATA_PATH = os.path.join(VECTOR_STORE_DIR, "plugins_metadata.pkl")
 
 N_LIST = 256
 N_PROBE = 20
