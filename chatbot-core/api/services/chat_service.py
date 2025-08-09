@@ -18,7 +18,8 @@ from api.prompts.prompts import (
 from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type
 from api.services.memory import get_session
 from api.models.embedding_model import EMBEDDING_MODEL
-from api.tools.utils import get_default_tools_call, TOOL_REGISTRY, validate_tool_calls
+from api.tools.tools import TOOL_REGISTRY
+from api.tools.utils import get_default_tools_call, validate_tool_calls, make_placeholder_replacer
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
 
@@ -292,7 +293,7 @@ def _get_query_context_relevance(query: str, context: str):
 
     return relevance_score
 
-
+# pylint: disable=duplicate-code
 def retrieve_context(user_input: str) -> str:
     """
     Retrieves the most relevant document chunks for a user query
@@ -309,6 +310,7 @@ def retrieve_context(user_input: str) -> str:
         user_input,
         EMBEDDING_MODEL,
         logger=logger,
+        source_name="plugins",
         top_k=retrieval_config["top_k"]
     )
     if not data_retrieved:
@@ -324,7 +326,7 @@ def retrieve_context(user_input: str) -> str:
             continue
         if text:
             code_iter = iter(item.get("code_blocks", []))
-            replace = make_placeholder_replacer(code_iter, item_id)
+            replace = make_placeholder_replacer(code_iter, item_id, logger)
             text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
 
             context_texts.append(text)
@@ -353,26 +355,6 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
         logger.error("LLM generation failed for prompt: %s. Error %s", prompt, e)
         return "Sorry, I'm having trouble generating a response right now."
 
-
-def make_placeholder_replacer(code_iter, item_id):
-    """
-    Returns a function to replace code block placeholders in retrieved text
-    with actual code snippets from the original document.
-
-    Args:
-        code_iter (iterator): Iterator over code snippets.
-        item_id (str): The ID of the document chunk (used for logging).
-
-    Returns:
-        Callable[[re.Match], str]: A function to replace placeholders.
-    """
-    def replace(_match):
-        try:
-            return next(code_iter)
-        except StopIteration:
-            logger.warning("More placeholders than code blocks in chunk with ID %s", item_id)
-            return "[MISSING_CODE]"
-    return replace
 
 def _extract_query_type(response: str) -> str:
     """

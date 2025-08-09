@@ -3,22 +3,89 @@ Definition of the tools avaialable to the Agent.
 """
 
 from typing import Optional
+from types import MappingProxyType
+from api.models.embedding_model import EMBEDDING_MODEL
+from api.tools.utils import (
+    filter_retrieved_data,
+    is_valid_plugin,
+    retrieve_documents,
+    extract_top_chunks
+)
+from api.config.loader import CONFIG
 
-def search_plugin_docs(query: str, plugin_name: Optional[str] = None) -> str:
-    """
-    Plugin Search tool
-    """
-    if query or plugin_name:
-        pass
-    return "Nothing relevant"
+retrieval_config = CONFIG["retrieval"]
 
-def search_jenkins_docs(query: str) -> str:
+def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[str] = None) -> str:
     """
-    Docs Search tool
+    Search tool for the plugin docs. Exploits both a sparse and dense search, resulting in a 
+    hybrid search.
+
+    Args:
+        query (str): The user query.
+        keywords (str): Keywords extracted from the user query.
+        plugin_name (Optional[str]): The refered plugin name in the query (if available).
+    
+    Returns:
+        str: The result of the research of the plugin search tool.
     """
-    if query:
-        pass
-    return "Nothing relevant"
+    source_name = CONFIG["tool_names"]["plugins"]
+    data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
+        retrieve_documents(
+            query=query,
+            keywords=keywords,
+            logger=logger,
+            source_name=source_name,
+            embedding_model=EMBEDDING_MODEL
+        )
+    )
+
+    if plugin_name and is_valid_plugin(plugin_name):
+        data_retrieved_semantic, data_retrieved_keyword = filter_retrieved_data(
+            data_retrieved_semantic,
+            data_retrieved_keyword,
+            plugin_name
+        )
+
+    return extract_top_chunks(
+        data_retrieved_semantic,
+        scores_semantic,
+        data_retrieved_keyword,
+        scores_keyword,
+        top_k=retrieval_config["top_k_plugins"],
+        logger=logger
+    )
+
+def search_jenkins_docs(query: str, keywords: str, logger) -> str:
+    """
+    Search tool for the Jenkins docs. Exploits both a sparse and dense search, resulting in a 
+    hybrid search.
+
+    Args:
+        query (str): The user query.
+        keywords (str): Keywords extracted from the user query.
+    
+    Returns:
+        str: The result of the research of the docs search tool.
+    """
+    source_name = CONFIG["tool_names"]["jenkins_docs"]
+    data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
+        retrieve_documents(
+            query=query,
+            keywords=keywords,
+            logger=logger,
+            source_name=source_name,
+            embedding_model=EMBEDDING_MODEL
+        )
+    )
+
+    return extract_top_chunks(
+        data_retrieved_semantic,
+        scores_semantic,
+        data_retrieved_keyword,
+        scores_keyword,
+        top_k=retrieval_config["top_k_docs"],
+        logger=logger
+    )
 
 def search_stackoverflow_threads(query: str) -> str:
     """
@@ -28,10 +95,43 @@ def search_stackoverflow_threads(query: str) -> str:
         pass
     return "Nothing relevant"
 
-def search_community_threads(query: str) -> str:
+def search_community_threads(query: str, keywords: str, logger) -> str:
     """
-    Community Threads Search tool
+    Search tool for the community discourse threads. Exploits both a sparse and 
+    dense search, resulting in a hybrid search. In this case a higher weight is 
+    given to the results that come from the semantic search
+
+    Args:
+        query (str): The user query.
+        keywords (str): Keywords extracted from the user query.
+    
+    Returns:
+        str: The result of the research of the docs search tool.
     """
-    if query:
-        pass
-    return "Nothing relevant"
+    source_name = CONFIG["tool_names"]["community_threads"]
+    data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
+        retrieve_documents(
+            query=query,
+            keywords=keywords,
+            logger=logger,
+            source_name=source_name,
+            embedding_model=EMBEDDING_MODEL
+        )
+    )
+
+    return extract_top_chunks(
+        data_retrieved_semantic,
+        scores_semantic,
+        data_retrieved_keyword,
+        scores_keyword,
+        top_k=retrieval_config["top_k_discourse"],
+        logger=logger,
+        semantic_weight=0.7
+    )
+
+TOOL_REGISTRY = MappingProxyType({
+    "search_plugin_docs": search_plugin_docs,
+    "search_jenkins_docs": search_jenkins_docs,
+    "search_stackoverflow_threads": search_stackoverflow_threads,
+    "search_community_threads": search_community_threads,
+})

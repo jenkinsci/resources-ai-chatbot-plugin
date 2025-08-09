@@ -11,10 +11,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROCESSED_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "processed")
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 CHUNK_FILES = [
-    "chunks_docs.json",
+    #"chunks_docs.json",
     "chunks_plugin_docs.json",
-    "chunks_discourse_docs.json",
-    "chunks_stackoverflow_threads.json"
+    #"chunks_discourse_docs.json",
+    #"chunks_stackoverflow_threads.json"
 ]
 
 def load_chunks_from_file(path, logger):

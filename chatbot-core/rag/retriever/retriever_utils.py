@@ -8,21 +8,26 @@ import numpy as np
 from rag.vectorstore.vectorstore_utils import load_faiss_index, load_metadata
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
-INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_index.idx")
-METADATA_PATH = os.path.join(VECTOR_STORE_DIR, "faiss_metadata.pkl")
 
-def load_vector_index(logger):
+def load_vector_index(logger, source_name):
     """
     Load the FAISS index and associated metadata from disk.
 
     Args:
         logger (logging.Logger): Logger for status and error messages.
+        source_name (str): The source name that we want to consider.
 
     Returns:
         Tuple[faiss.Index, list]: The FAISS index and corresponding metadata list.
     """
-    index = load_faiss_index(INDEX_PATH, logger)
-    metadata = load_metadata(METADATA_PATH, logger)
+    if not source_name.strip():
+        logger.warning("No source name provided. Returning empty results.")
+        return [], []
+    index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
+    metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+
+    index = load_faiss_index(index_path, logger)
+    metadata = load_metadata(metadata_path, logger)
 
     return index, metadata
 

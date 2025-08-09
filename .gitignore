@@ -18,6 +18,10 @@ chatbot-core/.env/
 # Data collection results
 chatbot-core/data/**/*.csv
 chatbot-core/data/**/*.json
+chatbot-core/data/**/*.jsonl
+
+# Exclude plugin_names file
+!chatbot-core/data/raw/plugin_names.json
 
 # Embeddings
 chatbot-core/data/embeddings/*
