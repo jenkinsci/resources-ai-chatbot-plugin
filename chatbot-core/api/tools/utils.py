@@ -295,7 +295,8 @@ def extract_top_chunks(
     data_retrieved_keyword,
     scores_keyword,
     top_k: int,
-    logger
+    logger,
+    semantic_weight: Optional[float] = 0.5
 ) -> str:
     """
     Combine semantic and keyword results, sort by scores, and extract top chunks.
@@ -307,13 +308,15 @@ def extract_top_chunks(
         scores_keyword: Corresponding keyword scores.
         top_k (int): Number of top results to extract.
         logger: Logger object.
+        semantic_weight (float): Importance weight assigned to the semantic score.
 
     Returns:
         str: Extracted content from top chunks.
     """
     scores = get_inverted_scores(
         [c["id"] for c in data_retrieved_semantic], scores_semantic,
-        [c["id"] for c in data_retrieved_keyword], scores_keyword
+        [c["id"] for c in data_retrieved_keyword], scores_keyword,
+        semantic_weight
     )
 
     combined_results = data_retrieved_semantic + data_retrieved_keyword

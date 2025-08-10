@@ -85,7 +85,8 @@ class BM25Indexer:
 indexer = BM25Indexer(
         index_configs=[
             {"index_name": "plugins", "file_path": "data/processed/chunks_plugin_docs.jsonl"},
-            {"index_name": "docs", "file_path": "data/processed/chunks_docs.jsonl"}
+            {"index_name": "docs", "file_path": "data/processed/chunks_docs.jsonl"},
+            {"index_name": "discourse", "file_path": "data/processed/chunks_discourse_docs.jsonl"}
         ],
         logger= LoggerFactory.instance().get_logger("bm25indexer")
     )
