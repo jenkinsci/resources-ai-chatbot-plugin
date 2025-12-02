@@ -3,7 +3,7 @@ Chat service layer responsible for processing the requests forwarded by the cont
 """
 
 import re
-from typing import List, Optional
+from typing import List, Optional, AsyncGenerator
 import ast
 import json
 from api.models.llama_cpp_provider import llm_provider
@@ -59,6 +59,40 @@ def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
     memory.chat_memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)
+
+
+async def get_chatbot_reply_stream(session_id: str, user_input: str) -> AsyncGenerator[str, None]:
+    """
+    Streaming version of chatbot reply that yields tokens as they're generated.
+    
+    Args:
+        session_id (str): The unique ID for the chat session.
+        user_input (str): The latest user message.
+        
+    Yields:
+        str: Individual tokens as they're generated.
+    """
+    logger.info("Streaming message from session '%s'", session_id)
+    logger.info("Handling the user query: %s", user_input)
+
+    memory = get_session(session_id)
+    if memory is None:
+        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
+
+    context = retrieve_context(user_input)
+    logger.info("Context retrieved: %s", context)
+
+    prompt = build_prompt(user_input, context, memory)
+    logger.info("Generating streaming answer with prompt: %s", prompt)
+
+    full_reply = ""
+    async for token in generate_answer_stream(prompt):
+        full_reply += token
+        yield token
+
+    # Update memory after streaming is complete
+    memory.chat_memory.add_user_message(user_input)
+    memory.chat_memory.add_ai_message(full_reply)
 
 
 def get_chatbot_reply_new_architecture(session_id: str, user_input: str) -> ChatResponse:
@@ -354,6 +388,28 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
     except Exception as e: # pylint: disable=broad-exception-caught
         logger.error("LLM generation failed for prompt: %s. Error %s", prompt, e)
         return "Sorry, I'm having trouble generating a response right now."
+
+
+async def generate_answer_stream(prompt: str, max_tokens: Optional[int] = None) -> AsyncGenerator[str, None]:
+    """
+    Generates a streaming completion from the language model for the given prompt.
+
+    Args:
+        prompt (str): The full prompt to send to the LLM.
+        max_tokens (Optional[int]): Maximum tokens to generate.
+        
+    Yields:
+        str: Individual tokens as they're generated.
+    """
+    try:
+        async for token in llm_provider.generate_stream(
+            prompt=prompt,
+            max_tokens=max_tokens or llm_config["max_tokens"]
+        ):
+            yield token
+    except Exception as e:
+        logger.error("LLM streaming generation failed for prompt: %s. Error %s", prompt, e)
+        yield "Sorry, I'm having trouble generating a response right now."
 
 
 def _extract_query_type(response: str) -> str:
