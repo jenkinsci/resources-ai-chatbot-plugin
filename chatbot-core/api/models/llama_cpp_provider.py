@@ -8,10 +8,12 @@ on quantized models (GGUF format).
 """
 
 from threading import Lock
+from typing import AsyncGenerator
 from llama_cpp import Llama
 from api.config.loader import CONFIG
 from api.models.llm_provider import LLMProvider
 from utils import LoggerFactory
+import asyncio
 
 llm_config = CONFIG["llm"]
 logger = LoggerFactory.instance().get_logger("llm")
@@ -60,5 +62,45 @@ class LlamaCppProvider(LLMProvider):
         except Exception as e: # pylint: disable=broad-exception-caught
             logger.error("Unexpected error during LLM generation: %s", e)
             return "Sorry, something went wrong during generation."
+
+    async def generate_stream(self, prompt: str, max_tokens: int) -> AsyncGenerator[str, None]:
+        """
+        Generate a streaming response from the model given a prompt.
+
+        Args:
+            prompt (str): Prompt to feed into the model.
+            max_tokens (int): Maximum number of tokens to generate.
+
+        Yields:
+            str: Individual tokens as they're generated.
+        """
+        try:
+            def _stream_generator():
+                with self.lock:
+                    return self.llm(
+                        prompt=prompt,
+                        max_tokens=max_tokens,
+                        echo=False,
+                        stream=True
+                    )
+            
+            # Run in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            stream = await loop.run_in_executor(None, _stream_generator)
+            
+            for chunk in stream:
+                if "choices" in chunk and len(chunk["choices"]) > 0:
+                    delta = chunk["choices"][0].get("delta", {})
+                    if "content" in delta:
+                        yield delta["content"]
+                    elif "text" in chunk["choices"][0]:
+                        yield chunk["choices"][0]["text"]
+                        
+        except ValueError as e:
+            logger.error("Invalid model configuration: %s", e)
+            yield "Sorry, model configuration error."
+        except Exception as e:
+            logger.error("Unexpected error during LLM streaming: %s", e)
+            yield "Sorry, something went wrong during generation."
 
 llm_provider = None if CONFIG["is_test_mode"] else LlamaCppProvider()

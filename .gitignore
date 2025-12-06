@@ -40,6 +40,17 @@ logs/*
 src/main/webapp/static/*
 !src/main/webapp/static/.gitkeep
 
+# Test scripts and logs (setup helpers)
+test_setup.sh
+test_api.py
+test_websocket.py
+test_websocket_simple.py
+test_streaming_direct.py
+websocket_demo.html
+api.log
+websocket_test.log
+server.log
+
 # Eclipse project files
 .settings
 .classpath
