@@ -15,8 +15,9 @@ from api.prompts.prompts import (
     RETRIEVER_AGENT_PROMPT,
     CONTEXT_RELEVANCE_PROMPT
 )
-from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type
+from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type, FileAttachment
 from api.services.memory import get_session
+from api.services.file_service import format_file_context
 from api.models.embedding_model import EMBEDDING_MODEL
 from api.tools.tools import TOOL_REGISTRY
 from api.tools.utils import get_default_tools_call, validate_tool_calls, make_placeholder_replacer
@@ -28,7 +29,11 @@ llm_config = CONFIG["llm"]
 retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 
-def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
+def get_chatbot_reply(
+    session_id: str,
+    user_input: str,
+    files: Optional[List[FileAttachment]] = None
+) -> ChatResponse:
     """
     Main chatbot entry point. Retrieves context, constructs a prompt with memory,
     and generates an LLM response. Also updates the memory with the latest exchange.
@@ -36,12 +41,16 @@ def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
     Args:
         session_id (str): The unique ID for the chat session.
         user_input (str): The latest user message.
+        files (Optional[List[FileAttachment]]): Optional list of file attachments.
 
     Returns:
         ChatResponse: The generated assistant response.
     """
     logger.info("New message from session '%s'", session_id)
     logger.info("Handling the user query: %s", user_input)
+    
+    if files:
+        logger.info("Processing %d uploaded file(s)", len(files))
 
     memory = get_session(session_id)
     if memory is None:
@@ -49,13 +58,28 @@ def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
+    
+    # Add file context if files are provided
+    file_context = ""
+    if files:
+        file_dicts = [file.model_dump() for file in files]
+        file_context = format_file_context(file_dicts)
+        if file_context:
+            logger.info("File context added: %d characters", len(file_context))
+            context = f"{context}\n\n[User Uploaded Files]\n{file_context}"
 
     prompt = build_prompt(user_input, context, memory)
 
     logger.info("Generating answer with prompt: %s", prompt)
     reply = generate_answer(prompt)
 
-    memory.chat_memory.add_user_message(user_input)
+    # Include file info in memory message
+    user_message = user_input
+    if files:
+        file_names = [f.filename for f in files]
+        user_message = f"{user_input}\n[Attached files: {', '.join(file_names)}]"
+    
+    memory.chat_memory.add_user_message(user_message)
     memory.chat_memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)

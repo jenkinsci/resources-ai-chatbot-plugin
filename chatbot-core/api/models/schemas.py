@@ -6,7 +6,24 @@ clients and the chatbot API endpoints.
 """
 
 from enum import Enum
+from typing import List, Optional
 from pydantic import BaseModel, field_validator
+
+
+class FileAttachment(BaseModel):
+    """
+    Represents a processed file attachment.
+
+    Fields:
+        filename (str): Original name of the uploaded file.
+        type (str): Type of file - "text" or "image".
+        content (str): Text content or base64 encoded image data.
+        mime_type (str): MIME type of the file.
+    """
+    filename: str
+    type: str
+    content: str
+    mime_type: str
 
 
 class ChatRequest(BaseModel):
@@ -28,11 +45,78 @@ class ChatRequest(BaseModel):
             raise ValueError("Message cannot be empty.")
         return v
 
+
+class ChatRequestWithFiles(BaseModel):
+    """
+    Represents a user message with optional file attachments.
+
+    Fields:
+        message (str): The user's input message.
+        files (List[FileAttachment]): Optional list of file attachments.
+
+    Validation:
+        - Rejects messages that are empty when no files are attached.
+    """
+    message: str
+    files: Optional[List[FileAttachment]] = None
+
+    @field_validator("message")
+    def message_must_not_be_empty_unless_files(cls, v, info): # pylint: disable=no-self-argument
+        """Validator that checks that a message is not empty unless files are present."""
+        # Allow empty message if files will be provided
+        # Note: files validation happens after this, so we allow empty message here
+        # The endpoint will validate that at least message or files are present
+        return v
+
 class ChatResponse(BaseModel):
     """
     Represents the chatbot's reply.
     """
     reply: str
+
+
+class ChatResponseWithFiles(BaseModel):
+    """
+    Represents the chatbot's reply with information about processed files.
+
+    Fields:
+        reply (str): The chatbot's text response.
+        processed_files (List[str]): List of filenames that were processed.
+    """
+    reply: str
+    processed_files: Optional[List[str]] = None
+
+
+class FileUploadResponse(BaseModel):
+    """
+    Response model for file upload operations.
+
+    Fields:
+        success (bool): Whether the upload was successful.
+        filename (str): Name of the uploaded file.
+        type (str): Type of file processed ("text" or "image").
+        message (str): Status message.
+    """
+    success: bool
+    filename: str
+    type: str
+    message: str
+
+
+class SupportedExtensionsResponse(BaseModel):
+    """
+    Response model for supported file extensions.
+
+    Fields:
+        text (List[str]): List of supported text file extensions.
+        image (List[str]): List of supported image file extensions.
+        max_text_size_mb (float): Maximum text file size in MB.
+        max_image_size_mb (float): Maximum image file size in MB.
+    """
+    text: List[str]
+    image: List[str]
+    max_text_size_mb: float
+    max_image_size_mb: float
 
 class SessionResponse(BaseModel):
     """

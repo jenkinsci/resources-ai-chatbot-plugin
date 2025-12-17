@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
-import { type Message } from "../model/Message";
+import { type Message, type FileAttachment } from "../model/Message";
 import { type ChatSession } from "../model/ChatSession";
 import {
   fetchChatbotReply,
+  fetchChatbotReplyWithFiles,
   createChatSession,
   deleteChatSession,
+  fetchSupportedExtensions,
+  validateFile,
+  fileToAttachment,
+  type SupportedExtensions,
 } from "../api/chatbot";
 import { Header } from "./Header";
 import { Messages } from "./Messages";
@@ -33,6 +38,22 @@ export const Chatbot = () => {
   const [sessionIdToDelete, setSessionIdToDelete] = useState<string | null>(
     null,
   );
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [supportedExtensions, setSupportedExtensions] =
+    useState<SupportedExtensions | null>(null);
+
+  /**
+   * Fetch supported file extensions on component mount.
+   */
+  useEffect(() => {
+    const loadSupportedExtensions = async () => {
+      const extensions = await fetchSupportedExtensions();
+      if (extensions) {
+        setSupportedExtensions(extensions);
+      }
+    };
+    loadSupportedExtensions();
+  }, []);
 
   /**
    * Saving the chat sessions in the session storage only
@@ -126,21 +147,32 @@ export const Chatbot = () => {
    */
   const sendMessage = async () => {
     const trimmed = input.trim();
-    if (!trimmed || !currentSessionId) {
+    const hasFiles = attachedFiles.length > 0;
+
+    if (!currentSessionId) {
       console.error("No sessions available.");
       return;
     }
-    if (!trimmed) {
-      console.error("Empty message provided.");
+    if (!trimmed && !hasFiles) {
+      console.error("Empty message and no files provided.");
       return;
     }
+
+    // Create file attachments for display
+    const fileAttachments: FileAttachment[] = attachedFiles.map(fileToAttachment);
+
     const userMessage: Message = {
       id: uuidv4(),
       sender: "user",
-      text: trimmed,
+      text: trimmed || (hasFiles ? "📎 Attached file(s)" : ""),
+      files: fileAttachments.length > 0 ? fileAttachments : undefined,
     };
 
+    // Clear input and files
     setInput("");
+    const filesToSend = [...attachedFiles];
+    setAttachedFiles([]);
+
     setSessions((prevSessions) =>
       prevSessions.map((session) =>
         session.id === currentSessionId
@@ -150,7 +182,18 @@ export const Chatbot = () => {
     );
     appendMessageToCurrentSession(userMessage);
 
-    const botReply = await fetchChatbotReply(currentSessionId!, trimmed);
+    // Use file upload endpoint if files are present, otherwise use regular endpoint
+    let botReply: Message;
+    if (filesToSend.length > 0) {
+      botReply = await fetchChatbotReplyWithFiles(
+        currentSessionId!,
+        trimmed || "Please analyze the attached file(s).",
+        filesToSend,
+      );
+    } else {
+      botReply = await fetchChatbotReply(currentSessionId!, trimmed);
+    }
+
     setSessions((prevSessions) =>
       prevSessions.map((session) =>
         session.id === currentSessionId
@@ -159,6 +202,27 @@ export const Chatbot = () => {
       ),
     );
     appendMessageToCurrentSession(botReply);
+  };
+
+  /**
+   * Handles attaching files to the current message.
+   */
+  const handleFilesAttached = (files: File[]) => {
+    setAttachedFiles(files);
+  };
+
+  /**
+   * Handles removing a file from attachments.
+   */
+  const handleFileRemoved = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  /**
+   * Validates a file for upload.
+   */
+  const handleValidateFile = (file: File) => {
+    return validateFile(file, supportedExtensions);
   };
 
   const getChatLoading = (): boolean => {
@@ -266,7 +330,16 @@ export const Chatbot = () => {
                 messages={getSessionMessages(currentSessionId)}
                 loading={getChatLoading()}
               />
-              <Input input={input} setInput={setInput} onSend={sendMessage} />
+              <Input
+                input={input}
+                setInput={setInput}
+                onSend={sendMessage}
+                attachedFiles={attachedFiles}
+                onFilesAttached={handleFilesAttached}
+                onFileRemoved={handleFileRemoved}
+                enableFileUpload={true}
+                validateFile={handleValidateFile}
+              />
             </>
           ) : (
             getWelcomePage()

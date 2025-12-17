@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { getChatbotText } from "../data/chatbotTexts";
 import { chatbotStyles } from "../styles/styles";
 
@@ -9,14 +9,35 @@ export interface InputProps {
   input: string;
   setInput: (value: string) => void;
   onSend: () => void;
+  /** Optional: files attached to the message */
+  attachedFiles?: File[];
+  /** Optional: callback when files are attached */
+  onFilesAttached?: (files: File[]) => void;
+  /** Optional: callback when a file is removed */
+  onFileRemoved?: (index: number) => void;
+  /** Optional: whether file upload is enabled */
+  enableFileUpload?: boolean;
+  /** Optional: file validation function */
+  validateFile?: (file: File) => { isValid: boolean; error?: string };
 }
 
 /**
  * Input is a controlled textarea component for user message entry.
  * It supports multiline input and handles sending messages with Enter,
- * while allowing new lines with Shift+Enter.
+ * while allowing new lines with Shift+Enter. Optionally supports file uploads.
  */
-export const Input = ({ input, setInput, onSend }: InputProps) => {
+export const Input = ({
+  input,
+  setInput,
+  onSend,
+  attachedFiles = [],
+  onFilesAttached,
+  onFileRemoved,
+  enableFileUpload = true,
+  validateFile,
+}: InputProps) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -24,22 +45,122 @@ export const Input = ({ input, setInput, onSend }: InputProps) => {
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !onFilesAttached) return;
+
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    Array.from(files).forEach((file: File) => {
+      if (validateFile) {
+        const validation = validateFile(file);
+        if (validation.isValid) {
+          validFiles.push(file);
+        } else {
+          errors.push(`${file.name}: ${validation.error}`);
+        }
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (errors.length > 0) {
+      alert(`Some files could not be added:\n${errors.join("\n")}`);
+    }
+
+    if (validFiles.length > 0) {
+      onFilesAttached([...attachedFiles, ...validFiles]);
+    }
+
+    // Reset the input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const canSend = input.trim() || attachedFiles.length > 0;
+
   return (
-    <div style={chatbotStyles.inputContainer}>
-      <textarea
-        value={input}
-        placeholder={getChatbotText("placeholder")}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        style={chatbotStyles.input}
-      />
-      <button
-        onClick={onSend}
-        disabled={!input.trim()}
-        style={chatbotStyles.sendButton(input)}
-      >
-        {getChatbotText("sendMessage")}
-      </button>
+    <div style={chatbotStyles.inputWrapper}>
+      {/* Attached files preview */}
+      {attachedFiles.length > 0 && (
+        <div style={chatbotStyles.attachedFilesContainer}>
+          {attachedFiles.map((file, index) => (
+            <div key={`${file.name}-${index}`} style={chatbotStyles.attachedFileChip}>
+              <span style={chatbotStyles.attachedFileName}>
+                {file.type.startsWith("image/") ? "🖼️" : "📄"} {file.name}
+              </span>
+              <span style={chatbotStyles.attachedFileSize}>
+                ({formatFileSize(file.size)})
+              </span>
+              {onFileRemoved && (
+                <button
+                  onClick={() => onFileRemoved(index)}
+                  style={chatbotStyles.removeFileButton}
+                  title="Remove file"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={chatbotStyles.inputContainer}>
+        {/* Hidden file input */}
+        {enableFileUpload && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFileSelect}
+            style={{ display: "none" }}
+            accept=".txt,.log,.md,.json,.xml,.yaml,.yml,.py,.js,.ts,.tsx,.java,.groovy,.sh,.png,.jpg,.jpeg,.gif,.webp,.bmp"
+            aria-label="Upload files"
+          />
+        )}
+
+        {/* Attach button */}
+        {enableFileUpload && onFilesAttached && (
+          <button
+            onClick={handleAttachClick}
+            style={chatbotStyles.attachButton}
+            title="Attach files"
+          >
+            📎
+          </button>
+        )}
+
+        <textarea
+          value={input}
+          placeholder={getChatbotText("placeholder")}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          style={{
+            ...chatbotStyles.input,
+            width: enableFileUpload && onFilesAttached ? "75%" : "85%",
+          }}
+        />
+        <button
+          onClick={onSend}
+          disabled={!canSend}
+          style={chatbotStyles.sendButton(canSend ? "x" : "")}
+        >
+          {getChatbotText("sendMessage")}
+        </button>
+      </div>
     </div>
   );
 };
