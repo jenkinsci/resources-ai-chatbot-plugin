@@ -39,6 +39,12 @@ def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chat
     data = response.json()
     assert "reply" in data
 
+    # Verify the service layer received correctly processed data
+    mock_get_chatbot_reply.assert_called_once()
+    args, _ = mock_get_chatbot_reply.call_args
+    assert args[2][0].filename == "script.py"
+    assert "print('Hello, World!')" in args[2][0].content
+
 
 def test_chatbot_reply_with_image_file(client, mock_session_exists, mock_get_chatbot_reply):
     """Test POST /sessions/{session_id}/message/upload with image file."""
@@ -79,6 +85,14 @@ def test_chatbot_reply_with_multiple_files(client, mock_session_exists, mock_get
     )
 
     assert response.status_code == 200
+
+    # Verify both files were processed and passed to service
+    mock_get_chatbot_reply.assert_called_once()
+    args, _ = mock_get_chatbot_reply.call_args
+    assert len(args[2]) == 2
+    filenames = [f.filename for f in args[2]]
+    assert "file1.txt" in filenames
+    assert "file2.log" in filenames
 
 
 def test_chatbot_reply_upload_invalid_session(client, mock_session_exists):
@@ -210,3 +224,10 @@ def test_chatbot_reply_text_truncation(
     )
 
     assert response.status_code == 200
+
+    # Verify that truncated content was passed to the service
+    mock_get_chatbot_reply.assert_called_once()
+    args, _ = mock_get_chatbot_reply.call_args
+    assert args[2][0].filename == "large_text.txt"
+    # Content should be truncated to MAX_TEXT_CONTENT_LENGTH (10000)
+    assert len(args[2][0].content) <= 10000 + 50  # Allow for truncation message
