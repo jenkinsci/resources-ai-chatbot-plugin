@@ -1,7 +1,7 @@
 """Unit tests for file_service module."""
 
-import pytest
 import base64
+import pytest
 from api.services.file_service import (
     get_file_extension,
     is_text_file,
@@ -57,6 +57,17 @@ class TestIsTextFile:
         assert is_text_file("Jenkinsfile") is True
         assert is_text_file("Dockerfile") is True
         assert is_text_file("Makefile") is True
+
+    def test_recognizes_hidden_files(self):
+        """Test that hidden files (dotfiles) are recognized as text files."""
+        assert is_text_file(".env") is True
+        assert is_text_file(".gitignore") is True
+        assert is_text_file(".dockerignore") is True
+        assert is_text_file(".editorconfig") is True
+        assert is_text_file(".eslintrc") is True
+        assert is_text_file(".prettierrc") is True
+        assert is_text_file(".babelrc") is True
+        assert is_text_file(".npmrc") is True
 
     def test_rejects_non_text_files(self):
         """Test that non-text files are rejected."""
@@ -159,8 +170,8 @@ class TestProcessImageFile:
     def test_returns_base64_encoded_content(self):
         """Test that image content is base64 encoded."""
         content = b"fake image data"
-        base64_content, mime_type = process_image_file(content, "test.png")
-        
+        base64_content, _ = process_image_file(content, "test.png")
+
         # Verify it's valid base64
         decoded = base64.b64decode(base64_content)
         assert decoded == content
@@ -168,13 +179,13 @@ class TestProcessImageFile:
     def test_returns_correct_mime_type(self):
         """Test that correct MIME type is returned."""
         content = b"fake image data"
-        
+
         _, mime_type = process_image_file(content, "test.png")
         assert mime_type == "image/png"
-        
+
         _, mime_type = process_image_file(content, "test.jpg")
         assert mime_type == "image/jpeg"
-        
+
         _, mime_type = process_image_file(content, "test.gif")
         assert mime_type == "image/gif"
 
@@ -223,9 +234,10 @@ class TestFormatFileContext:
             "mime_type": "text/plain"
         }]
         result = format_file_context(files)
-        
-        assert "[Uploaded File: script.py]" in result
+
+        assert "<uploaded_file name=\"script.py\">" in result
         assert "print('hello')" in result
+        assert "</uploaded_file>" in result
 
     def test_formats_image_file_context(self):
         """Test formatting image file context."""
@@ -236,24 +248,50 @@ class TestFormatFileContext:
             "mime_type": "image/png"
         }]
         result = format_file_context(files)
-        
-        assert "[Uploaded Image: photo.png]" in result
+
+        assert "<uploaded_image name=\"photo.png\">" in result
+        assert "</uploaded_image>" in result
 
     def test_handles_multiple_files(self):
         """Test formatting multiple files."""
         files = [
-            {"filename": "file1.txt", "type": "text", "content": "content1", "mime_type": "text/plain"},
-            {"filename": "file2.py", "type": "text", "content": "content2", "mime_type": "text/plain"},
+            {
+                "filename": "file1.txt",
+                "type": "text",
+                "content": "content1",
+                "mime_type": "text/plain"
+            },
+            {
+                "filename": "file2.py",
+                "type": "text",
+                "content": "content2",
+                "mime_type": "text/plain"
+            },
         ]
         result = format_file_context(files)
-        
-        assert "[Uploaded File: file1.txt]" in result
-        assert "[Uploaded File: file2.py]" in result
+
+        assert "<uploaded_file name=\"file1.txt\">" in result
+        assert "<uploaded_file name=\"file2.py\">" in result
 
     def test_returns_empty_for_no_files(self):
         """Test that empty string is returned for no files."""
         assert format_file_context([]) == ""
         assert format_file_context(None) == ""
+
+    def test_handles_markdown_with_code_blocks(self):
+        """Test that markdown content with triple backticks is handled."""
+        files = [{
+            "filename": "readme.md",
+            "type": "text",
+            "content": "# Title\n```python\nprint('hello')\n```",
+            "mime_type": "text/plain"
+        }]
+        result = format_file_context(files)
+
+        # XML tags should contain the content without breaking
+        assert "<uploaded_file name=\"readme.md\">" in result
+        assert "```python" in result
+        assert "</uploaded_file>" in result
 
 
 class TestGetSupportedExtensions:

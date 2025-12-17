@@ -7,7 +7,13 @@ clients and the chatbot API endpoints.
 
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
+
+
+class FileType(str, Enum):
+    """Enum representing supported file types."""
+    TEXT = "text"
+    IMAGE = "image"
 
 
 class FileAttachment(BaseModel):
@@ -16,12 +22,12 @@ class FileAttachment(BaseModel):
 
     Fields:
         filename (str): Original name of the uploaded file.
-        type (str): Type of file - "text" or "image".
+        type (FileType): Type of file - TEXT or IMAGE.
         content (str): Text content or base64 encoded image data.
         mime_type (str): MIME type of the file.
     """
     filename: str
-    type: str
+    type: FileType
     content: str
     mime_type: str
 
@@ -55,18 +61,19 @@ class ChatRequestWithFiles(BaseModel):
         files (List[FileAttachment]): Optional list of file attachments.
 
     Validation:
-        - Rejects messages that are empty when no files are attached.
+        - Rejects when both message is empty and no files are attached.
     """
-    message: str
+    message: str = ""
     files: Optional[List[FileAttachment]] = None
 
-    @field_validator("message")
-    def message_must_not_be_empty_unless_files(cls, v, info): # pylint: disable=no-self-argument
-        """Validator that checks that a message is not empty unless files are present."""
-        # Allow empty message if files will be provided
-        # Note: files validation happens after this, so we allow empty message here
-        # The endpoint will validate that at least message or files are present
-        return v
+    @model_validator(mode="after")
+    def validate_message_or_files(self):
+        """Validates that at least message or files are present."""
+        has_message = bool(self.message and self.message.strip())
+        has_files = bool(self.files and len(self.files) > 0)
+        if not has_message and not has_files:
+            raise ValueError("Either message or files must be provided.")
+        return self
 
 class ChatResponse(BaseModel):
     """

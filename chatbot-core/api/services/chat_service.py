@@ -48,7 +48,7 @@ def get_chatbot_reply(
     """
     logger.info("New message from session '%s'", session_id)
     logger.info("Handling the user query: %s", user_input)
-    
+
     if files:
         logger.info("Processing %d uploaded file(s)", len(files))
 
@@ -58,7 +58,7 @@ def get_chatbot_reply(
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
-    
+
     # Add file context if files are provided
     file_context = ""
     if files:
@@ -78,7 +78,7 @@ def get_chatbot_reply(
     if files:
         file_names = [f.filename for f in files]
         user_message = f"{user_input}\n[Attached files: {', '.join(file_names)}]"
-    
+
     memory.chat_memory.add_user_message(user_message)
     memory.chat_memory.add_ai_message(reply)
 

@@ -100,38 +100,44 @@ async def chatbot_reply_with_files(
     """
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
-    
+
     # Validate that at least message or files are provided
     has_message = message and message.strip()
     has_files = files and len(files) > 0
-    
+
     if not has_message and not has_files:
         raise HTTPException(
             status_code=422,
             detail="Either message or files must be provided."
         )
-    
+
     # Process uploaded files
     processed_files: List[FileAttachment] = []
-    
+
     if files:
         for upload_file in files:
             try:
                 content = await upload_file.read()
-                processed = process_uploaded_file(content, upload_file.filename or "unknown")
+                processed = process_uploaded_file(
+                    content, upload_file.filename or "unknown"
+                )
                 processed_files.append(FileAttachment(**processed))
             except FileProcessingError as e:
-                raise HTTPException(status_code=400, detail=str(e))
+                raise HTTPException(status_code=400, detail=str(e)) from e
             except Exception as e:
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Failed to process file '{upload_file.filename}': {str(e)}"
-                )
-    
+                    detail=f"Failed to process file: {type(e).__name__}"
+                ) from e
+            finally:
+                await upload_file.close()
+
     # Use default message if only files provided
     final_message = message.strip() if has_message else "Please analyze the attached file(s)."
-    
-    return get_chatbot_reply(session_id, final_message, processed_files if processed_files else None)
+
+    return get_chatbot_reply(
+        session_id, final_message, processed_files if processed_files else None
+    )
 
 
 @router.get("/files/supported-extensions", response_model=SupportedExtensionsResponse)

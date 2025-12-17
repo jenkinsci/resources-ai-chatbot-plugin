@@ -9,7 +9,7 @@ Handles extraction of text content from various file types including:
 
 import base64
 import mimetypes
-from typing import Optional, Tuple
+from typing import Tuple
 from pathlib import Path
 from utils import LoggerFactory
 
@@ -23,7 +23,8 @@ TEXT_EXTENSIONS = {
     ".css", ".scss", ".less", ".sql", ".rb", ".go", ".rs",
     ".c", ".cpp", ".h", ".hpp", ".cs", ".swift", ".kt",
     ".jenkinsfile", ".dockerfile", ".properties", ".ini", ".cfg",
-    ".conf", ".toml", ".gradle", ".pom", ".env"
+    ".conf", ".toml", ".gradle", ".pom", ".env", ".gitignore",
+    ".dockerignore", ".editorconfig", ".eslintrc", ".prettierrc"
 }
 
 # Supported image extensions
@@ -39,7 +40,6 @@ MAX_TEXT_CONTENT_LENGTH = 10000
 
 class FileProcessingError(Exception):
     """Custom exception for file processing errors."""
-    pass
 
 
 def get_file_extension(filename: str) -> str:
@@ -66,11 +66,24 @@ def is_text_file(filename: str) -> bool:
         bool: True if the file is a text-based file, False otherwise.
     """
     ext = get_file_extension(filename)
-    # Also check files without extension but with known names
     base_name = Path(filename).name.lower()
-    known_text_files = {"jenkinsfile", "dockerfile", "makefile", "readme", "license"}
-    
-    return ext in TEXT_EXTENSIONS or base_name in known_text_files
+
+    # Known text files without extension
+    known_text_files = {
+        "jenkinsfile", "dockerfile", "makefile", "readme", "license",
+        ".env", ".gitignore", ".dockerignore", ".editorconfig",
+        ".eslintrc", ".prettierrc", ".babelrc", ".npmrc"
+    }
+
+    # Check if extension is supported or if it's a known text file
+    if ext in TEXT_EXTENSIONS:
+        return True
+
+    # Handle hidden files (starting with .)
+    if base_name.startswith(".") and not ext:
+        return True
+
+    return base_name in known_text_files
 
 
 def is_image_file(filename: str) -> bool:
@@ -111,7 +124,7 @@ def validate_file_size(content: bytes, filename: str) -> None:
         FileProcessingError: If the file exceeds size limits.
     """
     max_size = MAX_IMAGE_FILE_SIZE if is_image_file(filename) else MAX_TEXT_FILE_SIZE
-    
+
     if len(content) > max_size:
         max_mb = max_size / (1024 * 1024)
         raise FileProcessingError(
@@ -135,7 +148,7 @@ def process_text_file(content: bytes, filename: str) -> str:
     """
     # Try common encodings
     encodings = ["utf-8", "utf-16", "latin-1", "cp1252"]
-    
+
     text_content = None
     for encoding in encodings:
         try:
@@ -143,12 +156,12 @@ def process_text_file(content: bytes, filename: str) -> str:
             break
         except (UnicodeDecodeError, LookupError):
             continue
-    
+
     if text_content is None:
         raise FileProcessingError(
             f"Could not decode file '{filename}'. Unsupported encoding."
         )
-    
+
     # Truncate if too long
     if len(text_content) > MAX_TEXT_CONTENT_LENGTH:
         logger.warning(
@@ -156,7 +169,7 @@ def process_text_file(content: bytes, filename: str) -> str:
             filename, len(text_content), MAX_TEXT_CONTENT_LENGTH
         )
         text_content = text_content[:MAX_TEXT_CONTENT_LENGTH] + "\n... [truncated]"
-    
+
     return text_content
 
 
@@ -183,9 +196,9 @@ def process_image_file(content: bytes, filename: str) -> Tuple[str, str]:
             ".bmp": "image/bmp"
         }
         mime_type = mime_map.get(ext, "application/octet-stream")
-    
+
     base64_content = base64.b64encode(content).decode("utf-8")
-    
+
     return base64_content, mime_type
 
 
@@ -208,15 +221,15 @@ def process_uploaded_file(content: bytes, filename: str) -> dict:
         FileProcessingError: If the file type is not supported or processing fails.
     """
     logger.info("Processing uploaded file: %s (%d bytes)", filename, len(content))
-    
+
     if not is_supported_file(filename):
         raise FileProcessingError(
             f"Unsupported file type for '{filename}'. "
             f"Supported types: text files, code files, and images."
         )
-    
+
     validate_file_size(content, filename)
-    
+
     if is_text_file(filename):
         text_content = process_text_file(content, filename)
         return {
@@ -225,7 +238,7 @@ def process_uploaded_file(content: bytes, filename: str) -> dict:
             "content": text_content,
             "mime_type": "text/plain"
         }
-    
+
     if is_image_file(filename):
         base64_content, mime_type = process_image_file(content, filename)
         return {
@@ -234,7 +247,7 @@ def process_uploaded_file(content: bytes, filename: str) -> dict:
             "content": base64_content,
             "mime_type": mime_type
         }
-    
+
     # Should not reach here due to is_supported_file check
     raise FileProcessingError(f"Unknown file type for '{filename}'")
 
@@ -242,6 +255,9 @@ def process_uploaded_file(content: bytes, filename: str) -> dict:
 def format_file_context(processed_files: list) -> str:
     """
     Formats processed files into context string for the LLM.
+
+    Uses XML-style tags as robust separators that won't conflict with
+    markdown content containing triple backticks.
 
     Args:
         processed_files: List of processed file dictionaries.
@@ -251,27 +267,31 @@ def format_file_context(processed_files: list) -> str:
     """
     if not processed_files:
         return ""
-    
+
     context_parts = []
-    
+
     for file_info in processed_files:
         filename = file_info.get("filename", "unknown")
         file_type = file_info.get("type", "unknown")
         content = file_info.get("content", "")
-        
+
         if file_type == "text":
+            # Use XML-style tags as robust separators to avoid conflicts
+            # with markdown content that may contain triple backticks
             context_parts.append(
-                f"[Uploaded File: {filename}]\n"
-                f"```\n{content}\n```"
+                f"<uploaded_file name=\"{filename}\">\n"
+                f"{content}\n"
+                f"</uploaded_file>"
             )
         elif file_type == "image":
             # For images, we note their presence; actual image processing
             # would require vision-capable LLM
             context_parts.append(
-                f"[Uploaded Image: {filename}]\n"
-                f"(Image content available for vision-capable models)"
+                f"<uploaded_image name=\"{filename}\">\n"
+                f"(Image content available for vision-capable models)\n"
+                f"</uploaded_image>"
             )
-    
+
     return "\n\n".join(context_parts)
 
 

@@ -97,9 +97,17 @@ export const Input = ({
       {attachedFiles.length > 0 && (
         <div style={chatbotStyles.attachedFilesContainer}>
           {attachedFiles.map((file, index) => (
-            <div key={`${file.name}-${index}`} style={chatbotStyles.attachedFileChip}>
+            <div
+              key={`${file.name}-${index}`}
+              style={chatbotStyles.attachedFileChip}
+            >
               <span style={chatbotStyles.attachedFileName}>
-                {file.type.startsWith("image/") ? "🖼️" : "📄"} {file.name}
+                {file.type.startsWith("image/") ? (
+                  <span data-testid="file-icon-image">🖼️</span>
+                ) : (
+                  <span data-testid="file-icon-document">📄</span>
+                )}{" "}
+                {file.name}
               </span>
               <span style={chatbotStyles.attachedFileSize}>
                 ({formatFileSize(file.size)})
