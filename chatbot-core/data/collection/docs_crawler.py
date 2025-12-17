@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
@@ -16,6 +17,9 @@ OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "../raw/jenkins_docs.json")
 # Home URL of jenkins doc
 BASE_URL = "https://www.jenkins.io/doc/"
 
+# Rate limiting delay between requests (in seconds)
+REQUEST_DELAY = 0.5
+
 # Set to check for duplicates
 visited_urls = set()
 
@@ -24,12 +28,21 @@ page_content = {}
 
 non_canonic_content_urls = set()
 
+
+def normalize_url(url):
+    """Normalize URL by adding trailing slash for non-HTML pages."""
+    if '.html' not in url and not url.endswith('/'):
+        url += '/'
+    return url
+
+
 def is_valid_url(url):
     """Check if the URL is a valid link to a new page, internal to the doc, 
         or a redirect to another page
     """
     parsed = urlparse(url)
     return parsed.scheme in {"http", "https"} and BASE_URL in url and "#" not in url
+
 
 def extract_page_content_container(soup):
     """Extract content from the 'container' div class"""
@@ -39,40 +52,65 @@ def extract_page_content_container(soup):
     return ""
 
 
-def crawl(url):
-    """Recursively crawl documentation pages starting from the base URL"""
+def crawl(start_url):
+    """Iteratively crawl documentation pages using stack-based DFS.
+    
+    Uses an explicit stack instead of recursion to avoid RecursionError
+    on deep documentation structures. Maintains the same traversal order
+    as the original recursive implementation.
+    
+    Args:
+        start_url: The URL to begin crawling from.
+    """
+    stack = [start_url]
 
-    # Avoid multiple visits
-    if url in visited_urls:
-        return
+    while stack:
+        url = stack.pop()
 
-    logger.info("Visiting: %s", url)
-    try:
-        visited_urls.add(url)
+        # Normalize URL before checking visited
+        url = normalize_url(url)
 
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, "html.parser")
+        # Fast skip for already visited or invalid URLs (no sleep)
+        if url in visited_urls:
+            continue
 
-        content = extract_page_content_container(soup)
-        if content:
-            page_content[url] = content
-        else:
-            non_canonic_content_urls.add(url)
+        if not is_valid_url(url):
+            continue
 
-        # Find all links in the page
-        links = soup.find_all("a", href=True)
-        if '.html' not in url and not url.endswith('/'):
-            url += '/'
+        logger.info("Visiting: %s", url)
 
-        for link in links:
-            href = link['href']
-            full_url = urljoin(url, href)
-            if is_valid_url(full_url):
-                crawl(full_url)
+        try:
+            visited_urls.add(url)
 
-    except requests.RequestException as e:
-        logger.error("Error accessing %s: %s", url, e)
+            # Rate limit only when actually hitting the network
+            time.sleep(REQUEST_DELAY)
+
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, "html.parser")
+
+            content = extract_page_content_container(soup)
+            if content:
+                page_content[url] = content
+            else:
+                non_canonic_content_urls.add(url)
+
+            # Find all links in the page
+            links = soup.find_all("a", href=True)
+
+            # Push links in reverse order to maintain original DFS traversal order
+            # Stack is LIFO, so reversed() ensures first link gets processed first
+            for link in reversed(links):
+                href = link['href']
+                full_url = urljoin(url, href)
+                # Normalize before pushing to prevent duplicate stack entries
+                full_url = normalize_url(full_url)
+                if is_valid_url(full_url) and full_url not in visited_urls:
+                    stack.append(full_url)
+
+        except requests.RequestException as e:
+            logger.error("Error accessing %s: %s", url, e)
+            continue  # Skip this URL, continue with remaining stack
 
 def start_crawl():
     """Start the crawling process from the base URL."""
