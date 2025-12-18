@@ -307,6 +307,9 @@ def process_image_file(content: bytes, filename: str) -> Tuple[str, str]:
 
     Returns:
         Tuple[str, str]: A tuple of (base64_encoded_content, mime_type).
+
+    Raises:
+        FileProcessingError: If MIME type cannot be determined.
     """
     mime_type, _ = mimetypes.guess_type(filename)
     if mime_type is None:
@@ -319,7 +322,13 @@ def process_image_file(content: bytes, filename: str) -> Tuple[str, str]:
             ".webp": "image/webp",
             ".bmp": "image/bmp"
         }
-        mime_type = mime_map.get(ext, "application/octet-stream")
+        mime_type = mime_map.get(ext)
+
+        if mime_type is None:
+            raise FileProcessingError(
+                f"Cannot determine MIME type for image '{filename}'. "
+                f"Unsupported or unrecognized image format."
+            )
 
     base64_content = base64.b64encode(content).decode("utf-8")
 

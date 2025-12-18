@@ -262,6 +262,13 @@ class TestProcessImageFile:
         _, mime_type = process_image_file(content, "test.gif")
         assert mime_type == "image/gif"
 
+    def test_rejects_unknown_image_extension(self):
+        """Test that unknown image extensions are rejected instead of fallback."""
+        content = b"fake image data"
+        with pytest.raises(FileProcessingError) as exc_info:
+            process_image_file(content, "image.unknown")
+        assert "Cannot determine MIME type" in str(exc_info.value)
+
 
 class TestProcessUploadedFile:
     """Tests for process_uploaded_file function."""
