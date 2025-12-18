@@ -9,11 +9,29 @@ Handles extraction of text content from various file types including:
 
 import base64
 import mimetypes
-from typing import Tuple
+from typing import Tuple, Optional
 from pathlib import Path
+
+try:
+    import magic
+    MAGIC_AVAILABLE = True
+except ImportError:
+    MAGIC_AVAILABLE = False
+
 from utils import LoggerFactory
 
 logger = LoggerFactory.instance().get_logger("api")
+
+# Magic byte signatures for common file types
+# Used as fallback when python-magic is not available
+MAGIC_SIGNATURES = {
+    b'\x89PNG\r\n\x1a\n': 'image/png',
+    b'\xff\xd8\xff': 'image/jpeg',
+    b'GIF87a': 'image/gif',
+    b'GIF89a': 'image/gif',
+    b'RIFF': 'image/webp',  # WebP starts with RIFF, need additional check
+    b'BM': 'image/bmp',
+}
 
 # Supported text-based file extensions
 TEXT_EXTENSIONS = {
@@ -132,6 +150,112 @@ def validate_file_size(content: bytes, filename: str) -> None:
         )
 
 
+def detect_mime_type_from_content(content: bytes) -> Optional[str]:
+    """
+    Detects MIME type from file content using magic bytes.
+
+    Uses python-magic library if available, otherwise falls back to
+    checking common magic byte signatures.
+
+    Args:
+        content: The file content as bytes.
+
+    Returns:
+        Optional[str]: Detected MIME type or None if undetectable.
+    """
+    if not content:
+        return None
+
+    # Use python-magic if available (more accurate)
+    if MAGIC_AVAILABLE:
+        try:
+            mime = magic.from_buffer(content, mime=True)
+            return mime
+        except Exception as e:
+            logger.warning("Magic detection failed: %s", e)
+
+    # Fallback: check magic byte signatures
+    for signature, mime_type in MAGIC_SIGNATURES.items():
+        if content.startswith(signature):
+            # Special handling for WebP (RIFF header + WEBP)
+            if signature == b'RIFF' and len(content) > 12:
+                if content[8:12] == b'WEBP':
+                    return 'image/webp'
+                continue
+            return mime_type
+
+    return None
+
+
+def validate_file_content_type(content: bytes, filename: str) -> None:
+    """
+    Validates that file content matches its claimed extension.
+
+    This is a security measure to prevent malicious files from being
+    disguised with fake extensions.
+
+    Args:
+        content: The file content as bytes.
+        filename: The name of the file.
+
+    Raises:
+        FileProcessingError: If content doesn't match extension.
+    """
+    if is_image_file(filename):
+        # For images, verify magic bytes match expected image type
+        detected_mime = detect_mime_type_from_content(content)
+        expected_ext = get_file_extension(filename)
+
+        # Map extensions to expected MIME types
+        ext_to_mime = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.webp': 'image/webp',
+            '.bmp': 'image/bmp',
+        }
+
+        expected_mime = ext_to_mime.get(expected_ext)
+
+        if detected_mime and expected_mime:
+            # Allow jpeg variations
+            if detected_mime in ('image/jpeg', 'image/jpg') and \
+               expected_mime in ('image/jpeg', 'image/jpg'):
+                return
+
+            if detected_mime != expected_mime:
+                logger.warning(
+                    "File content mismatch for '%s': detected %s, expected %s",
+                    filename, detected_mime, expected_mime
+                )
+                raise FileProcessingError(
+                    f"File '{filename}' content does not match its extension. "
+                    f"Expected {expected_mime}, detected {detected_mime}."
+                )
+    elif is_text_file(filename):
+        # For text files, verify it's not actually a binary/executable
+        detected_mime = detect_mime_type_from_content(content)
+
+        # List of dangerous MIME types that should never be accepted as text
+        dangerous_mimes = {
+            'application/x-executable',
+            'application/x-msdos-program',
+            'application/x-msdownload',
+            'application/x-sharedlib',
+            'application/x-pie-executable',
+        }
+
+        if detected_mime in dangerous_mimes:
+            logger.warning(
+                "Dangerous file disguised as text: '%s' (detected: %s)",
+                filename, detected_mime
+            )
+            raise FileProcessingError(
+                f"File '{filename}' appears to be an executable, not a text file."
+            )
+
+
 def process_text_file(content: bytes, filename: str) -> str:
     """
     Processes a text file and extracts its content.
@@ -229,6 +353,9 @@ def process_uploaded_file(content: bytes, filename: str) -> dict:
         )
 
     validate_file_size(content, filename)
+
+    # Validate content matches extension (security check)
+    validate_file_content_type(content, filename)
 
     if is_text_file(filename):
         text_content = process_text_file(content, filename)

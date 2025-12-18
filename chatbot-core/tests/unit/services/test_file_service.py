@@ -8,6 +8,8 @@ from api.services.file_service import (
     is_image_file,
     is_supported_file,
     validate_file_size,
+    validate_file_content_type,
+    detect_mime_type_from_content,
     process_text_file,
     process_image_file,
     process_uploaded_file,
@@ -140,6 +142,77 @@ class TestValidateFileSize:
         assert "exceeds maximum size" in str(exc_info.value)
 
 
+class TestDetectMimeTypeFromContent:
+    """Tests for detect_mime_type_from_content function."""
+
+    def test_detects_png(self):
+        """Test PNG magic byte detection."""
+        png_header = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        result = detect_mime_type_from_content(png_header)
+        assert result == 'image/png'
+
+    def test_detects_jpeg(self):
+        """Test JPEG magic byte detection."""
+        jpeg_header = b'\xff\xd8\xff' + b'\x00' * 100
+        result = detect_mime_type_from_content(jpeg_header)
+        assert result == 'image/jpeg'
+
+    def test_detects_gif(self):
+        """Test GIF magic byte detection."""
+        gif87_header = b'GIF87a' + b'\x00' * 100
+        gif89_header = b'GIF89a' + b'\x00' * 100
+        assert detect_mime_type_from_content(gif87_header) == 'image/gif'
+        assert detect_mime_type_from_content(gif89_header) == 'image/gif'
+
+    def test_detects_bmp(self):
+        """Test BMP magic byte detection."""
+        bmp_header = b'BM' + b'\x00' * 100
+        result = detect_mime_type_from_content(bmp_header)
+        assert result == 'image/bmp'
+
+    def test_returns_none_for_unknown(self):
+        """Test that None is returned for unknown content."""
+        unknown_content = b'random binary data here'
+        result = detect_mime_type_from_content(unknown_content)
+        assert result is None
+
+    def test_handles_empty_content(self):
+        """Test that empty content returns None."""
+        assert detect_mime_type_from_content(b'') is None
+        assert detect_mime_type_from_content(None) is None
+
+
+class TestValidateFileContentType:
+    """Tests for validate_file_content_type function."""
+
+    def test_accepts_valid_png(self):
+        """Test that valid PNG passes validation."""
+        png_content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        validate_file_content_type(png_content, "test.png")  # Should not raise
+
+    def test_accepts_valid_jpeg(self):
+        """Test that valid JPEG passes validation."""
+        jpeg_content = b'\xff\xd8\xff' + b'\x00' * 100
+        validate_file_content_type(jpeg_content, "test.jpg")  # Should not raise
+
+    def test_rejects_mismatched_image_extension(self):
+        """Test that mismatched image content/extension is rejected."""
+        png_content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        with pytest.raises(FileProcessingError) as exc_info:
+            validate_file_content_type(png_content, "fake.jpg")
+        assert "content does not match" in str(exc_info.value)
+
+    def test_accepts_text_file(self):
+        """Test that text content passes validation."""
+        text_content = b"print('Hello, World!')"
+        validate_file_content_type(text_content, "script.py")  # Should not raise
+
+    def test_accepts_valid_gif_extension(self):
+        """Test that valid GIF passes validation."""
+        gif_content = b'GIF89a' + b'\x00' * 100
+        validate_file_content_type(gif_content, "animation.gif")  # Should not raise
+
+
 class TestProcessTextFile:
     """Tests for process_text_file function."""
 
@@ -197,7 +270,7 @@ class TestProcessUploadedFile:
         """Test processing a text file."""
         content = b"print('Hello, World!')"
         result = process_uploaded_file(content, "script.py")
-        
+
         assert result["filename"] == "script.py"
         assert result["type"] == "text"
         assert "print('Hello, World!')" in result["content"]
@@ -205,9 +278,10 @@ class TestProcessUploadedFile:
 
     def test_processes_image_file(self):
         """Test processing an image file."""
-        content = b"fake image data"
+        # Use valid PNG magic bytes
+        content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
         result = process_uploaded_file(content, "photo.png")
-        
+
         assert result["filename"] == "photo.png"
         assert result["type"] == "image"
         assert result["mime_type"] == "image/png"
@@ -220,6 +294,14 @@ class TestProcessUploadedFile:
         with pytest.raises(FileProcessingError) as exc_info:
             process_uploaded_file(content, "archive.zip")
         assert "Unsupported file type" in str(exc_info.value)
+
+    def test_rejects_disguised_file(self):
+        """Test that files with mismatched content/extension are rejected."""
+        # PNG content with JPG extension
+        png_content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        with pytest.raises(FileProcessingError) as exc_info:
+            process_uploaded_file(png_content, "fake.jpg")
+        assert "content does not match" in str(exc_info.value)
 
 
 class TestFormatFileContext:
