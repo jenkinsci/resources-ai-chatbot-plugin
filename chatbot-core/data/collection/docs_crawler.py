@@ -2,9 +2,10 @@
 
 import json
 import os
-import time
 from urllib.parse import urljoin, urlparse
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from utils import LoggerFactory
 
@@ -17,11 +18,28 @@ OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "../raw/jenkins_docs.json")
 # Home URL of jenkins doc
 BASE_URL = "https://www.jenkins.io/doc/"
 
-# Rate limiting delay between requests (in seconds)
-REQUEST_DELAY = 0.5
-
 # Set to check for duplicates
 visited_urls = set()
+
+
+def create_session_with_retries():
+    """Create a requests session with automatic retry on rate limits.
+    
+    Uses exponential backoff and respects Retry-After header from server.
+    This is an optimistic approach - we don't slow down unless the server
+    tells us to.
+    """
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,  # 1s, 2s, 4s between retries
+        status_forcelist=[429, 500, 502, 503, 504],
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
 
 # Key: url ; Value: content of that page
 page_content = {}
@@ -62,6 +80,7 @@ def crawl(start_url):
     Args:
         start_url: The URL to begin crawling from.
     """
+    session = create_session_with_retries()
     stack = [start_url]
 
     while stack:
@@ -70,7 +89,7 @@ def crawl(start_url):
         # Normalize URL before checking visited
         url = normalize_url(url)
 
-        # Fast skip for already visited or invalid URLs (no sleep)
+        # Fast skip for already visited or invalid URLs
         if url in visited_urls:
             continue
 
@@ -82,10 +101,7 @@ def crawl(start_url):
         try:
             visited_urls.add(url)
 
-            # Rate limit only when actually hitting the network
-            time.sleep(REQUEST_DELAY)
-
-            response = requests.get(url, timeout=10)
+            response = session.get(url, timeout=10)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, "html.parser")
 
