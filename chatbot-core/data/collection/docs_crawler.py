@@ -63,8 +63,16 @@ def is_valid_url(url):
 
 
 def extract_page_content_container(soup):
-    """Extract content from the 'container' div class"""
-    content_div = soup.find("div", class_="container")
+    """Extract main content from the page.
+    
+    Developer docs use col-8, non-developer docs use col-lg-9.
+    Falls back to container if neither is found.
+    """
+    content_div = (
+        soup.find("div", class_="col-8") or 
+        soup.find("div", class_="col-lg-9") or
+        soup.find("div", class_="container")
+    )
     if content_div:
         return str(content_div)
     return ""
