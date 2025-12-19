@@ -154,8 +154,9 @@ def detect_mime_type_from_content(content: bytes) -> Optional[str]:
     """
     Detects MIME type from file content using magic bytes.
 
-    Uses python-magic library if available, otherwise falls back to
-    checking common magic byte signatures.
+    Prioritizes our own magic byte signatures for common image formats
+    to ensure consistent behavior across different environments.
+    Falls back to python-magic for other file types.
 
     Args:
         content: The file content as bytes.
@@ -166,15 +167,8 @@ def detect_mime_type_from_content(content: bytes) -> Optional[str]:
     if not content:
         return None
 
-    # Use python-magic if available (more accurate)
-    if MAGIC_AVAILABLE:
-        try:
-            mime = magic.from_buffer(content, mime=True)
-            return mime
-        except Exception as e:
-            logger.warning("Magic detection failed: %s", e)
-
-    # Fallback: check magic byte signatures
+    # First, check our magic byte signatures for known image formats
+    # This ensures consistent behavior across different environments
     for signature, mime_type in MAGIC_SIGNATURES.items():
         if content.startswith(signature):
             # Special handling for WebP (RIFF header + WEBP)
@@ -183,6 +177,14 @@ def detect_mime_type_from_content(content: bytes) -> Optional[str]:
                     return 'image/webp'
                 continue
             return mime_type
+
+    # Fall back to python-magic for other file types (e.g., executables)
+    if MAGIC_AVAILABLE:
+        try:
+            mime = magic.from_buffer(content, mime=True)
+            return mime
+        except (ValueError, TypeError) as exc:
+            logger.warning("Magic detection failed: %s", exc)
 
     return None
 

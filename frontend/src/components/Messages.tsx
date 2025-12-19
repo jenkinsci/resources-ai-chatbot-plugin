@@ -1,5 +1,9 @@
 import React, { useEffect, useRef } from "react";
-import { type Message, type Sender, type FileAttachment } from "../model/Message";
+import {
+  type Message,
+  type Sender,
+  type FileAttachment,
+} from "../model/Message";
 import { chatbotStyles } from "../styles/styles";
 import { getChatbotText } from "../data/chatbotTexts";
 
@@ -23,7 +27,9 @@ const formatFileSize = (bytes: number): string => {
 /**
  * Renders a file attachment display.
  */
-const FileAttachmentDisplay: React.FC<{ file: FileAttachment }> = ({ file }) => {
+const FileAttachmentDisplay: React.FC<{ file: FileAttachment }> = ({
+  file,
+}) => {
   if (file.type === "image" && file.previewUrl) {
     return (
       <div style={chatbotStyles.fileAttachmentContainer}>
@@ -72,7 +78,7 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
     text: string,
     sender: Sender,
     key: React.Key,
-    files?: FileAttachment[]
+    files?: FileAttachment[],
   ) => (
     <div key={key} style={chatbotStyles.messageContainer(sender)}>
       <span style={chatbotStyles.messageBubble(sender)}>
@@ -80,7 +86,10 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
         {files && files.length > 0 && (
           <div style={chatbotStyles.messageFilesContainer}>
             {files.map((file, index) => (
-              <FileAttachmentDisplay key={`${file.filename}-${index}`} file={file} />
+              <FileAttachmentDisplay
+                key={`${file.filename}-${index}`}
+                file={file}
+              />
             ))}
           </div>
         )}
@@ -97,7 +106,9 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
 
   return (
     <div style={chatbotStyles.messagesMain}>
-      {messages.map((msg) => renderMessage(msg.text, msg.sender, msg.id, msg.files))}
+      {messages.map((msg) =>
+        renderMessage(msg.text, msg.sender, msg.id, msg.files),
+      )}
       {loading &&
         renderMessage(
           getChatbotText("generatingMessage"),

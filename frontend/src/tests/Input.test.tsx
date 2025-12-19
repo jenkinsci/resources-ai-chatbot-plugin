@@ -33,7 +33,7 @@ describe("Input Component", () => {
 
   it("calls onSend when Enter is pressed", () => {
     render(
-      <Input input="Some text" setInput={mockSetInput} onSend={mockOnSend} />
+      <Input input="Some text" setInput={mockSetInput} onSend={mockOnSend} />,
     );
     fireEvent.keyDown(screen.getByRole("textbox"), {
       key: "Enter",
@@ -44,7 +44,7 @@ describe("Input Component", () => {
 
   it("does not call onSend when Shift+Enter is pressed", () => {
     render(
-      <Input input="Some text" setInput={mockSetInput} onSend={mockOnSend} />
+      <Input input="Some text" setInput={mockSetInput} onSend={mockOnSend} />,
     );
     fireEvent.keyDown(screen.getByRole("textbox"), {
       key: "Enter",
@@ -55,12 +55,12 @@ describe("Input Component", () => {
 
   it("disables the send button when input is empty or whitespace", () => {
     const { rerender } = render(
-      <Input input="" setInput={mockSetInput} onSend={mockOnSend} />
+      <Input input="" setInput={mockSetInput} onSend={mockOnSend} />,
     );
     expect(screen.getByRole("button", { name: /send/i })).toBeDisabled();
 
     rerender(
-      <Input input="    " setInput={mockSetInput} onSend={mockOnSend} />
+      <Input input="    " setInput={mockSetInput} onSend={mockOnSend} />,
     );
     expect(screen.getByRole("button", { name: /send/i })).toBeDisabled();
   });
@@ -72,7 +72,11 @@ describe("Input Component", () => {
 
   it("calls onSend when button is clicked", () => {
     render(
-      <Input input="Test message" setInput={mockSetInput} onSend={mockOnSend} />
+      <Input
+        input="Test message"
+        setInput={mockSetInput}
+        onSend={mockOnSend}
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: /send/i }));
     expect(mockOnSend).toHaveBeenCalled();
@@ -87,7 +91,7 @@ describe("Input Component", () => {
           onSend={mockOnSend}
           enableFileUpload={true}
           onFilesAttached={mockOnFilesAttached}
-        />
+        />,
       );
       expect(screen.getByTitle("Attach files")).toBeInTheDocument();
     });
@@ -99,7 +103,7 @@ describe("Input Component", () => {
           setInput={mockSetInput}
           onSend={mockOnSend}
           enableFileUpload={false}
-        />
+        />,
       );
       expect(screen.queryByTitle("Attach files")).not.toBeInTheDocument();
     });
@@ -118,7 +122,7 @@ describe("Input Component", () => {
           attachedFiles={[mockFile]}
           onFilesAttached={mockOnFilesAttached}
           onFileRemoved={mockOnFileRemoved}
-        />
+        />,
       );
 
       expect(screen.getByText(/test\.txt/)).toBeInTheDocument();
@@ -136,7 +140,7 @@ describe("Input Component", () => {
           onSend={mockOnSend}
           attachedFiles={[mockFile]}
           onFilesAttached={mockOnFilesAttached}
-        />
+        />,
       );
 
       expect(screen.getByRole("button", { name: /send/i })).toBeEnabled();
@@ -155,7 +159,7 @@ describe("Input Component", () => {
           attachedFiles={[mockFile]}
           onFilesAttached={mockOnFilesAttached}
           onFileRemoved={mockOnFileRemoved}
-        />
+        />,
       );
 
       const removeButton = screen.getByTitle("Remove file");
@@ -176,7 +180,7 @@ describe("Input Component", () => {
           onSend={mockOnSend}
           attachedFiles={[mockFile]}
           onFilesAttached={mockOnFilesAttached}
-        />
+        />,
       );
 
       expect(screen.getByTestId("file-icon-image")).toBeInTheDocument();
@@ -192,7 +196,7 @@ describe("Input Component", () => {
           onSend={mockOnSend}
           attachedFiles={[mockFile]}
           onFilesAttached={mockOnFilesAttached}
-        />
+        />,
       );
 
       expect(screen.getByTestId("file-icon-document")).toBeInTheDocument();
@@ -207,11 +211,11 @@ describe("Input Component", () => {
           enableFileUpload={true}
           onFilesAttached={mockOnFilesAttached}
           validateFile={mockValidateFile}
-        />
+        />,
       );
 
       const fileInput = document.querySelector(
-        'input[type="file"]'
+        'input[type="file"]',
       ) as HTMLInputElement;
       const mockFile = new File(["content"], "test.txt", {
         type: "text/plain",
@@ -230,7 +234,7 @@ describe("Input Component", () => {
           onSend={mockOnSend}
           attachedFiles={[]}
           onFilesAttached={mockOnFilesAttached}
-        />
+        />,
       );
 
       expect(screen.getByRole("button", { name: /send/i })).toBeDisabled();

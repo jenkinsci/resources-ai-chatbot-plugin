@@ -159,7 +159,8 @@ export const Chatbot = () => {
     }
 
     // Create file attachments for display
-    const fileAttachments: FileAttachment[] = attachedFiles.map(fileToAttachment);
+    const fileAttachments: FileAttachment[] =
+      attachedFiles.map(fileToAttachment);
 
     const userMessage: Message = {
       id: uuidv4(),

@@ -3,7 +3,7 @@
 from io import BytesIO
 
 
-def test_get_supported_extensions(client, mock_session_exists):
+def test_get_supported_extensions(client, mock_session_exists):  # pylint: disable=unused-argument
     """Test GET /files/supported-extensions endpoint."""
     response = client.get("/files/supported-extensions")
 
