@@ -1,7 +1,9 @@
 """Unit tests for in-memory chat session management logic."""
 
 import uuid
+import time
 import pytest
+from datetime import datetime, timedelta
 from langchain.memory import ConversationBufferMemory
 from api.services import memory
 
@@ -55,3 +57,91 @@ def test_session_exists_returns_true_for_existing_session():
 def test_session_exists_returns_false_for_missing_session():
     """Test that session_exists returns False when session is not present."""
     assert not memory.session_exists("missing-session-id")
+
+
+# Tests for session cleanup (TTL mechanism) - Issue #63
+
+
+def test_init_session_creates_session_with_timestamp():
+    """Test that new sessions are created with last_accessed timestamp."""
+    session_id = memory.init_session()
+    
+    # Check that session data contains both memory and timestamp
+    session_data = memory._sessions.get(session_id)
+    assert session_data is not None
+    assert "memory" in session_data
+    assert "last_accessed" in session_data
+    assert isinstance(session_data["memory"], ConversationBufferMemory)
+    assert isinstance(session_data["last_accessed"], datetime)
+
+
+def test_get_session_updates_timestamp():
+    """Test that accessing a session updates its last_accessed timestamp."""
+    session_id = memory.init_session()
+    initial_timestamp = memory._sessions[session_id]["last_accessed"]
+    
+    # Wait a bit to ensure timestamp difference
+    time.sleep(0.1)
+    
+    # Access the session
+    retrieved_memory = memory.get_session(session_id)
+    updated_timestamp = memory._sessions[session_id]["last_accessed"]
+    
+    assert retrieved_memory is not None
+    assert updated_timestamp > initial_timestamp
+
+
+def test_cleanup_expired_sessions_removes_old_sessions():
+    """Test that cleanup_expired_sessions removes sessions older than timeout."""
+    # Create test sessions
+    session1 = memory.init_session()
+    session2 = memory.init_session()
+    session3 = memory.init_session()
+    
+    # Manually set session1 and session2 to be expired (>24 hours old)
+    old_timestamp = datetime.now() - timedelta(hours=25)
+    memory._sessions[session1]["last_accessed"] = old_timestamp
+    memory._sessions[session2]["last_accessed"] = old_timestamp
+    
+    # session3 remains fresh
+    assert len(memory._sessions) == 3
+    
+    # Run cleanup
+    cleaned_count = memory.cleanup_expired_sessions()
+    
+    # Verify results
+    assert cleaned_count == 2
+    assert len(memory._sessions) == 1
+    assert session3 in memory._sessions
+    assert session1 not in memory._sessions
+    assert session2 not in memory._sessions
+
+
+def test_cleanup_expired_sessions_preserves_active_sessions():
+    """Test that cleanup preserves sessions within the timeout period."""
+    # Create sessions
+    session1 = memory.init_session()
+    session2 = memory.init_session()
+    
+    # Both sessions are fresh (just created)
+    initial_count = len(memory._sessions)
+    
+    # Run cleanup
+    cleaned_count = memory.cleanup_expired_sessions()
+    
+    # No sessions should be cleaned up
+    assert cleaned_count == 0
+    assert len(memory._sessions) == initial_count
+    assert memory.session_exists(session1)
+    assert memory.session_exists(session2)
+
+
+def test_cleanup_expired_sessions_with_no_sessions():
+    """Test that cleanup handles empty session dictionary gracefully."""
+    memory.reset_sessions()
+    
+    # Run cleanup on empty sessions
+    cleaned_count = memory.cleanup_expired_sessions()
+    
+    assert cleaned_count == 0
+    assert len(memory._sessions) == 0
