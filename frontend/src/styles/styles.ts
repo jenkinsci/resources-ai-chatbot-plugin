@@ -148,6 +148,18 @@ export const chatbotStyles = {
     lineHeight: "1.5",
   } as CSSProperties,
 
+  cancelButton: (): CSSProperties => ({
+  width: "14%",
+  padding: "0.5rem 1rem",
+  backgroundColor: "#ff4d4d", // red for cancel
+  color: "#fff",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  opacity: 1,
+}),
+
+
   sendButton: (input: string): CSSProperties =>
     ({
       width: "14%",

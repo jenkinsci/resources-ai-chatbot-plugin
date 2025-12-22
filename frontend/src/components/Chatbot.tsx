@@ -21,7 +21,11 @@ import { v4 as uuidv4 } from "uuid";
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
  */
+
+
 export const Chatbot = () => {
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
@@ -95,6 +99,7 @@ export const Chatbot = () => {
    * Handles the creation process of a chat session.
    */
   const handleNewChat = async () => {
+    console.log("Creating new chat")
     const id = await createChatSession();
 
     if (id === "") {
@@ -115,42 +120,24 @@ export const Chatbot = () => {
     setSessions((prevSessions) =>
       prevSessions.map((session) =>
         session.id === currentSessionId
-          ? { ...session, messages: [...session.messages, message] }
+          ? {
+            ...session,
+            messages: [...session.messages, message],
+            isLoading: session.isLoading,
+          }
           : session,
       ),
     );
   };
 
-  /**
-   * Handles the send process in a chat session.
-   */
-  const sendMessage = async () => {
-    const trimmed = input.trim();
-    if (!trimmed || !currentSessionId) {
-      console.error("No sessions available.");
-      return;
-    }
-    if (!trimmed) {
-      console.error("Empty message provided.");
-      return;
-    }
-    const userMessage: Message = {
-      id: uuidv4(),
-      sender: "user",
-      text: trimmed,
-    };
 
-    setInput("");
-    setSessions((prevSessions) =>
-      prevSessions.map((session) =>
-        session.id === currentSessionId
-          ? { ...session, isLoading: true }
-          : session,
-      ),
-    );
-    appendMessageToCurrentSession(userMessage);
+  const cancelSendMessage = () => {
+    if (abortController) {
+      abortController.abort();   
+      setAbortController(null);  
+    }
 
-    const botReply = await fetchChatbotReply(currentSessionId!, trimmed);
+   
     setSessions((prevSessions) =>
       prevSessions.map((session) =>
         session.id === currentSessionId
@@ -158,14 +145,75 @@ export const Chatbot = () => {
           : session,
       ),
     );
-    appendMessageToCurrentSession(botReply);
   };
+
+
+
+  /**
+   * Handles the send process in a chat session.
+   */
+  const sendMessage = async () => {
+    const trimmed = input.trim();
+    if (!trimmed || !currentSessionId) return;
+
+
+    const userMessage: Message = {
+      id: uuidv4(),
+      sender: "user",
+      text: trimmed,
+    };
+
+    setInput("");
+
+    const controller = new AbortController();
+    setAbortController(controller);
+
+    setSessions((prevSessions) =>
+      prevSessions.map((session) =>
+        session.id === currentSessionId
+          ? { ...session, isLoading: true }
+          : session,
+      ),
+    );
+    await new Promise((res) => setTimeout(res, 3000));
+
+    appendMessageToCurrentSession(userMessage);
+
+    try {
+      
+      await new Promise((res) => setTimeout(res, 3000));
+
+      if (controller.signal.aborted) {
+        console.info("Mock reply ignored due to cancel");
+        return;
+      }
+      // mock bot reply
+      appendMessageToCurrentSession({
+        id: uuidv4(),
+        sender: "jenkins-bot",
+        text: "This is a mock reply",
+      });
+
+    } finally {
+      setAbortController(null);
+      setSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === currentSessionId
+            ? { ...session, isLoading: false }
+            : session,
+        ),
+      );
+    }
+
+  };
+
 
   const getChatLoading = (): boolean => {
     const currentChat = sessions.find((chat) => chat.id === currentSessionId);
-
+    console.log("Loading state for current chat:", currentChat?.isLoading);
     return currentChat ? currentChat.isLoading : false;
   };
+
 
   const openSideBar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -266,7 +314,8 @@ export const Chatbot = () => {
                 messages={getSessionMessages(currentSessionId)}
                 loading={getChatLoading()}
               />
-              <Input input={input} setInput={setInput} onSend={sendMessage} />
+              <Input input={input} setInput={setInput} onSend={sendMessage} onCancel={cancelSendMessage} loading={getChatLoading()}
+              />
             </>
           ) : (
             getWelcomePage()

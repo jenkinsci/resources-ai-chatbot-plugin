@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef, Fragment } from "react";
+
 import { type Message, type Sender } from "../model/Message";
 import { chatbotStyles } from "../styles/styles";
 import { getChatbotText } from "../data/chatbotTexts";
@@ -27,12 +28,13 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
   const renderMessage = (text: string, sender: Sender, key: React.Key) => (
     <div key={key} style={chatbotStyles.messageContainer(sender)}>
       <span style={chatbotStyles.messageBubble(sender)}>
-        {text.split("\n").map((line, i) => (
-          <React.Fragment key={i}>
-            {line}
-            <br />
-          </React.Fragment>
-        ))}
+        { text.split("\n").map((line, i) => (
+  <Fragment key={i}>
+    {line}
+    <br />
+  </Fragment>
+))}
+
       </span>
     </div>
   );

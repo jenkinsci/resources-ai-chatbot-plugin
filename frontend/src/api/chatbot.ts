@@ -1,6 +1,7 @@
 import { type Message } from "../model/Message";
-import { getChatbotText } from "../data/chatbotTexts";
+// import { getChatbotText } from "../data/chatbotTexts";
 import { v4 as uuidv4 } from "uuid";
+
 import { CHATBOT_API_TIMEOUTS_MS } from "../config";
 import { callChatbotApi } from "../utils/callChatbotApi";
 
@@ -10,25 +11,33 @@ import { callChatbotApi } from "../utils/callChatbotApi";
  *
  * @returns A Promise resolving to the id of the new chat session
  */
+// export const createChatSession = async (): Promise<string> => {
+//   const data = await callChatbotApi<{ session_id: string }>(
+//     "sessions",
+//     { method: "POST" },
+//     { session_id: "" },
+//     CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION,
+//   );
+
+//   if (!data.session_id) {
+//     console.error(
+//       "Failed to create chat session: session_id missing in response",
+//       data,
+//     );
+//     return "";
+//   }
+
+
+//   return data.session_id;
+//   console.log("createChatSession response:", data);
+
+// };
+
+// MOCK API for frontend-only work
 export const createChatSession = async (): Promise<string> => {
-  const data = await callChatbotApi<{ session_id: string }>(
-    "sessions",
-    { method: "POST" },
-    { session_id: "" },
-    CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION,
-  );
-
-  if (!data.session_id) {
-    console.error(
-      "Failed to create chat session: session_id missing in response",
-      data,
-    );
-    return "";
-  }
-
-  return data.session_id;
+  // Instead of calling the backend, just generate a fake session ID
+  return uuidv4();
 };
-
 /**
  * Sends the user's message to the backend chatbot API and returns the bot's response.
  * If the API call fails or returns an invalid response, a fallback error message is used.
@@ -37,24 +46,49 @@ export const createChatSession = async (): Promise<string> => {
  * @param userMessage - The message input from the user
  * @returns A Promise resolving to a bot-generated Message
  */
+// export const fetchChatbotReply = async (
+//   sessionId: string,
+//   userMessage: string,
+//   signal?: AbortSignal,
+// ): Promise<Message> => {
+//   const data = await callChatbotApi<{ reply?: string }>(
+//     `sessions/${sessionId}/message`,
+//     {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({ message: userMessage }),
+//     },
+//     {},
+//     CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
+//     signal, // ✅ pass signal
+//   );
+
+//   const botReply = data.reply || getChatbotText("errorMessage");
+//   return createBotMessage(botReply);
+// };
+
+//MOCK API
 export const fetchChatbotReply = async (
   sessionId: string,
-  userMessage: string,
-): Promise<Message> => {
-  const data = await callChatbotApi<{ reply?: string }>(
-    `sessions/${sessionId}/message`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMessage }),
+  message: string,
+  signal: AbortSignal,
+) => {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-    {},
-    CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
-  );
+    body: JSON.stringify({ sessionId, message }),
+    signal,
+  });
 
-  const botReply = data.reply || getChatbotText("errorMessage");
-  return createBotMessage(botReply);
+  if (!response.ok) {
+    throw new Error("Failed to fetch chatbot reply");
+  }
+
+  return response.json();
 };
+
 
 /**
  * Sends a request to the backend to delete the chat session with session id sessionId.

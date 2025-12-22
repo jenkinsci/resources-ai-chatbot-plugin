@@ -6,6 +6,7 @@ import type { SidebarProps } from "../components/Sidebar";
 import type { HeaderProps } from "../components/Header";
 import type { InputProps } from "../components/Input";
 import type { MessagesProps } from "../components/Messages";
+import '@testing-library/jest-dom';
 
 jest.mock("../api/chatbot", () => ({
   fetchChatbotReply: jest.fn().mockResolvedValue({

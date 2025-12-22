@@ -13,6 +13,8 @@
   "errorMessage": "Sorry, I had trouble responding.",
   "noResponseMessage": "No response",
   "sendMessage": "Send",
+  "cancelMessage": "Cancel",
+
   "welcomeMessage": "Welcome to Jenkins AI Assistant",
   "welcomeDescription": "Create a new chat to get started",
   "createNewChat": "Start Chatting!",

@@ -4,7 +4,7 @@
 export interface Message {
   /** Unique identifier for the message (UUID) */
   id: string;
-  sender: Sender;
+  sender: Sender |"user" | "assistant" | "bot";
   text: string;
 }
 
