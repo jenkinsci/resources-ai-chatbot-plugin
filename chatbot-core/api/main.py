@@ -17,29 +17,29 @@ async def periodic_session_cleanup():
     Background task that periodically cleans up expired sessions.
     """
     cleanup_interval = CONFIG.get("session", {}).get("cleanup_interval_seconds", 3600)
-    logger.info(f"Starting periodic session cleanup task (interval: {cleanup_interval}s)")
-    
+    logger.info("Starting periodic session cleanup task (interval: %ss)", cleanup_interval)
+
     while True:
         await asyncio.sleep(cleanup_interval)
         try:
             cleaned_count = cleanup_expired_sessions()
             if cleaned_count > 0:
-                logger.info(f"Cleaned up {cleaned_count} expired session(s)")
-        except Exception as e:
-            logger.error(f"Error during session cleanup: {e}")
+                logger.info("Cleaned up %s expired session(s)", cleaned_count)
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logger.error("Error during session cleanup: %s", error)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app_instance: FastAPI):  # pylint: disable=unused-argument
     """
     Manages the application lifecycle, starting background tasks on startup.
     """
     # Startup: Create the cleanup task
     cleanup_task = asyncio.create_task(periodic_session_cleanup())
     logger.info("Application startup complete, background tasks initialized")
-    
+
     yield
-    
+
     # Shutdown: Cancel the cleanup task
     cleanup_task.cancel()
     try:
@@ -54,7 +54,7 @@ app = FastAPI(lifespan=lifespan)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    CONFIG["cors"]["allowed_origins"],
+    allow_origins=CONFIG["cors"]["allowed_origins"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

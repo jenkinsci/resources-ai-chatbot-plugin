@@ -89,15 +89,15 @@ def cleanup_expired_sessions() -> int:
     timeout_hours = CONFIG.get("session", {}).get("timeout_hours", 24)
     now = datetime.now()
     cutoff_time = now - timedelta(hours=timeout_hours)
-    
+
     with _lock:
         expired_session_ids = [
             session_id
             for session_id, session_data in _sessions.items()
             if session_data["last_accessed"] < cutoff_time
         ]
-        
+
         for session_id in expired_session_ids:
             del _sessions[session_id]
-    
+
     return len(expired_session_ids)
