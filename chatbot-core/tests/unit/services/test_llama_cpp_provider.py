@@ -2,7 +2,13 @@
 
 from unittest.mock import patch, MagicMock
 import pytest
-from api.models.llama_cpp_provider import LlamaCppProvider
+from api.models.llama_cpp_provider import LlamaCppProvider, LLAMA_CPP_AVAILABLE
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    not LLAMA_CPP_AVAILABLE, reason="llama-cpp-python is not installed"
+)
 
 
 @patch("api.models.llama_cpp_provider.Llama")
