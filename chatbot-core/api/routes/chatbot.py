@@ -6,7 +6,10 @@ This module acts as a "controller" connecting the HTTP layer to
 the chat service logic.
 """
 
-from fastapi import APIRouter, HTTPException, Response, status
+
+from fastapi import APIRouter, HTTPException, Response, status, WebSocket, WebSocketDisconnect
+import json
+from api.services.chat_service import get_chatbot_reply_stream
 from api.models.schemas import (
     ChatRequest,
     ChatResponse,
@@ -19,8 +22,71 @@ from api.services.memory import (
     delete_session,
     session_exists
 )
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# --- Conditional Imports for Optional Dependencies ---
+try:
+    from llama_cpp import Llama
+    LLM_AVAILABLE = True
+except ImportError:
+    LLM_AVAILABLE = False
+    logger.warning("LLM not available - running in API-only mode")
+
+try:
+    from retriv import DenseRetriever
+    RETRIEVAL_AVAILABLE = True
+except ImportError:
+    RETRIEVAL_AVAILABLE = False
+    logger.warning("Retrieval not available - limited functionality")
 
 router = APIRouter()
+
+
+# WebSocket endpoint for real-time token streaming
+@router.websocket("/sessions/{session_id}/stream")
+async def chatbot_stream(websocket: WebSocket, session_id: str):
+    """
+    WebSocket endpoint for real-time token streaming.
+    Protocol:
+        Client sends: {"message": "user query"}
+        Server sends: {"token": "text"} for each token
+        Server sends: {"end": true} when complete
+        Server sends: {"error": "message"} on errors
+    """
+    logger.info(f"WebSocket connection attempt for session: {session_id}")
+    await websocket.accept()
+    logger.info(f"WebSocket accepted for session: {session_id}")
+
+    if not session_exists(session_id):
+        await websocket.send_text(json.dumps({"error": "Session not found"}))
+        await websocket.close()
+        return
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            message_data = json.loads(data)
+            user_message = message_data.get("message", "")
+
+            if not user_message:
+                continue
+
+            async for token in get_chatbot_reply_stream(session_id, user_message):
+                await websocket.send_text(json.dumps({"token": token}))
+
+            await websocket.send_text(json.dumps({"end": True}))
+
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket disconnected for session {session_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error for session {session_id}: {e}", exc_info=True)
+        try:
+            await websocket.send_text(json.dumps({"error": "An unexpected error occurred."}))
+        except:
+            pass  # Connection already closed
 
 
 @router.post("/sessions", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)

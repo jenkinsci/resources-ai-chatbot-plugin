@@ -1,11 +1,11 @@
-"""
-Chat service layer responsible for processing the requests forwarded by the controller.
-"""
+"""Chat service layer responsible for processing the requests forwarded by the controller."""
 
+import asyncio
 import re
-from typing import List, Optional
 import ast
 import json
+from typing import AsyncGenerator, Optional, List
+
 from api.models.llama_cpp_provider import llm_provider
 from api.config.loader import CONFIG
 from api.prompts.prompt_builder import build_prompt
@@ -306,6 +306,11 @@ def retrieve_context(user_input: str) -> str:
         str: Combined, reconstructed context text. Returns retrieval_config["empty_context_message"]
         if any context have been retrieved.
     """
+    # Dev mode: bypass RAG when indices are not built
+    if CONFIG.get("dev_mode", False):
+        logger.info("Dev mode enabled - skipping RAG retrieval. Build indices to enable full RAG.")
+        return "Dev mode: RAG indices not built. This is a placeholder context for testing."
+    
     data_retrieved, _ = get_relevant_documents(
         user_input,
         EMBEDDING_MODEL,
@@ -348,12 +353,76 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
     Returns:
         str: The model's generated text response.
     """
+    if llm_provider is None:
+        logger.warning("LLM provider not available - returning fallback response")
+        return "LLM is not available. Please install llama-cpp-python and configure a model."
     try:
         return llm_provider.generate(prompt=prompt,
                                     max_tokens=max_tokens or llm_config["max_tokens"])
+    except (ImportError, AttributeError) as e:
+        logger.error("LLM provider unavailable: %s", e)
+        return "LLM is not available. Please install llama-cpp-python and configure a model."
     except Exception as e: # pylint: disable=broad-exception-caught
         logger.error("LLM generation failed for prompt: %s. Error %s", prompt, e)
         return "Sorry, I'm having trouble generating a response right now."
+
+
+async def generate_answer_stream(prompt: str, max_tokens: Optional[int] = None) -> AsyncGenerator[str, None]:
+    """
+    Generate streaming completion from LLM.
+    Args:
+        prompt: Full prompt for the model
+        max_tokens: Token generation limit
+    Yields:
+        str: Individual tokens
+    """
+    if llm_provider is None:
+        logger.warning("LLM provider not available - returning fallback response")
+        yield "LLM is not available. Please install llama-cpp-python and configure a model."
+        return
+    try:
+        async for token in llm_provider.generate_stream(
+            prompt=prompt,
+            max_tokens=max_tokens or llm_config["max_tokens"]
+        ):
+            yield token
+    except (ImportError, AttributeError) as e:
+        logger.error("LLM provider unavailable: %s", e)
+        yield "LLM is not available. Please install llama-cpp-python and configure a model."
+    except Exception as e:
+        logger.error(f"LLM streaming generation failed: {e}", exc_info=True)
+        yield "Sorry, I'm having trouble generating a response right now."
+
+
+async def get_chatbot_reply_stream(session_id: str, user_input: str) -> AsyncGenerator[str, None]:
+    """
+    Streaming version of get_chatbot_reply for WebSocket clients.
+    Args:
+        session_id: Unique session identifier
+        user_input: User's message
+    Yields:
+        str: Individual tokens from LLM response
+    """
+    logger.info("Streaming message from session '%s'", session_id)
+    logger.info("Handling user query: %s", user_input)
+
+    memory = get_session(session_id)
+    if memory is None:
+        raise RuntimeError(f"Session '{session_id}' not found in memory store.")
+
+    context = retrieve_context(user_input)
+    logger.info("Context retrieved: %s", context)
+
+    prompt = build_prompt(user_input, context, memory)
+    logger.info("Generating streaming answer with prompt: %s", prompt)
+
+    full_reply = ""
+    async for token in generate_answer_stream(prompt):
+        full_reply += token
+        yield token
+
+    memory.chat_memory.add_user_message(user_input)
+    memory.chat_memory.add_ai_message(full_reply)
 
 
 def _extract_query_type(response: str) -> str:
