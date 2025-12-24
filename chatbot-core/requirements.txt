@@ -46,7 +46,7 @@ nvidia-nvtx-cu12==12.6.77
 # Vector Store & Retrieval
 faiss-cpu==1.13.2
 # Optional retriever extras; comment out if build tools unavailable
-# retriv @ git+https://github.com/giovanni-vaccarino/retriv.git@remove-pystemmer
+retriv @ git+https://github.com/giovanni-vaccarino/retriv.git@remove-pystemmer
 
 # Data Processing
 numpy==2.2.6
