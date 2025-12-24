@@ -133,11 +133,11 @@ export const Chatbot = () => {
 
   const cancelSendMessage = () => {
     if (abortController) {
-      abortController.abort();   
-      setAbortController(null);  
+      abortController.abort();
+      setAbortController(null);
     }
 
-   
+
     setSessions((prevSessions) =>
       prevSessions.map((session) =>
         session.id === currentSessionId
@@ -146,8 +146,6 @@ export const Chatbot = () => {
       ),
     );
   };
-
-
 
   /**
    * Handles the send process in a chat session.
@@ -175,25 +173,25 @@ export const Chatbot = () => {
           : session,
       ),
     );
-    await new Promise((res) => setTimeout(res, 3000));
 
     appendMessageToCurrentSession(userMessage);
 
     try {
-      
-      await new Promise((res) => setTimeout(res, 3000));
+      const botReply = await fetchChatbotReply(
+        currentSessionId,
+        trimmed,
+        controller.signal,
+      );
 
-      if (controller.signal.aborted) {
-        console.info("Mock reply ignored due to cancel");
-        return;
+      if (controller.signal.aborted) return;
+
+      appendMessageToCurrentSession(botReply);
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        console.info("Message sending cancelled by user");
+      } else {
+        console.error("Error sending message", e);
       }
-      // mock bot reply
-      appendMessageToCurrentSession({
-        id: uuidv4(),
-        sender: "jenkins-bot",
-        text: "This is a mock reply",
-      });
-
     } finally {
       setAbortController(null);
       setSessions((prevSessions) =>
@@ -204,16 +202,13 @@ export const Chatbot = () => {
         ),
       );
     }
-
-  };
-
+  }
 
   const getChatLoading = (): boolean => {
     const currentChat = sessions.find((chat) => chat.id === currentSessionId);
     console.log("Loading state for current chat:", currentChat?.isLoading);
     return currentChat ? currentChat.isLoading : false;
   };
-
 
   const openSideBar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -324,4 +319,5 @@ export const Chatbot = () => {
       )}
     </>
   );
+
 };
