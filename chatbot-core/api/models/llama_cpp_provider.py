@@ -8,10 +8,13 @@ on quantized models (GGUF format).
 """
 
 
+import logging
+import asyncio
+from typing import AsyncGenerator
+
 from api.config.loader import CONFIG
 from api.models.llm_provider import LLMProvider
 from utils import LoggerFactory
-import logging
 
 try:
     from threading import Lock
@@ -23,13 +26,8 @@ except ImportError:
     Llama = None
     logging.warning("llama-cpp-python is not installed. LlamaCppProvider will be disabled.")
 
-
 llm_config = CONFIG["llm"]
 logger = LoggerFactory.instance().get_logger("llm")
-
-# pylint: disable=too-few-public-methods
-from typing import AsyncGenerator
-import asyncio
 
 class LlamaCppProvider(LLMProvider if LLAMA_CPP_AVAILABLE else object):
     """

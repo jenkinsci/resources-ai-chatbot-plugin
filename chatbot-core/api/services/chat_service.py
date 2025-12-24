@@ -1,25 +1,30 @@
+
 """Chat service layer responsible for processing the requests forwarded by the controller."""
 
-import asyncio
-import re
 import ast
+import asyncio
 import json
-from typing import AsyncGenerator, Optional, List
+import re
+from typing import AsyncGenerator, List, Optional
 
-from api.models.llama_cpp_provider import llm_provider
 from api.config.loader import CONFIG
+from api.models.embedding_model import EMBEDDING_MODEL
+from api.models.llama_cpp_provider import llm_provider
+from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type
 from api.prompts.prompt_builder import build_prompt
 from api.prompts.prompts import (
+    CONTEXT_RELEVANCE_PROMPT,
     QUERY_CLASSIFIER_PROMPT,
-    SPLIT_QUERY_PROMPT,
     RETRIEVER_AGENT_PROMPT,
-    CONTEXT_RELEVANCE_PROMPT
+    SPLIT_QUERY_PROMPT,
 )
-from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type
 from api.services.memory import get_session
-from api.models.embedding_model import EMBEDDING_MODEL
 from api.tools.tools import TOOL_REGISTRY
-from api.tools.utils import get_default_tools_call, validate_tool_calls, make_placeholder_replacer
+from api.tools.utils import (
+    get_default_tools_call,
+    make_placeholder_replacer,
+    validate_tool_calls,
+)
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
 

@@ -7,22 +7,22 @@ the chat service logic.
 """
 
 
-from fastapi import APIRouter, HTTPException, Response, status, WebSocket, WebSocketDisconnect
 import json
-from api.services.chat_service import get_chatbot_reply_stream
+import logging
+
+from fastapi import APIRouter, HTTPException, Response, status, WebSocket, WebSocketDisconnect
 from api.models.schemas import (
     ChatRequest,
     ChatResponse,
     SessionResponse,
-    DeleteResponse
+    DeleteResponse,
 )
-from api.services.chat_service import get_chatbot_reply
+from api.services.chat_service import get_chatbot_reply, get_chatbot_reply_stream
 from api.services.memory import (
     init_session,
     delete_session,
-    session_exists
+    session_exists,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
