@@ -25,7 +25,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r chatbot-core/requirements.txt
+        # Only install pylint and core dependencies needed for linting
+        # Skip heavy ML/AI packages (faiss, torch, llama-cpp, sentence-transformers)
+        # that may not have wheels for all Python versions
+        pip install pylint
+        pip install fastapi pydantic pyyaml python-dotenv requests beautifulsoup4 langchain pandas
+      continue-on-error: false
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        # Some optional, heavy dependencies (faiss, llama_cpp, sentence-transformers, etc.)
+        # are not installed in this job since they're not needed for linting.
+        # We disable import-error and no-name-in-module checks so pylint focuses
+        # on actual code style issues rather than missing optional dependencies.
+        pylint --disable=import-error,no-name-in-module $(git ls-files '*.py')

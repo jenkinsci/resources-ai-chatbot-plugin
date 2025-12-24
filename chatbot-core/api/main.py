@@ -9,7 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import chatbot
 from api.config.loader import CONFIG
 from api.services.memory import cleanup_expired_sessions
-from api.utils.logger import logger
+from utils import LoggerFactory
+
+logger = LoggerFactory.get_logger(__name__)
 
 
 async def periodic_session_cleanup():
@@ -46,7 +48,8 @@ async def lifespan(app_instance: FastAPI):  # pylint: disable=unused-argument
         await cleanup_task
     except asyncio.CancelledError:
         pass
-    logger.info("Application shutdown complete, background tasks stopped")
+    logger.info("Application shutdown complete")
+    logger.info("Background tasks stopped")
 
 
 app = FastAPI(lifespan=lifespan)
