@@ -4,6 +4,7 @@ import {
   fetchChatbotReply,
   deleteChatSession,
 } from "../api/chatbot";
+
 import { callChatbotApi } from "../utils/callChatbotApi";
 import { getChatbotText } from "../data/chatbotTexts";
 
@@ -92,18 +93,20 @@ describe("chatbotApi", () => {
     });
 
     it("uses fallback error message when API reply is missing", async () => {
-      (callChatbotApi as jest.Mock).mockResolvedValueOnce({});
+  (callChatbotApi as jest.Mock).mockResolvedValueOnce({});
 
-      const result = await fetchChatbotReply("session-xyz", "Hi!");
+  const result = await fetchChatbotReply("session-xyz", "Hi!");
 
-      expect(getChatbotText).toHaveBeenCalledWith("errorMessage");
 
-      expect(result).toEqual({
-        id: "mock-uuid",
-        sender: "jenkins-bot",
-        text: "Fallback error message",
-      });
-    });
+  expect(getChatbotText).toHaveBeenCalledWith("errorMessage");
+
+  expect(result).toEqual({
+    id: "mock-uuid",
+    sender: "jenkins-bot",
+    text: "Fallback error message",
+  });
+});
+
   });
 
   describe("deleteChatSession", () => {
