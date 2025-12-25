@@ -390,7 +390,7 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
     except (ValueError, RuntimeError) as exc:
         logger.error("LLM generation failed for prompt: %r. Error: %r", prompt, exc)
         return "Sorry, I'm having trouble generating a response right now."
-    except Exception as exc:
+    except Exception:  # pylint: disable=broad-except
         logger.exception("Unexpected error during LLM generation for prompt: %r", prompt)
         return "Sorry, an unexpected error occurred. Please contact support."
 
@@ -422,7 +422,7 @@ async def generate_answer_stream(
     except (ValueError, RuntimeError) as exc:
         logger.error("LLM streaming generation failed: %r", exc, exc_info=True)
         yield "Sorry, I'm having trouble generating a response right now."
-    except Exception as exc:
+    except Exception:  # pylint: disable=broad-except
         logger.exception("Unexpected error during LLM streaming generation")
         yield "Sorry, an unexpected error occurred. Please contact support."
 
