@@ -1,4 +1,3 @@
-// import React from "react";
 import type { KeyboardEvent } from "react";
 
 import { getChatbotText } from "../data/chatbotTexts";
