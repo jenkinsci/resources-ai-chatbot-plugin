@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { type Message, type FileAttachment } from "../model/Message";
+import { type Message } from "../model/Message";
 import { type ChatSession } from "../model/ChatSession";
 import {
   fetchChatbotReply,
@@ -38,32 +38,33 @@ export const Chatbot = () => {
   const [sessionIdToDelete, setSessionIdToDelete] = useState<string | null>(
     null,
   );
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
-  const [supportedExtensions, setSupportedExtensions] =
-    useState<SupportedExtensions | null>(null);
+const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+const [supportedExtensions, setSupportedExtensions] =
+  useState<SupportedExtensions | null>(null);
 
-  /**
-   * Fetch supported file extensions on component mount.
-   */
-  useEffect(() => {
-    const loadSupportedExtensions = async () => {
-      const extensions = await fetchSupportedExtensions();
-      if (extensions) {
-        setSupportedExtensions(extensions);
-      }
-    };
-    loadSupportedExtensions();
-  }, []);
+/**
+ * Fetch supported file extensions on component mount.
+ */
+useEffect(() => {
+  const loadSupportedExtensions = async () => {
+    const extensions = await fetchSupportedExtensions();
+    if (extensions) {
+      setSupportedExtensions(extensions);
+    }
+  };
+  loadSupportedExtensions();
+}, []);
 
-  /**
-   * Saving the chat sessions in the session storage only
-   * when the component unmounts to avoid continuos savings.
-   */
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      sessionStorage.setItem("chatbot-sessions", JSON.stringify(sessions));
-      sessionStorage.setItem("chatbot-last-session-id", currentSessionId || "");
-    };
+/**
+ * Saving the chat sessions in the session storage only
+ * when the component unmounts to avoid continuos savings.
+ */
+useEffect(() => {
+  const handleBeforeUnload = () => {
+    sessionStorage.setItem("chatbot-sessions", JSON.stringify(sessions));
+    sessionStorage.setItem("chatbot-last-session-id", currentSessionId || "");
+  };
+
 
     window.addEventListener("beforeunload", handleBeforeUnload);
 
@@ -71,6 +72,7 @@ export const Chatbot = () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [sessions, currentSessionId]);
+
 
   /**
    * Returns the messages of a chat session.
@@ -119,7 +121,7 @@ export const Chatbot = () => {
     const id = await createChatSession();
 
     if (id === "") {
-      console.error("Add error showage for a couple of seconds.");
+        console.error("Add error showage for a couple of seconds.");
       return;
     }
 
@@ -147,45 +149,55 @@ export const Chatbot = () => {
   /**
    * Handles the send process in a chat session.
    */
-  const sendMessage = async () => {
-    const trimmed = input.trim();
-    if (!trimmed || !currentSessionId) {
-      return;
-    }
+  
+const sendMessage = async () => {
+  const trimmed = input.trim();
+  const hasFiles = attachedFiles.length > 0;
 
-    const userMessage: Message = {
-      id: uuidv4(),
-      sender: "user",
-      text: trimmed || (hasFiles ? "📎 Attached file(s)" : ""),
-      files: fileAttachments.length > 0 ? fileAttachments : undefined,
-    };
+  if (!currentSessionId) return;
+  if (!trimmed && !hasFiles) return;
 
-    // Clear input and files
-    setInput("");
+  const fileAttachments = attachedFiles.map(fileToAttachment);
 
-    setSessions((prevSessions) =>
-      prevSessions.map((session) =>
-        session.id === currentSessionId
-          ? { ...session, isLoading: true }
-          : session,
+  const userMessage: Message = {
+    id: uuidv4(),
+    sender: "user",
+    text: trimmed || "📎 Attached file(s)",
+    files: fileAttachments.length ? fileAttachments : undefined,
+  };
+
+  setInput("");
+  const filesToSend = [...attachedFiles];
+  setAttachedFiles([]);
+
+  setSessions((prev) =>
+    prev.map((s) =>
+      s.id === currentSessionId ? { ...s, isLoading: true } : s,
+    ),
+  );
+
+  appendMessageToCurrentSession(userMessage);
+
+  try {
+    const botReply =
+      filesToSend.length > 0
+        ? await fetchChatbotReplyWithFiles(
+            currentSessionId,
+            trimmed || "Please analyze the attached file(s).",
+            filesToSend,
+          )
+        : await fetchChatbotReply(currentSessionId, trimmed);
+
+    appendMessageToCurrentSession(botReply);
+  } finally {
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === currentSessionId ? { ...s, isLoading: false } : s,
       ),
     );
+  }
+};
 
-    appendMessageToCurrentSession(userMessage);
-
-    try {
-      const botReply = await fetchChatbotReply(currentSessionId, trimmed);
-      appendMessageToCurrentSession(botReply);
-    } finally {
-      setSessions((prevSessions) =>
-        prevSessions.map((session) =>
-          session.id === currentSessionId
-            ? { ...session, isLoading: false }
-            : session,
-        ),
-      );
-    }
-  };
 
   /**
    * Handles attaching files to the current message.
@@ -331,4 +343,4 @@ export const Chatbot = () => {
       )}
     </>
   );
-};
+  };
