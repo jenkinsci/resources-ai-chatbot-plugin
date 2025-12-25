@@ -4,6 +4,8 @@ import json
 import os
 from urllib.parse import urljoin, urlparse
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from utils import LoggerFactory
 
@@ -19,10 +21,38 @@ BASE_URL = "https://www.jenkins.io/doc/"
 # Set to check for duplicates
 visited_urls = set()
 
+
+def create_session_with_retries():
+    """Create a requests session with automatic retry on rate limits.
+    
+    Uses exponential backoff and respects Retry-After header from server.
+    This is an optimistic approach - we don't slow down unless the server
+    tells us to.
+    """
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,  # 1s, 2s, 4s between retries
+        status_forcelist=[429, 500, 502, 503, 504],
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+
 # Key: url ; Value: content of that page
 page_content = {}
 
 non_canonic_content_urls = set()
+
+
+def normalize_url(url):
+    """Normalize URL by adding trailing slash for non-HTML pages."""
+    if '.html' not in url and not url.endswith('/'):
+        url += '/'
+    return url
+
 
 def is_valid_url(url):
     """Check if the URL is a valid link to a new page, internal to the doc, 
@@ -31,48 +61,80 @@ def is_valid_url(url):
     parsed = urlparse(url)
     return parsed.scheme in {"http", "https"} and BASE_URL in url and "#" not in url
 
+
 def extract_page_content_container(soup):
-    """Extract content from the 'container' div class"""
-    content_div = soup.find("div", class_="container")
+    """Extract main content from the page.
+
+    Developer docs use col-8, non-developer docs use col-lg-9.
+    Falls back to container if neither is found.
+    """
+    content_div = (
+        soup.find("div", class_="col-8")
+        or soup.find("div", class_="col-lg-9")
+        or soup.find("div", class_="container")
+    )
     if content_div:
         return str(content_div)
     return ""
 
 
-def crawl(url):
-    """Recursively crawl documentation pages starting from the base URL"""
+def crawl(start_url):
+    """Iteratively crawl documentation pages using stack-based DFS.
+    
+    Uses an explicit stack instead of recursion to avoid RecursionError
+    on deep documentation structures. Maintains the same traversal order
+    as the original recursive implementation.
+    
+    Args:
+        start_url: The URL to begin crawling from.
+    """
+    session = create_session_with_retries()
+    stack = [start_url]
 
-    # Avoid multiple visits
-    if url in visited_urls:
-        return
+    while stack:
+        url = stack.pop()
 
-    logger.info("Visiting: %s", url)
-    try:
-        visited_urls.add(url)
+        # Normalize URL before checking visited
+        url = normalize_url(url)
 
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, "html.parser")
+        # Fast skip for already visited or invalid URLs
+        if url in visited_urls:
+            continue
 
-        content = extract_page_content_container(soup)
-        if content:
-            page_content[url] = content
-        else:
-            non_canonic_content_urls.add(url)
+        if not is_valid_url(url):
+            continue
 
-        # Find all links in the page
-        links = soup.find_all("a", href=True)
-        if '.html' not in url and not url.endswith('/'):
-            url += '/'
+        logger.info("Visiting: %s", url)
 
-        for link in links:
-            href = link['href']
-            full_url = urljoin(url, href)
-            if is_valid_url(full_url):
-                crawl(full_url)
+        try:
+            visited_urls.add(url)
 
-    except requests.RequestException as e:
-        logger.error("Error accessing %s: %s", url, e)
+            response = session.get(url, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, "html.parser")
+
+            content = extract_page_content_container(soup)
+            if content:
+                page_content[url] = content
+            else:
+                non_canonic_content_urls.add(url)
+
+            # Find all links in the page
+            links = soup.find_all("a", href=True)
+
+            # Push links in reverse order to maintain original DFS traversal order
+            # Stack is LIFO, so reversed() ensures first link gets processed first
+            for link in reversed(links):
+                href = link['href']
+                full_url = urljoin(url, href)
+                # Normalize before pushing to prevent duplicate stack entries
+                full_url = normalize_url(full_url)
+                if is_valid_url(full_url) and full_url not in visited_urls:
+                    stack.append(full_url)
+
+        except requests.RequestException as e:
+            logger.error("Error accessing %s: %s", url, e)
+            continue  # Skip this URL, continue with remaining stack
 
 def start_crawl():
     """Start the crawling process from the base URL."""
