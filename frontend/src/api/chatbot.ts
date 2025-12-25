@@ -1,6 +1,8 @@
-import { type Message } from "../model/Message";
+import { type Message, type Sender } from "../model/Message";
 import { getChatbotText } from "../data/chatbotTexts";
 import { v4 as uuidv4 } from "uuid";
+
+
 import { CHATBOT_API_TIMEOUTS_MS } from "../config";
 import { callChatbotApi } from "../utils/callChatbotApi";
 
@@ -27,6 +29,8 @@ export const createChatSession = async (): Promise<string> => {
   }
 
   return data.session_id;
+ 
+
 };
 
 /**
@@ -40,6 +44,7 @@ export const createChatSession = async (): Promise<string> => {
 export const fetchChatbotReply = async (
   sessionId: string,
   userMessage: string,
+  signal?: AbortSignal,
 ): Promise<Message> => {
   const data = await callChatbotApi<{ reply?: string }>(
     `sessions/${sessionId}/message`,
@@ -50,6 +55,7 @@ export const fetchChatbotReply = async (
     },
     {},
     CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
+    signal, 
   );
 
   const botReply = data.reply || getChatbotText("errorMessage");
@@ -79,6 +85,7 @@ export const deleteChatSession = async (sessionId: string): Promise<void> => {
  */
 export const createBotMessage = (text: string): Message => ({
   id: uuidv4(),
-  sender: "jenkins-bot",
+  sender: "jenkins-bot" as Sender,
+
   text,
 });

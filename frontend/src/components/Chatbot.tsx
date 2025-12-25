@@ -21,7 +21,11 @@ import { v4 as uuidv4 } from "uuid";
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
  */
+
+
 export const Chatbot = () => {
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
@@ -95,6 +99,7 @@ export const Chatbot = () => {
    * Handles the creation process of a chat session.
    */
   const handleNewChat = async () => {
+
     const id = await createChatSession();
 
     if (id === "") {
@@ -115,7 +120,28 @@ export const Chatbot = () => {
     setSessions((prevSessions) =>
       prevSessions.map((session) =>
         session.id === currentSessionId
-          ? { ...session, messages: [...session.messages, message] }
+          ? {
+            ...session,
+            messages: [...session.messages, message],
+            isLoading: session.isLoading,
+          }
+          : session,
+      ),
+    );
+  };
+
+
+  const cancelSendMessage = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+    }
+
+
+    setSessions((prevSessions) =>
+      prevSessions.map((session) =>
+        session.id === currentSessionId
+          ? { ...session, isLoading: false }
           : session,
       ),
     );
@@ -126,14 +152,9 @@ export const Chatbot = () => {
    */
   const sendMessage = async () => {
     const trimmed = input.trim();
-    if (!trimmed || !currentSessionId) {
-      console.error("No sessions available.");
-      return;
-    }
-    if (!trimmed) {
-      console.error("Empty message provided.");
-      return;
-    }
+    if (!trimmed || !currentSessionId) return;
+
+
     const userMessage: Message = {
       id: uuidv4(),
       sender: "user",
@@ -141,6 +162,10 @@ export const Chatbot = () => {
     };
 
     setInput("");
+
+    const controller = new AbortController();
+    setAbortController(controller);
+
     setSessions((prevSessions) =>
       prevSessions.map((session) =>
         session.id === currentSessionId
@@ -148,22 +173,45 @@ export const Chatbot = () => {
           : session,
       ),
     );
+
     appendMessageToCurrentSession(userMessage);
 
-    const botReply = await fetchChatbotReply(currentSessionId!, trimmed);
-    setSessions((prevSessions) =>
-      prevSessions.map((session) =>
-        session.id === currentSessionId
-          ? { ...session, isLoading: false }
-          : session,
-      ),
-    );
-    appendMessageToCurrentSession(botReply);
-  };
+    try {
+      const botReply = await fetchChatbotReply(
+        currentSessionId,
+        trimmed,
+        controller.signal,
+      );
+
+      if (controller.signal.aborted) return;
+
+      appendMessageToCurrentSession(botReply);
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        appendMessageToCurrentSession({
+          id: uuidv4(),
+          sender: "jenkins-bot",
+          text: "Message cancelled",
+        });
+      } else {
+        console.error("Error sending message", e);
+      }
+    }
+    finally {
+      setAbortController(null);
+      setSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === currentSessionId
+            ? { ...session, isLoading: false }
+            : session,
+        ),
+      );
+    }
+  }
 
   const getChatLoading = (): boolean => {
     const currentChat = sessions.find((chat) => chat.id === currentSessionId);
-
+    console.log("Loading state for current chat:", currentChat?.isLoading);
     return currentChat ? currentChat.isLoading : false;
   };
 
@@ -266,7 +314,8 @@ export const Chatbot = () => {
                 messages={getSessionMessages(currentSessionId)}
                 loading={getChatLoading()}
               />
-              <Input input={input} setInput={setInput} onSend={sendMessage} />
+              <Input input={input} setInput={setInput} onSend={sendMessage} onCancel={cancelSendMessage} loading={getChatLoading()}
+              />
             </>
           ) : (
             getWelcomePage()
@@ -275,4 +324,5 @@ export const Chatbot = () => {
       )}
     </>
   );
+
 };

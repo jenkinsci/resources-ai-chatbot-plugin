@@ -14,15 +14,22 @@ export const callChatbotApi = async <T>(
   options: RequestInit,
   fallbackErrorValue: T,
   timeoutMs: number,
+    signal?: AbortSignal,
 ): Promise<T> => {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
+
+if (signal) {
+  signal.addEventListener("abort", () => controller.abort());
+}
+
+const id = setTimeout(() => controller.abort(), timeoutMs);
+
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/chatbot/${endpoint}`, {
-      ...options,
-      signal: controller.signal,
-    });
+  const response = await fetch(`${API_BASE_URL}/api/chatbot/${endpoint}`, {
+  ...options,
+  signal: controller.signal,
+});
 
     if (!response.ok) {
       console.error(`API error: ${response.status} ${response.statusText}`);
@@ -31,15 +38,14 @@ export const callChatbotApi = async <T>(
 
     return await response.json();
   } catch (error: unknown) {
-    if (error instanceof DOMException && error.name == "AbortError") {
-      console.error(
-        `API request to ${endpoint} timed out aftr ${timeoutMs}ms.`,
-      );
-    } else {
-      console.error(`API error calling ${endpoint}:`, error);
-    }
-    return fallbackErrorValue;
-  } finally {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    console.info(`API request to ${endpoint} aborted`);
+  } else {
+    console.error(`API error calling ${endpoint}:`, error);
+  }
+  return fallbackErrorValue;
+}
+finally {
     clearTimeout(id);
   }
 };
