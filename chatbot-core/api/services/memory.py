@@ -79,6 +79,50 @@ def reset_sessions():
     with _lock:
         _sessions.clear()
 
+def get_last_accessed(session_id: str) -> datetime | None:
+    """
+    Get the last accessed timestamp for a given session.
+
+    Args:
+        session_id (str): The session identifier.
+
+    Returns:
+        datetime | None: The last accessed timestamp if session exists, else None.
+    """
+    with _lock:
+        session_data = _sessions.get(session_id)
+        if session_data:
+            return session_data["last_accessed"]
+    return None
+
+def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
+    """
+    Set the last accessed timestamp for a given session (for testing purposes).
+
+    Args:
+        session_id (str): The session identifier.
+        timestamp (datetime): The timestamp to set.
+
+    Returns:
+        bool: True if session exists and timestamp was set, False otherwise.
+    """
+    with _lock:
+        session_data = _sessions.get(session_id)
+        if session_data:
+            session_data["last_accessed"] = timestamp
+            return True
+    return False
+
+def get_session_count() -> int:
+    """
+    Get the total number of active sessions (for testing purposes).
+
+    Returns:
+        int: The number of active sessions.
+    """
+    with _lock:
+        return len(_sessions)
+
 def cleanup_expired_sessions() -> int:
     """
     Remove sessions that have not been accessed within the configured timeout period.

@@ -68,26 +68,24 @@ def test_init_session_creates_session_with_timestamp():
     """Test that new sessions are created with last_accessed timestamp."""
     session_id = memory.init_session()
 
-    # Check that session data contains both memory and timestamp
-    session_data = memory._sessions.get(session_id)  # pylint: disable=protected-access
-    assert session_data is not None
-    assert "memory" in session_data
-    assert "last_accessed" in session_data
-    assert isinstance(session_data["memory"], ConversationBufferMemory)
-    assert isinstance(session_data["last_accessed"], datetime)
+    # Check that session exists and has last_accessed timestamp
+    assert memory.session_exists(session_id)
+    last_accessed = memory.get_last_accessed(session_id)
+    assert last_accessed is not None
+    assert isinstance(last_accessed, datetime)
 
 
 def test_get_session_updates_timestamp():
     """Test that accessing a session updates its last_accessed timestamp."""
     session_id = memory.init_session()
-    initial_timestamp = memory._sessions[session_id]["last_accessed"]  # pylint: disable=protected-access
+    initial_timestamp = memory.get_last_accessed(session_id)
 
     # Wait a bit to ensure timestamp difference
     time.sleep(0.1)
 
     # Access the session
     retrieved_memory = memory.get_session(session_id)
-    updated_timestamp = memory._sessions[session_id]["last_accessed"]  # pylint: disable=protected-access
+    updated_timestamp = memory.get_last_accessed(session_id)
 
     assert retrieved_memory is not None
     assert updated_timestamp > initial_timestamp
@@ -102,21 +100,21 @@ def test_cleanup_expired_sessions_removes_old_sessions():
 
     # Manually set session1 and session2 to be expired (>24 hours old)
     old_timestamp = datetime.now() - timedelta(hours=25)
-    memory._sessions[session1]["last_accessed"] = old_timestamp  # pylint: disable=protected-access
-    memory._sessions[session2]["last_accessed"] = old_timestamp  # pylint: disable=protected-access
+    memory.set_last_accessed(session1, old_timestamp)
+    memory.set_last_accessed(session2, old_timestamp)
 
     # session3 remains fresh
-    assert len(memory._sessions) == 3  # pylint: disable=protected-access
+    assert memory.get_session_count() == 3
 
     # Run cleanup
     cleaned_count = memory.cleanup_expired_sessions()
 
     # Verify results
     assert cleaned_count == 2
-    assert len(memory._sessions) == 1  # pylint: disable=protected-access
-    assert session3 in memory._sessions  # pylint: disable=protected-access
-    assert session1 not in memory._sessions  # pylint: disable=protected-access
-    assert session2 not in memory._sessions  # pylint: disable=protected-access
+    assert memory.get_session_count() == 1
+    assert memory.session_exists(session3)
+    assert not memory.session_exists(session1)
+    assert not memory.session_exists(session2)
 
 
 def test_cleanup_expired_sessions_preserves_active_sessions():
@@ -126,14 +124,14 @@ def test_cleanup_expired_sessions_preserves_active_sessions():
     session2 = memory.init_session()
 
     # Both sessions are fresh (just created)
-    initial_count = len(memory._sessions)  # pylint: disable=protected-access
+    initial_count = memory.get_session_count()
 
     # Run cleanup
     cleaned_count = memory.cleanup_expired_sessions()
 
     # No sessions should be cleaned up
     assert cleaned_count == 0
-    assert len(memory._sessions) == initial_count  # pylint: disable=protected-access
+    assert memory.get_session_count() == initial_count
     assert memory.session_exists(session1)
     assert memory.session_exists(session2)
 
@@ -146,4 +144,4 @@ def test_cleanup_expired_sessions_with_no_sessions():
     cleaned_count = memory.cleanup_expired_sessions()
 
     assert cleaned_count == 0
-    assert len(memory._sessions) == 0  # pylint: disable=protected-access
+    assert memory.get_session_count() == 0
