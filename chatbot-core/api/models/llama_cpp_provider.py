@@ -12,6 +12,7 @@ on quantized models (GGUF format).
 # =========================
 import asyncio
 import logging
+from threading import Lock
 from typing import AsyncGenerator
 
 # =========================
@@ -20,8 +21,6 @@ from typing import AsyncGenerator
 from api.config.loader import CONFIG
 from api.models.llm_provider import LLMProvider
 from utils import LoggerFactory
-
-from threading import Lock
 try:
     from llama_cpp import Llama
     LLAMA_CPP_AVAILABLE = True
