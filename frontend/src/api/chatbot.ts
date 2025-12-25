@@ -29,7 +29,7 @@ export const createChatSession = async (): Promise<string> => {
   }
 
   return data.session_id;
-  console.log("createChatSession response:", data);
+ 
 
 };
 

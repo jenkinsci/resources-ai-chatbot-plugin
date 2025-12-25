@@ -3,6 +3,7 @@ import {
   createBotMessage,
   createChatSession,
   fetchChatbotReply,
+  deleteChatSession
 } from "../api/chatbot";
 import { callChatbotApi } from "../utils/callChatbotApi";
 
@@ -113,5 +114,20 @@ describe("chatbotApi", () => {
       });
     });
   });
+  describe("deleteChatSession", () => {
+  it("calls API to delete chat session", async () => {
+    (callChatbotApi as jest.Mock).mockResolvedValueOnce(undefined);
+
+    await deleteChatSession("session-123");
+
+    expect(callChatbotApi).toHaveBeenCalledWith(
+      "sessions/session-123",
+      { method: "DELETE" },
+      undefined,
+      expect.any(Number),
+    );
+  });
+});
+
 });
 

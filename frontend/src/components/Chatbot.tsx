@@ -99,7 +99,7 @@ export const Chatbot = () => {
    * Handles the creation process of a chat session.
    */
   const handleNewChat = async () => {
-    console.log("Creating new chat")
+
     const id = await createChatSession();
 
     if (id === "") {
@@ -188,11 +188,16 @@ export const Chatbot = () => {
       appendMessageToCurrentSession(botReply);
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === "AbortError") {
-        console.info("Message sending cancelled by user");
+        appendMessageToCurrentSession({
+          id: uuidv4(),
+          sender: "jenkins-bot",
+          text: "Message cancelled",
+        });
       } else {
         console.error("Error sending message", e);
       }
-    } finally {
+    }
+    finally {
       setAbortController(null);
       setSessions((prevSessions) =>
         prevSessions.map((session) =>
