@@ -47,17 +47,17 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # --- Optional dependency checks (feature flags) ---
-llm_available = False
+LLM_AVAILABLE = False
 try:
     import llama_cpp  # noqa: F401 # pylint: disable=unused-import
-    llm_available = True
+    LLM_AVAILABLE = True
 except ImportError:
     logger.warning("LLM not available - running in API-only mode")
 
-retrieval_available = False
+RETRIEVAL_AVAILABLE = False
 try:
     import retriv  # noqa: F401 # pylint: disable=unused-import
-    retrieval_available = True
+    RETRIEVAL_AVAILABLE = True
 except ImportError:
     logger.warning("Retrieval not available - limited functionality")
 
