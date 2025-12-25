@@ -30,16 +30,16 @@ from fastapi import (
 from api.models.schemas import (
     ChatRequest,
     ChatResponse,
-    SessionResponse,
     DeleteResponse,
+    SessionResponse,
 )
 from api.services.chat_service import (
     get_chatbot_reply,
     get_chatbot_reply_stream,
 )
 from api.services.memory import (
-    init_session,
     delete_session,
+    init_session,
     session_exists,
 )
 
@@ -148,7 +148,17 @@ def start_chat(response: Response):
 )
 def chatbot_reply(session_id: str, request: ChatRequest):
     """
-    Handle chatbot replies.
+    POST endpoint to handle chatbot replies.
+
+    Receives a user message and returns the assistant's reply.
+    Validates that the session exists before processing.
+
+    Args:
+        session_id (str): The session identifier.
+        request (ChatRequest): The request containing the user message.
+
+    Returns:
+        ChatResponse: The assistant's reply.
     """
     if not session_exists(session_id):
         raise HTTPException(
@@ -177,5 +187,5 @@ def delete_chat(session_id: str):
         )
 
     return DeleteResponse(
-    message=f"Session {session_id} deleted."
+        message=f"Session {session_id} deleted."
     )

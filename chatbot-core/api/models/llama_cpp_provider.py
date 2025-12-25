@@ -21,14 +21,12 @@ from api.config.loader import CONFIG
 from api.models.llm_provider import LLMProvider
 from utils import LoggerFactory
 
+from threading import Lock
 try:
-    from threading import Lock
     from llama_cpp import Llama
-
     LLAMA_CPP_AVAILABLE = True
 except ImportError:
     LLAMA_CPP_AVAILABLE = False
-    Lock = None
     Llama = None
     logging.warning(
         "llama-cpp-python is not installed. "
