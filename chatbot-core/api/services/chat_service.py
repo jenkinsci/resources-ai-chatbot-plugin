@@ -22,6 +22,7 @@ from api.tools.tools import TOOL_REGISTRY
 from api.tools.utils import get_default_tools_call, validate_tool_calls, make_placeholder_replacer
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
+from services.sessionmanager import append_message_to_json
 
 logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
@@ -57,6 +58,8 @@ def get_chatbot_reply(session_id: str, user_input: str) -> ChatResponse:
 
     memory.chat_memory.add_user_message(user_input)
     memory.chat_memory.add_ai_message(reply)
+    append_message_to_json(session_id, "user", user_input)
+    append_message_to_json(session_id, "assistant", reply)
 
     return ChatResponse(reply=reply)
 
@@ -88,6 +91,8 @@ def get_chatbot_reply_new_architecture(session_id: str, user_input: str) -> Chat
 
     memory.chat_memory.add_user_message(user_input)
     memory.chat_memory.add_ai_message(reply)
+    append_message_to_json(session_id, "user", user_input)
+    append_message_to_json(session_id, "assistant", reply)
 
     return ChatResponse(reply=reply)
 
