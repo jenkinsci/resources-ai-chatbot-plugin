@@ -82,6 +82,7 @@ def get_chatbot_reply(
     memory.chat_memory.add_user_message(user_message)
     memory.chat_memory.add_ai_message(reply)
 
+
     return ChatResponse(reply=reply)
 
 
@@ -112,6 +113,7 @@ def get_chatbot_reply_new_architecture(session_id: str, user_input: str) -> Chat
 
     memory.chat_memory.add_user_message(user_input)
     memory.chat_memory.add_ai_message(reply)
+
 
     return ChatResponse(reply=reply)
 

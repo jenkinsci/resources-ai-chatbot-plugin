@@ -7,7 +7,7 @@ the chat service logic.
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Response, status, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Response, status, UploadFile, File, Form, BackgroundTasks
 from api.models.schemas import (
     ChatRequest,
     ChatResponse,
@@ -20,14 +20,15 @@ from api.services.chat_service import get_chatbot_reply
 from api.services.memory import (
     init_session,
     delete_session,
-    session_exists
+    session_exists,
+    get_session
 )
 from api.services.file_service import (
     process_uploaded_file,
     get_supported_extensions,
     FileProcessingError
 )
-
+from api.services.sessionmanager import append_message
 router = APIRouter()
 
 
@@ -49,7 +50,7 @@ def start_chat(response: Response):
 
 
 @router.post("/sessions/{session_id}/message", response_model=ChatResponse)
-def chatbot_reply(session_id: str, request: ChatRequest):
+def chatbot_reply(session_id: str, request: ChatRequest, background_tasks: BackgroundTasks):
     """
     POST endpoint to handle chatbot replies.
 
@@ -66,7 +67,8 @@ def chatbot_reply(session_id: str, request: ChatRequest):
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
 
-    return get_chatbot_reply(session_id, request.message)
+    reply =  get_chatbot_reply(session_id, request.message)
+    background_tasks.add_task(append_message , session_id , get_session(session_id).chat_memory.messages) 
 
 
 @router.post("/sessions/{session_id}/message/upload", response_model=ChatResponse)
