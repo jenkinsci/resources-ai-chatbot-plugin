@@ -1,0 +1,14 @@
+# Pylint and linting dependencies for CI
+# These are lightweight dependencies needed for code style checking
+# Heavy ML/AI packages (faiss, torch, llama-cpp, sentence-transformers) are excluded
+# as they're not needed for linting and may not have wheels for all Python versions
+
+pylint>=3.0.0
+fastapi>=0.104.0
+pydantic>=2.0.0
+pyyaml>=6.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+langchain>=0.1.0
+pandas>=2.0.0
