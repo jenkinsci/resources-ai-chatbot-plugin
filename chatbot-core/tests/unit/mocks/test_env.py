@@ -58,6 +58,16 @@ def mock_get_chatbot_reply(mocker):
     return mocker.patch("api.routes.chatbot.get_chatbot_reply")
 
 @pytest.fixture
+def mock_process_uploaded_file(mocker):
+    """Mock the process_uploaded_file function."""
+    return mocker.patch("api.routes.chatbot.process_uploaded_file")
+
+@pytest.fixture
+def mock_format_file_context(mocker):
+    """Mock the format_file_context function."""
+    return mocker.patch("api.services.chat_service.format_file_context")
+
+@pytest.fixture
 def mock_sentence_transformer(mocker):
     """Mock the SentenceTransformer class constructor."""
     return mocker.patch("rag.embedding.embedding_utils.SentenceTransformer")
