@@ -17,5 +17,10 @@
   "welcomeDescription": "Create a new chat to get started",
   "createNewChat": "Start Chatting!",
   "sidebarCreateNewChat": "+ Create New Chat",
-  "sidebarNoActiveChats": "No active chats yet"
+  "sidebarNoActiveChats": "No active chats yet",
+  "attachFile": "Attach file",
+  "removeFile": "Remove file",
+  "fileUploadError": "Failed to upload file",
+  "unsupportedFileType": "Unsupported file type",
+  "fileTooLarge": "File is too large"
 }
