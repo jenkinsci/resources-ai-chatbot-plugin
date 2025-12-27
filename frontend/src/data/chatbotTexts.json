@@ -5,7 +5,6 @@
   "placeholder": "Type your message...",
   "noInputWarningMessage": "Please enter a message before sending.",
   "generatingMessage": "Generating...",
-  "exportLabel": "📤",
   "exportChat": "Export chat",
   "clearChat": "Delete chat",
   "popupTitle": "Delete this chat?",
