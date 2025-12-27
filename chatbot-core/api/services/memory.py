@@ -6,7 +6,7 @@ Provides utility functions for session lifecycle.
 import uuid
 from threading import Lock
 from langchain.memory import ConversationBufferMemory
-from sessionmanager import _delete_session, _load_session_from_json
+from .sessionmanager import _delete_session, _load_session_from_json
 
 
 # sessionId --> ConversationBufferMemory
