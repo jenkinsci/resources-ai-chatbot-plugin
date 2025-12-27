@@ -1,6 +1,9 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { getChatbotText } from "../data/chatbotTexts";
 import { Header } from "../components/Header";
+import type { Message } from "../model/Message";
+
+const mockMessages: Message[] = [];
 
 describe("Header Component", () => {
   const mockOpenSideBar = jest.fn();
@@ -17,6 +20,8 @@ describe("Header Component", () => {
         currentSessionId={null}
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
+        messages={mockMessages}
+
       />,
     );
 
@@ -32,6 +37,7 @@ describe("Header Component", () => {
         currentSessionId={null}
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
+        messages={mockMessages}
       />,
     );
 
@@ -47,6 +53,7 @@ describe("Header Component", () => {
         currentSessionId="session-1"
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
+        messages={mockMessages}
       />,
     );
 
@@ -62,6 +69,7 @@ describe("Header Component", () => {
         currentSessionId={null}
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
+        messages={mockMessages}
       />,
     );
 
@@ -79,6 +87,7 @@ describe("Header Component", () => {
         currentSessionId="session-1"
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
+        messages={mockMessages}
       />,
     );
 
