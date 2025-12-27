@@ -1,9 +1,8 @@
-
 import {
   createBotMessage,
   createChatSession,
   fetchChatbotReply,
-  deleteChatSession
+  deleteChatSession,
 } from "../api/chatbot";
 import { callChatbotApi } from "../utils/callChatbotApi";
 
@@ -19,19 +18,16 @@ jest.mock("../data/chatbotTexts", () => ({
   getChatbotText: jest.fn().mockReturnValue("Fallback error message"),
 }));
 
-
 describe("chatbotApi", () => {
- 
   let consoleErrorSpy: jest.SpyInstance;
 
   beforeAll(() => {
-    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => { });
+    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterAll(() => {
     consoleErrorSpy.mockRestore();
   });
-
 
   describe("createBotMessage", () => {
     it("creates a bot message with text", () => {
@@ -58,7 +54,7 @@ describe("chatbotApi", () => {
         "sessions",
         { method: "POST" },
         { session_id: "" },
-        expect.any(Number)
+        expect.any(Number),
       );
     });
 
@@ -70,7 +66,7 @@ describe("chatbotApi", () => {
       expect(result).toBe("");
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to create chat session: session_id missing in response",
-        {}
+        {},
       );
     });
   });
@@ -115,19 +111,17 @@ describe("chatbotApi", () => {
     });
   });
   describe("deleteChatSession", () => {
-  it("calls API to delete chat session", async () => {
-    (callChatbotApi as jest.Mock).mockResolvedValueOnce(undefined);
+    it("calls API to delete chat session", async () => {
+      (callChatbotApi as jest.Mock).mockResolvedValueOnce(undefined);
 
-    await deleteChatSession("session-123");
+      await deleteChatSession("session-123");
 
-    expect(callChatbotApi).toHaveBeenCalledWith(
-      "sessions/session-123",
-      { method: "DELETE" },
-      undefined,
-      expect.any(Number),
-    );
+      expect(callChatbotApi).toHaveBeenCalledWith(
+        "sessions/session-123",
+        { method: "DELETE" },
+        undefined,
+        expect.any(Number),
+      );
+    });
   });
 });
-
-});
-

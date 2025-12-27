@@ -28,13 +28,12 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
   const renderMessage = (text: string, sender: Sender, key: React.Key) => (
     <div key={key} style={chatbotStyles.messageContainer(sender)}>
       <span style={chatbotStyles.messageBubble(sender)}>
-        { text.split("\n").map((line, i) => (
-  <Fragment key={i}>
-    {line}
-    <br />
-  </Fragment>
-))}
-
+        {text.split("\n").map((line, i) => (
+          <Fragment key={i}>
+            {line}
+            <br />
+          </Fragment>
+        ))}
       </span>
     </div>
   );

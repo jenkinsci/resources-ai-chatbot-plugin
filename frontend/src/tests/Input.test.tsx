@@ -11,17 +11,33 @@ describe("Input Component", () => {
   });
 
   it("renders textarea and send button", () => {
-    render(<Input input="" setInput={mockSetInput} onSend={mockOnSend} onCancel={function (): void {
-      throw new Error("Function not implemented.");
-    } } loading={false} />);
+    render(
+      <Input
+        input=""
+        setInput={mockSetInput}
+        onSend={mockOnSend}
+        onCancel={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+        loading={false}
+      />,
+    );
     expect(screen.getByRole("textbox")).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
   it("calls setInput when typing", () => {
-    render(<Input input="" setInput={mockSetInput} onSend={mockOnSend} onCancel={function (): void {
-      throw new Error("Function not implemented.");
-    } } loading={false} />);
+    render(
+      <Input
+        input=""
+        setInput={mockSetInput}
+        onSend={mockOnSend}
+        onCancel={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+        loading={false}
+      />,
+    );
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "Hello" },
     });
@@ -30,9 +46,15 @@ describe("Input Component", () => {
 
   it("calls onSend when Enter is pressed", () => {
     render(
-      <Input input="Some text" setInput={mockSetInput} onSend={mockOnSend} onCancel={function (): void {
-        throw new Error("Function not implemented.");
-      } } loading={false} />,
+      <Input
+        input="Some text"
+        setInput={mockSetInput}
+        onSend={mockOnSend}
+        onCancel={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+        loading={false}
+      />,
     );
     fireEvent.keyDown(screen.getByRole("textbox"), {
       key: "Enter",
@@ -43,9 +65,15 @@ describe("Input Component", () => {
 
   it("does not call onSend when Shift+Enter is pressed", () => {
     render(
-      <Input input="Some text" setInput={mockSetInput} onSend={mockOnSend} onCancel={function (): void {
-        throw new Error("Function not implemented.");
-      } } loading={false} />,
+      <Input
+        input="Some text"
+        setInput={mockSetInput}
+        onSend={mockOnSend}
+        onCancel={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+        loading={false}
+      />,
     );
     fireEvent.keyDown(screen.getByRole("textbox"), {
       key: "Enter",
@@ -56,24 +84,44 @@ describe("Input Component", () => {
 
   it("disables the send button when input is empty or whitespace", () => {
     const { rerender } = render(
-      <Input input="" setInput={mockSetInput} onSend={mockOnSend} onCancel={function (): void {
-        throw new Error("Function not implemented.");
-      } } loading={false} />,
+      <Input
+        input=""
+        setInput={mockSetInput}
+        onSend={mockOnSend}
+        onCancel={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+        loading={false}
+      />,
     );
     expect(screen.getByRole("button")).toBeDisabled();
 
     rerender(
-      <Input input="    " setInput={mockSetInput} onSend={mockOnSend} onCancel={function (): void {
-        throw new Error("Function not implemented.");
-      } } loading={false} />,
+      <Input
+        input="    "
+        setInput={mockSetInput}
+        onSend={mockOnSend}
+        onCancel={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+        loading={false}
+      />,
     );
     expect(screen.getByRole("button")).toBeDisabled();
   });
 
   it("enables the send button when input has text", () => {
-    render(<Input input="Hello" setInput={mockSetInput} onSend={mockOnSend} onCancel={function (): void {
-      throw new Error("Function not implemented.");
-    } } loading={false} />);
+    render(
+      <Input
+        input="Hello"
+        setInput={mockSetInput}
+        onSend={mockOnSend}
+        onCancel={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+        loading={false}
+      />,
+    );
     expect(screen.getByRole("button")).toBeEnabled();
   });
 
@@ -82,9 +130,12 @@ describe("Input Component", () => {
       <Input
         input="Test message"
         setInput={mockSetInput}
-        onSend={mockOnSend} onCancel={function (): void {
+        onSend={mockOnSend}
+        onCancel={function (): void {
           throw new Error("Function not implemented.");
-        } } loading={false}      />,
+        }}
+        loading={false}
+      />,
     );
     fireEvent.click(screen.getByRole("button"));
     expect(mockOnSend).toHaveBeenCalled();
