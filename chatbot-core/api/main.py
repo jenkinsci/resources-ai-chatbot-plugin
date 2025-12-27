@@ -4,8 +4,8 @@ Main entry point for the FastAPI application.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import chatbot
-from .config.loader import CONFIG
+from api.routes import chatbot
+from api.config.loader import CONFIG
 
 app = FastAPI()
 

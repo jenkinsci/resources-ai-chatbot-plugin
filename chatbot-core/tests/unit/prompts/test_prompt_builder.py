@@ -2,19 +2,13 @@
 
 from langchain.memory import ConversationBufferMemory
 from api.prompts.prompt_builder import build_prompt, SYSTEM_INSTRUCTION
-from api.services.sessionmanager import append_message_to_json
-import uuid
 
 
 def test_build_prompt_with_full_history_and_context():
     """Test prompt formatting with user + assistant chat history and context."""
-    test_session_id = str(uuid.uuid4())
     memory = ConversationBufferMemory(return_messages=True)
     memory.chat_memory.add_user_message("How do I configure a Jenkins job?") # pylint: disable=no-member
     memory.chat_memory.add_ai_message("You can use the freestyl option.") # pylint: disable=no-member
-    append_message_to_json(test_session_id, "user", "How do I configure a Jenkins job?")
-    append_message_to_json(test_session_id, "assistant", "You can use the freestyl option.")
-
     context = "You can configure Jenkins jobs using freestyle option or pipelines."
     user_query = "What about using pipelines?"
 
