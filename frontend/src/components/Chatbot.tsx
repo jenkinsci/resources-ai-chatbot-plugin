@@ -259,6 +259,7 @@ export const Chatbot = () => {
             currentSessionId={currentSessionId}
             openSideBar={openSideBar}
             clearMessages={openConfirmDeleteChatPopup}
+            messages={getSessionMessages(currentSessionId)}
           />
           {currentSessionId !== null ? (
             <>

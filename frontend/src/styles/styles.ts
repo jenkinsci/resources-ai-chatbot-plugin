@@ -164,6 +164,8 @@ export const chatbotStyles = {
 
   chatbotHeader: {
     display: "flex",
+    alignItems: "center",
+    gap: "8px",
     flexDirection: "row",
     justifyContent: "space-between",
     padding: "1rem",
@@ -173,6 +175,12 @@ export const chatbotStyles = {
     backgroundColor: "#f5f5f5",
   } as CSSProperties,
 
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  } as CSSProperties,
+
   clearButton: {
     backgroundColor: "transparent",
     border: "none",
@@ -180,6 +188,33 @@ export const chatbotStyles = {
     cursor: "pointer",
     fontSize: "14px",
   } as CSSProperties,
+
+  exportButton: {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "black",
+    cursor: "pointer",
+    fontSize: "14px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    position: "relative",
+  } as CSSProperties,
+
+  exportMenu: {
+  position: "absolute",
+  top: "100%",
+  right: 0,
+  marginTop: "6px",
+  backgroundColor: "#ffffff",
+  border: "1px solid #dcdcdc",
+  borderRadius: "6px",
+  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+  minWidth: "120px",
+  display: "flex",
+  flexDirection: "column",
+  zIndex: 10000,
+} as CSSProperties,
 
   openSidebarButton: {
     background: "transparent",

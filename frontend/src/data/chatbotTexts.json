@@ -5,6 +5,8 @@
   "placeholder": "Type your message...",
   "noInputWarningMessage": "Please enter a message before sending.",
   "generatingMessage": "Generating...",
+  "exportLabel": "📤",
+  "exportChat": "Export chat",
   "clearChat": "Delete chat",
   "popupTitle": "Delete this chat?",
   "popupMessage": "This action cannot be undone. Are you sure you want to delete this conversation?",
