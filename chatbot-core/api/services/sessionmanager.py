@@ -72,3 +72,10 @@ def _delete_session(session_id: str) -> bool:
             os.remove(path)
             return True
     return False
+
+
+def append_message(session_id: str, role: str, content: str) -> None:
+    """
+    Public function to append a message to a session file.
+    """
+    _append_message_to_json(session_id, role, content)
