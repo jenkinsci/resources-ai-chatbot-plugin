@@ -21,6 +21,9 @@ _lock = Lock()
 def init_session() -> str:
     """
     Initialize a new chat session and store its memory object.
+    
+    Returns:
+    str: A newly generated UUID representing the session ID.
     """
     session_id = str(uuid.uuid4())
     with _lock:
@@ -35,7 +38,14 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
     """
     Retrieve the chat session memory for the given session ID.
     Lazily restores from disk if missing in memory.
+
+    Args:
+        session_id (str): The session identifier.
+
+    Returns:
+        ConversationBufferMemory | None: The memory object if found, else None.
     """
+
     with _lock:
         session_data = _sessions.get(session_id)
 
@@ -68,6 +78,12 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
 def delete_session(session_id: str) -> bool:
     """
     Delete a chat session and its persisted data.
+
+    Args:
+    session_id (str): The session identifier.
+
+    Returns:
+        bool: True if the session existed and was deleted, False otherwise.
     """
     with _lock:
         in_memory_deleted = _sessions.pop(session_id, None) is not None
@@ -81,6 +97,12 @@ def delete_session(session_id: str) -> bool:
 def session_exists(session_id: str) -> bool:
     """
     Check if a chat session exists in memory.
+
+    Args:
+    session_id (str): The session identifier.
+
+    Returns:
+        bool: True if the session exists, False otherwise.
     """
     with _lock:
         return session_id in _sessions

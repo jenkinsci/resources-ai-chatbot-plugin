@@ -2,11 +2,12 @@ import os
 import json
 import uuid
 from threading import Lock
+import uuid
 
 
 _SESSION_DIRECTORY = os.getenv("SESSION_FILE_PATH", "data/sessions")
 
-os.makedirs(_SESSION_DIRECTORY, exist_ok=True)
+os.makedirs(_SESSION_DIRECTORY,mode = 0o755, exist_ok=True)
 
 _FILE_LOCK = Lock()
 
