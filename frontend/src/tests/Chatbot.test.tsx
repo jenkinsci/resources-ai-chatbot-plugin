@@ -13,8 +13,26 @@ jest.mock("../api/chatbot", () => ({
     sender: "jenkins-bot",
     text: "Bot reply",
   }),
+  fetchChatbotReplyWithFiles: jest.fn().mockResolvedValue({
+    id: "bot-msg-1",
+    sender: "jenkins-bot",
+    text: "Bot reply with files",
+  }),
   createChatSession: jest.fn().mockResolvedValue("new-session-id"),
   deleteChatSession: jest.fn().mockResolvedValue(undefined),
+  fetchSupportedExtensions: jest.fn().mockResolvedValue({
+    text: [".txt", ".log", ".md"],
+    image: [".png", ".jpg"],
+    max_text_size_mb: 5,
+    max_image_size_mb: 10,
+  }),
+  validateFile: jest.fn().mockReturnValue({ isValid: true }),
+  fileToAttachment: jest.fn().mockReturnValue({
+    filename: "test.txt",
+    type: "text",
+    size: 100,
+    mimeType: "text/plain",
+  }),
 }));
 
 jest.mock("uuid", () => ({
