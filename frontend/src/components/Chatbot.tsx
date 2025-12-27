@@ -22,9 +22,9 @@ import { v4 as uuidv4 } from "uuid";
  * Chatbot is the core component responsible for managing the chatbot display.
  */
 
-
 export const Chatbot = () => {
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -99,7 +99,6 @@ export const Chatbot = () => {
    * Handles the creation process of a chat session.
    */
   const handleNewChat = async () => {
-
     const id = await createChatSession();
 
     if (id === "") {
@@ -121,22 +120,20 @@ export const Chatbot = () => {
       prevSessions.map((session) =>
         session.id === currentSessionId
           ? {
-            ...session,
-            messages: [...session.messages, message],
-            isLoading: session.isLoading,
-          }
+              ...session,
+              messages: [...session.messages, message],
+              isLoading: session.isLoading,
+            }
           : session,
       ),
     );
   };
-
 
   const cancelSendMessage = () => {
     if (abortController) {
       abortController.abort();
       setAbortController(null);
     }
-
 
     setSessions((prevSessions) =>
       prevSessions.map((session) =>
@@ -153,7 +150,6 @@ export const Chatbot = () => {
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed || !currentSessionId) return;
-
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -196,8 +192,7 @@ export const Chatbot = () => {
       } else {
         console.error("Error sending message", e);
       }
-    }
-    finally {
+    } finally {
       setAbortController(null);
       setSessions((prevSessions) =>
         prevSessions.map((session) =>
@@ -207,7 +202,7 @@ export const Chatbot = () => {
         ),
       );
     }
-  }
+  };
 
   const getChatLoading = (): boolean => {
     const currentChat = sessions.find((chat) => chat.id === currentSessionId);
@@ -314,7 +309,12 @@ export const Chatbot = () => {
                 messages={getSessionMessages(currentSessionId)}
                 loading={getChatLoading()}
               />
-              <Input input={input} setInput={setInput} onSend={sendMessage} onCancel={cancelSendMessage} loading={getChatLoading()}
+              <Input
+                input={input}
+                setInput={setInput}
+                onSend={sendMessage}
+                onCancel={cancelSendMessage}
+                loading={getChatLoading()}
               />
             </>
           ) : (
@@ -324,5 +324,4 @@ export const Chatbot = () => {
       )}
     </>
   );
-
 };

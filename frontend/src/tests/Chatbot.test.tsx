@@ -1,4 +1,3 @@
-
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Chatbot } from "../components/Chatbot";
 import * as chatbotApi from "../api/chatbot";
@@ -7,12 +6,12 @@ import type { SidebarProps } from "../components/Sidebar";
 import type { HeaderProps } from "../components/Header";
 import type { InputProps } from "../components/Input";
 import type { MessagesProps } from "../components/Messages";
-import '@testing-library/jest-dom';
+import "@testing-library/jest-dom";
 
 let consoleErrorSpy: jest.SpyInstance;
 
 beforeAll(() => {
-  consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => { });
+  consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterAll(() => {
@@ -95,7 +94,9 @@ describe("Chatbot component", () => {
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
-    expect(screen.getByText(getChatbotText("welcomeMessage"))).toBeInTheDocument();
+    expect(
+      screen.getByText(getChatbotText("welcomeMessage")),
+    ).toBeInTheDocument();
   });
 
   it("creates a new chat when clicking create button", async () => {
@@ -196,7 +197,7 @@ describe("Chatbot component", () => {
   });
 
   it("logs error when createChatSession returns empty id", async () => {
-    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => { });
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     (chatbotApi.createChatSession as jest.Mock).mockResolvedValueOnce("");
 
     render(<Chatbot />);
@@ -226,7 +227,9 @@ describe("Chatbot component", () => {
     expect(screen.getByText(getChatbotText("popupTitle"))).toBeInTheDocument();
 
     fireEvent.click(screen.getByText(getChatbotText("popupCancelButton")));
-    expect(screen.queryByText(getChatbotText("popupTitle"))).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(getChatbotText("popupTitle")),
+    ).not.toBeInTheDocument();
   });
 
   it("closes the sidebar when onClose is called", () => {

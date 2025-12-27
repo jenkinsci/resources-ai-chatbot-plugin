@@ -14,13 +14,18 @@ export interface InputProps {
   loading: boolean;
 }
 
-
 /**
  * Input is a controlled textarea component for user message entry.
  * It supports multiline input and handles sending messages with Enter,
  * while allowing new lines with Shift+Enter.
  */
-export const Input = ({ input, setInput, onSend, onCancel, loading }: InputProps) => {
+export const Input = ({
+  input,
+  setInput,
+  onSend,
+  onCancel,
+  loading,
+}: InputProps) => {
   console.log("Input loading prop:", loading);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -42,10 +47,7 @@ export const Input = ({ input, setInput, onSend, onCancel, loading }: InputProps
       />
 
       {loading && (
-        <button
-          onClick={onCancel}
-          style={chatbotStyles.cancelButton()}
-        >
+        <button onClick={onCancel} style={chatbotStyles.cancelButton()}>
           {getChatbotText("cancelMessage")}
         </button>
       )}
@@ -58,7 +60,6 @@ export const Input = ({ input, setInput, onSend, onCancel, loading }: InputProps
           {getChatbotText("sendMessage")}
         </button>
       )}
-
     </div>
   );
 };
