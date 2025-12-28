@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+*.log
+logs/
+
+# Data directories (will be mounted as volumes)
+data/raw/
+data/processed/
+data/embeddings/
+data/chunking/
+
+# Model files (will be mounted as volumes)
+api/models/mistral/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+
+# OS
+.DS_Store
+Thumbs.db
+

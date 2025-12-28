@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: "",
   build: {
-    outDir: "../src/main/webapp/static",
+    outDir: "dist",
     assetsDir: "assets",
     rollupOptions: {
       output: {
