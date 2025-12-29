@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./chatbot-core
+      dockerfile: Dockerfile.gpu
+    container_name: chatbot-backend-gpu
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chatbot-core/api/models:/app/api/models:ro
+      - chatbot-data:/app/data
+      - ./chatbot-core/api/config/config.yml:/app/api/config/config.yml:ro
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - chatbot-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=
+    container_name: chatbot-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - chatbot-network
+
+volumes:
+  chatbot-data:
+    driver: local
+
+networks:
+  chatbot-network:
+    driver: bridge
