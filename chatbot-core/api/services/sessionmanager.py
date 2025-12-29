@@ -2,7 +2,7 @@ import os
 import json
 import uuid
 from threading import Lock
-import uuid
+
 
 
 _SESSION_DIRECTORY = os.getenv("SESSION_FILE_PATH", "data/sessions")
@@ -39,7 +39,7 @@ def _load_session_from_json(session_id: str) -> list:
 
 def _append_message_to_json(session_id: str, messages:list) -> None:
     """
-    Append a message to the session file using atomic write.
+    Persist the current session messages as a full snapshot using atomic write.
     """
     path = _get_session_file_path(session_id)
     tmp_path = f"{path}.tmp"
