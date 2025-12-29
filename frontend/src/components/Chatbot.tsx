@@ -33,7 +33,6 @@ export const Chatbot = () => {
   const [sessionIdToDelete, setSessionIdToDelete] = useState<string | null>(
     null,
   );
-  
 
   /**
    * Saving the chat sessions in the session storage only
@@ -51,7 +50,6 @@ export const Chatbot = () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [sessions, currentSessionId]);
-
 
   /**
    * Returns the messages of a chat session.
@@ -100,7 +98,7 @@ export const Chatbot = () => {
     const id = await createChatSession();
 
     if (id === "") {
-        console.error("Add error showage for a couple of seconds.");
+      console.error("Add error showage for a couple of seconds.");
       return;
     }
 
@@ -129,42 +127,42 @@ export const Chatbot = () => {
    * Handles the send process in a chat session.
    */
   const sendMessage = async () => {
-  const trimmed = input.trim();
-  if (!trimmed || !currentSessionId) {
-    return;
-  }
+    const trimmed = input.trim();
+    if (!trimmed || !currentSessionId) {
+      return;
+    }
 
-  const userMessage: Message = {
-    id: uuidv4(),
-    sender: "user",
-    text: trimmed,
-  };
+    const userMessage: Message = {
+      id: uuidv4(),
+      sender: "user",
+      text: trimmed,
+    };
 
-  setInput("");
+    setInput("");
 
-  setSessions((prevSessions) =>
-    prevSessions.map((session) =>
-      session.id === currentSessionId
-        ? { ...session, isLoading: true }
-        : session,
-    ),
-  );
-
-  appendMessageToCurrentSession(userMessage);
-
-  try {
-    const botReply = await fetchChatbotReply(currentSessionId, trimmed);
-    appendMessageToCurrentSession(botReply);
-  } finally {
     setSessions((prevSessions) =>
       prevSessions.map((session) =>
         session.id === currentSessionId
-          ? { ...session, isLoading: false }
+          ? { ...session, isLoading: true }
           : session,
       ),
     );
-  }
-};
+
+    appendMessageToCurrentSession(userMessage);
+
+    try {
+      const botReply = await fetchChatbotReply(currentSessionId, trimmed);
+      appendMessageToCurrentSession(botReply);
+    } finally {
+      setSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === currentSessionId
+            ? { ...session, isLoading: false }
+            : session,
+        ),
+      );
+    }
+  };
 
   const getChatLoading = (): boolean => {
     const currentChat = sessions.find((chat) => chat.id === currentSessionId);

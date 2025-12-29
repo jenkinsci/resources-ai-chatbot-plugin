@@ -27,7 +27,7 @@ export const createChatSession = async (): Promise<string> => {
   }
 
   return data.session_id;
-}
+};
 /**
  * Sends the user's message to the backend chatbot API and returns the bot's response.
  * If the API call fails or returns an invalid response, a fallback error message is used.

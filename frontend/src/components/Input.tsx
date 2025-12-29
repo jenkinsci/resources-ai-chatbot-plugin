@@ -1,4 +1,3 @@
-
 import { getChatbotText } from "../data/chatbotTexts";
 import { chatbotStyles } from "../styles/styles";
 
