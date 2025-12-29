@@ -70,6 +70,8 @@ def chatbot_reply(session_id: str, request: ChatRequest, background_tasks: Backg
     reply =  get_chatbot_reply(session_id, request.message)
     background_tasks.add_task(append_message , session_id , get_session(session_id).chat_memory.messages) 
 
+    return reply
+
 
 @router.post("/sessions/{session_id}/message/upload", response_model=ChatResponse)
 async def chatbot_reply_with_files(
