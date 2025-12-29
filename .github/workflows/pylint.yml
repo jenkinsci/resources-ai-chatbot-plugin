@@ -25,7 +25,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r chatbot-core/requirements.txt
+        # Install only linting dependencies from separate requirements file
+        # This allows Dependabot to track versions and avoids heavy ML packages
+        pip install -r .github/workflows/requirements-pylint.txt
+      continue-on-error: false
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        # Some optional, heavy dependencies (faiss, llama_cpp, sentence-transformers, etc.)
+        # are not installed in this job since they're not needed for linting.
+        # We disable import-error and no-name-in-module checks so pylint focuses
+        # on actual code style issues rather than missing optional dependencies.
+        pylint --disable=import-error,no-name-in-module $(git ls-files '*.py')
