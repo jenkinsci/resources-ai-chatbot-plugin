@@ -6,7 +6,7 @@
   "noInputWarningMessage": "Please enter a message before sending.",
   "generatingMessage": "Generating...",
   "exportChat": "Export chat",
-  "clearChat": "Delete chat",
+  "clearChat": "Clear chat",
   "popupTitle": "Delete this chat?",
   "popupMessage": "This action cannot be undone. Are you sure you want to delete this conversation?",
   "popupDeleteButton": "Delete",
