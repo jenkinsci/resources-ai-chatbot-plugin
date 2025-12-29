@@ -56,7 +56,7 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
 
             _sessions[session_id] = {
             "memory": memory,
-            "last_accessed": datetime.now(datetime.UTC),
+            "last_accessed": datetime.now(),
         }
 
     return memory
