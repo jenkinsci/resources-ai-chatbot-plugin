@@ -1,4 +1,20 @@
 /**
+ * Represents a file attachment in a message.
+ */
+export interface FileAttachment {
+  /** Name of the file */
+  filename: string;
+  /** Type of file - "text" or "image" */
+  type: "text" | "image";
+  /** File size in bytes */
+  size: number;
+  /** MIME type of the file */
+  mimeType: string;
+  /** Preview URL for images (blob URL) */
+  previewUrl?: string;
+}
+
+/**
  * Single message in the chatbot conversation.
  */
 export interface Message {
@@ -6,6 +22,8 @@ export interface Message {
   id: string;
   sender: Sender;
   text: string;
+  /** Optional file attachments */
+  files?: FileAttachment[];
 }
 
 /**

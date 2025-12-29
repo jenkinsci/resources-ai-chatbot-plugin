@@ -1,5 +1,9 @@
 import React, { useEffect, useRef } from "react";
-import { type Message, type Sender } from "../model/Message";
+import {
+  type Message,
+  type Sender,
+  type FileAttachment,
+} from "../model/Message";
 import { chatbotStyles } from "../styles/styles";
 import { getChatbotText } from "../data/chatbotTexts";
 
@@ -10,6 +14,52 @@ export interface MessagesProps {
   messages: Message[];
   loading: boolean;
 }
+
+/**
+ * Formats file size in human-readable format.
+ */
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+/**
+ * Renders a file attachment display.
+ */
+const FileAttachmentDisplay: React.FC<{ file: FileAttachment }> = ({
+  file,
+}) => {
+  if (file.type === "image" && file.previewUrl) {
+    return (
+      <div style={chatbotStyles.fileAttachmentContainer}>
+        <img
+          src={file.previewUrl}
+          alt={file.filename}
+          style={chatbotStyles.imagePreview}
+        />
+        <div style={chatbotStyles.fileAttachmentInfo}>
+          <span style={chatbotStyles.fileAttachmentName}>{file.filename}</span>
+          <span style={chatbotStyles.fileAttachmentSize}>
+            {formatFileSize(file.size)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={chatbotStyles.fileAttachmentContainer}>
+      <div style={chatbotStyles.textFileIcon}>📄</div>
+      <div style={chatbotStyles.fileAttachmentInfo}>
+        <span style={chatbotStyles.fileAttachmentName}>{file.filename}</span>
+        <span style={chatbotStyles.fileAttachmentSize}>
+          {formatFileSize(file.size)}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 /**
  * Messages is responsible for rendering the chat conversation thread,
@@ -24,9 +74,26 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const renderMessage = (text: string, sender: Sender, key: React.Key) => (
+  const renderMessage = (
+    text: string,
+    sender: Sender,
+    key: React.Key,
+    files?: FileAttachment[],
+  ) => (
     <div key={key} style={chatbotStyles.messageContainer(sender)}>
       <span style={chatbotStyles.messageBubble(sender)}>
+        {/* Render file attachments if present */}
+        {files && files.length > 0 && (
+          <div style={chatbotStyles.messageFilesContainer}>
+            {files.map((file, index) => (
+              <FileAttachmentDisplay
+                key={`${file.filename}-${index}`}
+                file={file}
+              />
+            ))}
+          </div>
+        )}
+        {/* Render text content */}
         {text.split("\n").map((line, i) => (
           <React.Fragment key={i}>
             {line}
@@ -39,7 +106,9 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
 
   return (
     <div style={chatbotStyles.messagesMain}>
-      {messages.map((msg) => renderMessage(msg.text, msg.sender, msg.id))}
+      {messages.map((msg) =>
+        renderMessage(msg.text, msg.sender, msg.id, msg.files),
+      )}
       {loading &&
         renderMessage(
           getChatbotText("generatingMessage"),
