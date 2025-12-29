@@ -7,6 +7,7 @@ import uuid
 from threading import Lock
 from langchain.memory import ConversationBufferMemory
 from api.services.sessionmanager import _delete_session, _load_session_from_json
+from datetime import datetime
 
 
 # sessionId --> ConversationBufferMemory
@@ -53,7 +54,10 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
                     {"role": msg["role"], "content": msg["content"]}
                 )
 
-            _sessions[session_id] = memory
+            _sessions[session_id] = {
+            "memory": memory,
+            "last_accessed": datetime.now(datetime.UTC),
+        }
 
     return memory
 
