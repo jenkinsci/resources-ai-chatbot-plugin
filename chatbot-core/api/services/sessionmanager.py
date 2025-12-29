@@ -1,5 +1,6 @@
 import os
 import json
+from pyexpat.errors import messages
 from threading import Lock
 import uuid
 
@@ -37,26 +38,17 @@ def _load_session_from_json(session_id: str) -> list:
         return json.load(f)
 
 
-def _append_message_to_json(session_id: str, role: str, content: str) -> None:
+def _append_message_to_json(session_id: str, messages : list) -> None:
     """
-    Append a message to the session file using atomic write.
+    Persist the current session messages as a full snapshot using atomic write.
     """
     path = _get_session_file_path(session_id)
     tmp_path = f"{path}.tmp"
 
     with _FILE_LOCK:
-        data = []
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-        data.append({
-            "role": role,
-            "content": content
-        })
 
         with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+            json.dump(messages, f, indent=2, ensure_ascii=False)
 
         os.replace(tmp_path, path)
 
@@ -74,8 +66,8 @@ def _delete_session(session_id: str) -> bool:
     return False
 
 
-def append_message(session_id: str, role: str, content: str) -> None:
+def append_message(session_id: str, messages: list) -> None:
     """
     Public function to append a message to a session file.
     """
-    _append_message_to_json(session_id, role, content)
+    _append_message_to_json(session_id, messages)
