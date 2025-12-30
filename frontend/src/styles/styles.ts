@@ -312,8 +312,8 @@ export const chatbotStyles = {
   } as CSSProperties,
 
   exportMenuItem: {
-    width: "100%",          
-  height: "64px",
+    width: "100%",
+    height: "64px",
     backgroundColor: "var(--button-background)",
     color: "var(--text-color)",
     border: "1px solid var(--border-color)",
