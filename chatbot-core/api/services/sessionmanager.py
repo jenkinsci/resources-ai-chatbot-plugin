@@ -21,7 +21,7 @@ def _get_session_file_path(session_id: str) -> str:
     try:
         uuid.UUID(session_id)
     except ValueError:
-        raise ValueError("Invalid session_id")
+        return False
     return os.path.join(_SESSION_DIRECTORY, f"{session_id}.json")
 
 
