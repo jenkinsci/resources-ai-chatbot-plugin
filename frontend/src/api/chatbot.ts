@@ -213,11 +213,9 @@ export const validateFile = (
   }
 
   const extension = "." + file.name.split(".").pop()?.toLowerCase();
- const isTextFile =
-  supportedExtensions.text.indexOf(extension) !== -1;
+  const isTextFile = supportedExtensions.text.indexOf(extension) !== -1;
+  const isImageFile = supportedExtensions.image.indexOf(extension) !== -1;
 
-const isImageFile =
-  supportedExtensions.image.indexOf(extension) !== -1;
 
   if (!isTextFile && !isImageFile) {
     return {
