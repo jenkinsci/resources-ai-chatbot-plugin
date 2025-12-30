@@ -12,8 +12,6 @@ from sessionmanager import delete_session_file, load_session, session_exists_in_
 # sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
 
 
-
-# sessionId --> ConversationBufferMemory
 _sessions = {}
 _lock = Lock()
 
