@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from threading import Lock
 from langchain.memory import ConversationBufferMemory
 from api.config.loader import CONFIG
-from sessionmanager import delete_session_file, load_session, session_exists_in_json
+from api.services.sessionmanager import delete_session_file, load_session, session_exists_in_json
 # sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
 
 
