@@ -21,7 +21,7 @@ describe("Header Component", () => {
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
-      />
+      />,
     );
 
     const sidebarButton = screen.getByRole("button", {
@@ -37,7 +37,7 @@ describe("Header Component", () => {
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
-      />
+      />,
     );
 
     const clearButton = screen.queryByRole("button", {
@@ -53,7 +53,7 @@ describe("Header Component", () => {
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
-      />
+      />,
     );
 
     const clearButton = screen.getByRole("button", {
@@ -69,7 +69,7 @@ describe("Header Component", () => {
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
-      />
+      />,
     );
 
     const sidebarButton = screen.getByRole("button", {
@@ -87,7 +87,7 @@ describe("Header Component", () => {
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
-      />
+      />,
     );
 
     const clearButton = screen.getByRole("button", {
