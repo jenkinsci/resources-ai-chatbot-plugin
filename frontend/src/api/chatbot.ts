@@ -49,6 +49,7 @@ export const createChatSession = async (): Promise<string> => {
 export const fetchChatbotReply = async (
   sessionId: string,
   userMessage: string,
+  signal?: AbortSignal,
 ): Promise<Message> => {
   const data = await callChatbotApi<{ reply?: string }>(
     `sessions/${sessionId}/message`,
@@ -56,6 +57,7 @@ export const fetchChatbotReply = async (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: userMessage }),
+      signal,
     },
     {},
     CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
@@ -78,6 +80,7 @@ export const fetchChatbotReplyWithFiles = async (
   sessionId: string,
   userMessage: string,
   files: File[],
+  signal: AbortSignal,
 ): Promise<Message> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(
@@ -98,7 +101,7 @@ export const fetchChatbotReplyWithFiles = async (
       {
         method: "POST",
         body: formData,
-        signal: controller.signal,
+        signal: signal,
       },
     );
 

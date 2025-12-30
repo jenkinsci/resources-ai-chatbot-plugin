@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
 import { type Message } from "../model/Message";
 import { type ChatSession } from "../model/ChatSession";
 import {
@@ -26,7 +27,10 @@ import { v4 as uuidv4 } from "uuid";
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
  */
+
 export const Chatbot = () => {
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
@@ -173,6 +177,8 @@ export const Chatbot = () => {
         s.id === currentSessionId ? { ...s, isLoading: true } : s,
       ),
     );
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     appendMessageToCurrentSession(userMessage);
 
@@ -183,17 +189,40 @@ export const Chatbot = () => {
               currentSessionId,
               trimmed || "Please analyze the attached file(s).",
               filesToSend,
+              controller.signal,
             )
-          : await fetchChatbotReply(currentSessionId, trimmed);
-
+          : controller.signal
+            ? await fetchChatbotReply(
+                currentSessionId,
+                trimmed,
+                controller.signal,
+              )
+            : await fetchChatbotReply(currentSessionId, trimmed);
       appendMessageToCurrentSession(botReply);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        // Request was intentionally cancelled
+        return;
+      }
+      throw error;
     } finally {
+      abortControllerRef.current = null;
       setSessions((prev) =>
         prev.map((s) =>
           s.id === currentSessionId ? { ...s, isLoading: false } : s,
         ),
       );
     }
+  };
+  const handleCancelMessage = () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === currentSessionId ? { ...s, isLoading: false } : s,
+      ),
+    );
   };
 
   /**
@@ -326,6 +355,8 @@ export const Chatbot = () => {
                 input={input}
                 setInput={setInput}
                 onSend={sendMessage}
+                onCancel={handleCancelMessage}
+                isLoading={getChatLoading()}
                 attachedFiles={attachedFiles}
                 onFilesAttached={handleFilesAttached}
                 onFileRemoved={handleFileRemoved}

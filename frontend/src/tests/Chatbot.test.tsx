@@ -184,6 +184,7 @@ describe("Chatbot component", () => {
       expect(chatbotApi.fetchChatbotReply).toHaveBeenCalledWith(
         "session-1",
         "Hello bot",
+        expect.anything(),
       );
     });
   });
