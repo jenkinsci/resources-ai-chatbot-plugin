@@ -29,13 +29,13 @@ export const chatbotStyles = {
     right: "2rem",
     width: "600px",
     height: "800px",
-    backgroundColor: "white",
-    border: "1px solid #ccc",
-    borderRadius: "10px",
+    backgroundColor: "var(--card-background)",
+    border: "var(--jenkins-border)",
+    borderRadius: "0.75rem",
+    boxShadow: "var(--dialog-box-shadow)",
     display: "flex",
     flexDirection: "column",
     zIndex: 999,
-    boxShadow: "0 0 20px rgba(0,0,0,0.2)",
   } as CSSProperties,
 
   containerWelcomePage: {
@@ -57,7 +57,9 @@ export const chatbotStyles = {
     justifyContent: "center",
     alignItems: "center",
     padding: "2rem 1rem",
-    backgroundColor: "rgba(44, 41, 41, 1)",
+    backgroundColor: "var(--background)",
+    color: "var(--text-color)",
+    border: "1px solid var(--border-color)",
     boxShadow: "4px 4px 10px rgba(0, 0, 0, 0.4)",
     borderRadius: "10px",
     zIndex: 11,
@@ -66,14 +68,18 @@ export const chatbotStyles = {
   popupTitle: {
     fontSize: "1.25rem",
     fontWeight: "bold",
-    color: "#ffffff",
+    backgroundColor: "var(--background)",
+    color: "var(--text-color)",
+    border: "1px solid var(--border-color)",
     marginBottom: "10px",
   } as CSSProperties,
 
   popupMessage: {
     fontSize: "1rem",
     textAlign: "center",
-    color: "#d1d5db",
+    backgroundColor: "var(--background)",
+    color: "var(--text-color)",
+    border: "1px solid var(--border-color)",
     marginBottom: "1.5rem",
   } as CSSProperties,
 
@@ -183,6 +189,11 @@ export const chatbotStyles = {
 
   inputContainer: {
     padding: "0.75rem",
+    backgroundColor: "var(--panel-background)",
+    borderTop: "var(--jenkins-border)",
+    border: "1px solid var(--border-color)",
+    color: "var(--text-color)",
+
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-between",
@@ -210,7 +221,11 @@ export const chatbotStyles = {
     width: "85%",
     padding: "0.5rem",
     borderRadius: "6px",
-    border: "1px solid #ccc",
+    borderTop: "1px solid var(--border-color)",
+    backgroundColor: "var(--input-color)",
+    border: "1px solid var(--input-border)",
+    color: "var(--text-color)",
+
     fontSize: "14px",
     fontFamily: "inherit",
     boxSizing: "border-box",
@@ -227,10 +242,10 @@ export const chatbotStyles = {
     ({
       width: "14%",
       padding: "0.5rem 1rem",
-      backgroundColor: "#0073e6",
-      color: "#fff",
+      backgroundColor: "var(--button-background)",
+      color: "var(--text-color)",
+      borderRadius: "0.625rem",
       border: "none",
-      borderRadius: "6px",
       cursor: input.trim() ? "pointer" : "not-allowed",
       opacity: input.trim() ? 1 : 0.5,
     }) as CSSProperties,
@@ -239,21 +254,81 @@ export const chatbotStyles = {
 
   chatbotHeader: {
     display: "flex",
+    alignItems: "center",
+    gap: "8px",
     flexDirection: "row",
     justifyContent: "space-between",
     padding: "1rem",
-    borderBottom: "1px solid #eee",
+    backgroundColor: "var(--panel-background)",
+    borderBottom: "var(--jenkins-border)",
+    color: "var(--text-color)",
     fontWeight: "bold",
     fontSize: "16px",
-    backgroundColor: "#f5f5f5",
+  } as CSSProperties,
+
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   } as CSSProperties,
 
   clearButton: {
     backgroundColor: "transparent",
     border: "none",
-    color: "black",
+    color: "inherit",
     cursor: "pointer",
     fontSize: "14px",
+  } as CSSProperties,
+
+  exportButton: {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "inherit",
+    cursor: "pointer",
+    fontSize: "14px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    position: "relative",
+  } as CSSProperties,
+
+  exportMenu: {
+    width: "160px",
+    position: "absolute",
+    top: "100%",
+    right: 0,
+    marginTop: "8px",
+    padding: "8px",
+
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "8px",
+
+    backgroundColor: "var(--card-background)",
+    border: "var(--jenkins-border)",
+    boxShadow: "var(--dropdown-box-shadow)",
+    borderRadius: "8px",
+    zIndex: 10000,
+  } as CSSProperties,
+
+  exportMenuItem: {
+    width: "100%",
+    height: "64px",
+    backgroundColor: "var(--button-background)",
+    color: "var(--text-color)",
+    border: "1px solid var(--border-color)",
+    borderRadius: "6px",
+    padding: "8px",
+    cursor: "pointer",
+
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "6px",
+  } as CSSProperties,
+
+  exportMenuItemHover: {
+    backgroundColor: "#f0f0f0",
   } as CSSProperties,
 
   openSidebarButton: {
@@ -286,8 +361,13 @@ export const chatbotStyles = {
       borderTopRightRadius: 20,
       borderBottomLeftRadius: 20,
       borderBottomRightRadius: sender === "user" ? 6 : 20,
-      backgroundColor: sender === "user" ? "#0073e6" : "#5e5b5b",
-      color: sender === "user" ? "#fff" : "#f0f0f0",
+      backgroundColor:
+        sender === "user"
+          ? "var(--item-background--active)"
+          : "var(--item-background--hover)",
+      color: "var(--text-color)",
+      borderRadius: "0.75rem",
+      border: "var(--jenkins-border--subtle)",
       maxWidth: "80%",
       wordWrap: "break-word",
       fontSize: "1rem",
@@ -350,8 +430,9 @@ export const chatbotStyles = {
     left: 0,
     height: "96%",
     width: "250px",
-    backgroundColor: "rgba(240, 240, 240, 0.9)",
-    boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
+    backgroundColor: "var(--background)",
+    borderRight: "1px solid var(--border-color)",
+    boxShadow: "var(--dropdown-shadow)",
     zIndex: 10,
     display: "flex",
     flexDirection: "column",
@@ -409,10 +490,12 @@ export const chatbotStyles = {
       padding: "0.75rem",
       marginBottom: "0.5rem",
       borderRadius: "0.5rem",
-      backgroundColor: isActive ? "#d0e7ff" : "#fff",
-      borderLeft: isActive ? "4px solid #0073e6" : "4px solid transparent",
+      backgroundColor: isActive ? "var(--button-background)" : "transparent",
+      color: "var(--text-color)",
+      borderLeft: isActive
+        ? "4px solid var(--button-background)"
+        : "4px solid transparent",
       fontWeight: isActive ? "bold" : "normal",
-      color: isActive ? "#0073e6" : "#333",
       cursor: "pointer",
       transition: "background 0.2s, border-left 0.2s",
     }) as CSSProperties,
