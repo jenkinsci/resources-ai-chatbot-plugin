@@ -1,8 +1,14 @@
 """Unit tests for LlamaCppProvider."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
-from api.models.llama_cpp_provider import LlamaCppProvider
+
+from api.models.llama_cpp_provider import LLAMA_CPP_AVAILABLE, LlamaCppProvider
+
+pytestmark = pytest.mark.skipif(
+    not LLAMA_CPP_AVAILABLE, reason="llama-cpp-python is not installed"
+)
 
 
 @patch("api.models.llama_cpp_provider.Llama")
@@ -30,7 +36,8 @@ def test_generate_invalid_model_config(mock_llama_class):
     with pytest.raises(RuntimeError) as excinfo:
         provider.generate("Prompt", max_tokens=10)
 
-    assert "LLM model could not be initialized. Check the model path." in str(excinfo.value)
+    assert "LLM model could not be initialized. Check the model path." in str(
+        excinfo.value)
 
 
 @patch("api.models.llama_cpp_provider.Llama")
