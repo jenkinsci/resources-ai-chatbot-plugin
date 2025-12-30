@@ -2,12 +2,14 @@
 Module for the Sparse Retriever Class.
 """
 
+import warnings
+
 try:
-    from retriv.retriv import SparseRetriever
-except ImportError:
+    from retriv import SparseRetriever
+except Exception as e:
     SparseRetriever = None
-    import warnings
-    warnings.warn("retriv is not installed. BM25Indexer will be unavailable.")
+    warnings.warn(f"retriv is not available. BM25Indexer will be unavailable. Error: {e}")
+
 from api.config.loader import CONFIG
 from utils import LoggerFactory
 
@@ -38,6 +40,9 @@ class BM25Indexer:
         """
         Indexes a single file and returns a SparseRetriever object.
         """
+        if SparseRetriever is None:
+            return None
+            
         index_name = config["index_name"]
         file_path = config["file_path"]
 
@@ -76,6 +81,9 @@ class BM25Indexer:
         If it's already created in this session, returns the cached one.
         Otherwise, loads it from disk.
         """
+        if SparseRetriever is None:
+            return None
+            
         if index_name in self.retrievers:
             return self.retrievers[index_name]
 
