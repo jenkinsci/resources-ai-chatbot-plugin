@@ -2,7 +2,12 @@
 Module for the Sparse Retriever Class.
 """
 
-from retriv import SparseRetriever
+try:
+    from retriv.retriv import SparseRetriever
+except ImportError:
+    SparseRetriever = None
+    import warnings
+    warnings.warn("retriv is not installed. BM25Indexer will be unavailable.")
 from api.config.loader import CONFIG
 from utils import LoggerFactory
 
