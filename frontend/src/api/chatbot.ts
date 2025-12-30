@@ -37,7 +37,6 @@ export const createChatSession = async (): Promise<string> => {
   }
 
   return data.session_id;
-
 };
 /**
  * Sends the user's message to the backend chatbot API and returns the bot's response.
@@ -215,7 +214,6 @@ export const validateFile = (
   const extension = "." + file.name.split(".").pop()?.toLowerCase();
   const isTextFile = supportedExtensions.text.indexOf(extension) !== -1;
   const isImageFile = supportedExtensions.image.indexOf(extension) !== -1;
-
 
   if (!isTextFile && !isImageFile) {
     return {

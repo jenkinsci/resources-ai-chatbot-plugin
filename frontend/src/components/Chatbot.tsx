@@ -65,14 +65,12 @@ export const Chatbot = () => {
       sessionStorage.setItem("chatbot-last-session-id", currentSessionId || "");
     };
 
-
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [sessions, currentSessionId]);
-
 
   /**
    * Returns the messages of a chat session.
@@ -182,10 +180,10 @@ export const Chatbot = () => {
       const botReply =
         filesToSend.length > 0
           ? await fetchChatbotReplyWithFiles(
-            currentSessionId,
-            trimmed || "Please analyze the attached file(s).",
-            filesToSend,
-          )
+              currentSessionId,
+              trimmed || "Please analyze the attached file(s).",
+              filesToSend,
+            )
           : await fetchChatbotReply(currentSessionId, trimmed);
 
       appendMessageToCurrentSession(botReply);
@@ -197,7 +195,6 @@ export const Chatbot = () => {
       );
     }
   };
-
 
   /**
    * Handles attaching files to the current message.

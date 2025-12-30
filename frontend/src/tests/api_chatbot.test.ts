@@ -93,20 +93,18 @@ describe("chatbotApi", () => {
     });
 
     it("uses fallback error message when API reply is missing", async () => {
-  (callChatbotApi as jest.Mock).mockResolvedValueOnce({});
+      (callChatbotApi as jest.Mock).mockResolvedValueOnce({});
 
-  const result = await fetchChatbotReply("session-xyz", "Hi!");
+      const result = await fetchChatbotReply("session-xyz", "Hi!");
 
+      expect(getChatbotText).toHaveBeenCalledWith("errorMessage");
 
-  expect(getChatbotText).toHaveBeenCalledWith("errorMessage");
-
-  expect(result).toEqual({
-    id: "mock-uuid",
-    sender: "jenkins-bot",
-    text: "Fallback error message",
-  });
-});
-
+      expect(result).toEqual({
+        id: "mock-uuid",
+        sender: "jenkins-bot",
+        text: "Fallback error message",
+      });
+    });
   });
 
   describe("deleteChatSession", () => {

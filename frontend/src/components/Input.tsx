@@ -1,4 +1,3 @@
-
 import { useRef } from "react";
 import { getChatbotText } from "../data/chatbotTexts";
 import { chatbotStyles } from "../styles/styles";
@@ -147,8 +146,7 @@ export const Input = ({
             onClick={handleAttachClick}
             style={chatbotStyles.attachButton}
             title="Attach files"
-          >
-          </button>
+          ></button>
         )}
 
         <textarea
