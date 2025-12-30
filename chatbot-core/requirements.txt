@@ -62,6 +62,8 @@ platformdirs==4.3.8
 pydantic==2.11.5
 pydantic_core==2.33.2
 pylint==3.3.7
+python-magic==0.4.27
+python-multipart==0.0.20
 pyparsing==3.2.3
 pytest==8.4.1
 pytest-cov==6.2.1

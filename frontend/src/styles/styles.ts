@@ -129,6 +129,64 @@ export const chatbotStyles = {
 
   // Input
 
+  inputWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    borderTop: "1px solid #eee",
+  } as CSSProperties,
+
+  attachedFilesContainer: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
+    padding: "8px 12px",
+    backgroundColor: "#f8f9fa",
+    borderBottom: "1px solid #eee",
+    maxHeight: "100px",
+    overflowY: "auto",
+  } as CSSProperties,
+
+  attachedFileChip: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "4px 8px",
+    backgroundColor: "#e9ecef",
+    borderRadius: "16px",
+    fontSize: "12px",
+    maxWidth: "200px",
+  } as CSSProperties,
+
+  attachedFileName: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    maxWidth: "120px",
+  } as CSSProperties,
+
+  attachedFileSize: {
+    color: "#6c757d",
+    fontSize: "11px",
+    flexShrink: 0,
+  } as CSSProperties,
+
+  removeFileButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "18px",
+    height: "18px",
+    padding: 0,
+    border: "none",
+    borderRadius: "50%",
+    backgroundColor: "#dc3545",
+    color: "#fff",
+    fontSize: "14px",
+    cursor: "pointer",
+    flexShrink: 0,
+    lineHeight: 1,
+  } as CSSProperties,
+
   inputContainer: {
     padding: "0.75rem",
     backgroundColor: "var(--panel-background)",
@@ -139,6 +197,24 @@ export const chatbotStyles = {
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: "8px",
+  } as CSSProperties,
+
+  attachButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "40px",
+    height: "40px",
+    padding: 0,
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    backgroundColor: "#fff",
+    fontSize: "18px",
+    cursor: "pointer",
+    flexShrink: 0,
+    transition: "background-color 0.2s",
   } as CSSProperties,
 
   input: {
@@ -296,6 +372,55 @@ export const chatbotStyles = {
       wordWrap: "break-word",
       fontSize: "1rem",
     }) as CSSProperties,
+
+  // File attachments in messages
+  messageFilesContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    marginBottom: "8px",
+  } as CSSProperties,
+
+  fileAttachmentContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: "8px",
+    maxWidth: "100%",
+  } as CSSProperties,
+
+  imagePreview: {
+    maxWidth: "200px",
+    maxHeight: "150px",
+    borderRadius: "4px",
+    objectFit: "contain" as const,
+  } as CSSProperties,
+
+  textFileIcon: {
+    fontSize: "24px",
+    flexShrink: 0,
+  } as CSSProperties,
+
+  fileAttachmentInfo: {
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  } as CSSProperties,
+
+  fileAttachmentName: {
+    fontSize: "12px",
+    fontWeight: "500",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  } as CSSProperties,
+
+  fileAttachmentSize: {
+    fontSize: "10px",
+    opacity: 0.8,
+  } as CSSProperties,
 
   // Sidebar
 
