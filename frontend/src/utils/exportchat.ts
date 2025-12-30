@@ -31,9 +31,7 @@ export const exportAsTxt = (messages: Message[]) => {
 -------------------------- */
 
 export const exportAsMd = (messages: Message[]) => {
-  const content = messages
-    .map((m) => `${m.sender}: ${m.text}`)
-    .join("\n\n");
+  const content = messages.map((m) => `${m.sender}: ${m.text}`).join("\n\n");
 
   const blob = new Blob([content], { type: "text/markdown" });
   downloadBlob(blob, "chat.md");
