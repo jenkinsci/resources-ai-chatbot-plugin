@@ -6,8 +6,8 @@ import warnings
 
 try:
     from retriv import SparseRetriever
-except Exception as e:
-    SparseRetriever = None
+except Exception as e:  # pylint: disable=broad-exception-caught
+    SparseRetriever = None  # pylint: disable=invalid-name
     warnings.warn(f"retriv is not available. BM25Indexer will be unavailable. Error: {e}")
 
 from api.config.loader import CONFIG
@@ -42,7 +42,7 @@ class BM25Indexer:
         """
         if SparseRetriever is None:
             return None
-            
+
         index_name = config["index_name"]
         file_path = config["file_path"]
 
@@ -83,7 +83,7 @@ class BM25Indexer:
         """
         if SparseRetriever is None:
             return None
-            
+
         if index_name in self.retrievers:
             return self.retrievers[index_name]
 
