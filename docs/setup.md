@@ -140,3 +140,31 @@ make setup-backend IS_CPU_REQ=1
 > **Note:** The same logic holds for every other target that will be presented.
 
 > **Note:** The target **does not** include the installation of the LLM.
+
+## Common Troubleshooting
+
+This section covers common issues encountered during setup, especially when installing
+dependencies that require native compilation (e.g. `llama-cpp-python`).
+
+---
+
+### llama-cpp-python fails to install
+
+**Symptoms**
+- `pip install llama-cpp-python` fails
+- Errors mentioning `cmake`, `gcc`, or “failed building wheel”
+
+**Cause**
+`llama-cpp-python` requires a working C/C++ toolchain and CMake to build native extensions.
+
+**Solution**
+For Linux (Ubuntu/Debian):
+```bash
+sudo apt install build-essential cmake
+pip install llama-cpp-python
+
+For macOS:
+```bash
+brew install cmake
+pip install llama-cpp-python    
+```
