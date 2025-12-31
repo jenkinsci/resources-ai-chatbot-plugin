@@ -152,7 +152,9 @@ export const Input = ({
             onClick={handleAttachClick}
             style={chatbotStyles.attachButton}
             title="Attach files"
-          ></button>
+          >
+            📎
+          </button>
         )}
 
         <textarea

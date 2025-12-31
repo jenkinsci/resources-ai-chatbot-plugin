@@ -164,8 +164,8 @@ export const Chatbot = () => {
     const userMessage: Message = {
       id: uuidv4(),
       sender: "user",
-      text: trimmed || "📎 Attached file(s)",
-      files: fileAttachments.length ? fileAttachments : undefined,
+      text: trimmed || (hasFiles ? "📎 Attached file(s)" : ""),
+      files: fileAttachments.length > 0 ? fileAttachments : undefined,
     };
 
     setInput("");
