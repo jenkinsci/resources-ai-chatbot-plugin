@@ -44,7 +44,7 @@ The API will be available at `http://127.0.0.1:8000`.
 
 Verify it's working:
 ```bash
-curl -X POST http://localhost:8000/api/chatbot/sessions
+curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 ```
 
 
