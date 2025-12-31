@@ -67,7 +67,7 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
             "last_accessed": datetime.now()
         }
 
-    return memory
+        return memory
 
 
 
@@ -84,12 +84,14 @@ def delete_session(session_id: str) -> bool:
         bool: True if the session existed and was deleted, False otherwise.
     """
     with _lock:
+        if session_id is None:
+            return True
         in_memory_deleted = _sessions.pop(session_id, None) is not None
 
     if in_memory_deleted:
-        return delete_session_file(session_id)
+        delete_session_file(session_id)
 
-    return False
+    return in_memory_deleted
 
 
 def session_exists(session_id: str) -> bool:

@@ -1,6 +1,6 @@
 import os
 import json
-from api.services.memory import session_exists
+import uuid
 from threading import Lock
 
 
@@ -19,9 +19,9 @@ def _get_session_file_path(session_id: str) -> str:
     """
 
     try:
-        session_exists(session_id)
+        uuid.UUID(session_id)
     except ValueError:
-        return False
+        return ""
     return os.path.join(_SESSION_DIRECTORY, f"{session_id}.json")
 
 
