@@ -34,8 +34,8 @@ Complete the full setup process in [docs/setup.md](docs/setup.md) before running
 
 ### Running the API
 
-Once setup is complete:
 
+Once setup is complete, from the **project root directory** run:
 ```bash
 make api
 ```
