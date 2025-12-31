@@ -18,10 +18,10 @@ def _get_session_file_path(session_id: str) -> str:
     Example: data/sessions/<session_id>.json
     """
 
-    try:
-        uuid.UUID(session_id)
-    except ValueError:
-        return False
+    # try:
+    #     uuid.UUID(session_id)
+    # except ValueError:
+    #     return False
     return os.path.join(_SESSION_DIRECTORY, f"{session_id}.json")
 
 
