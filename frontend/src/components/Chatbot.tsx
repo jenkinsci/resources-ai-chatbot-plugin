@@ -22,6 +22,8 @@ import {
   loadChatbotLastSessionId,
 } from "../utils/chatbotStorage";
 import { v4 as uuidv4 } from "uuid";
+import { ProactiveToast } from "./Toast";
+import { useContextObserver } from "../utils/useContextObserver";
 
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
@@ -31,16 +33,18 @@ export const Chatbot = () => {
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(
-    loadChatbotLastSessionId,
+    loadChatbotLastSessionId
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
   const [sessionIdToDelete, setSessionIdToDelete] = useState<string | null>(
-    null,
+    null
   );
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [supportedExtensions, setSupportedExtensions] =
     useState<SupportedExtensions | null>(null);
+
+  const { showToast, setShowToast } = useContextObserver(isOpen);
 
   /**
    * Fetch supported file extensions on component mount.
@@ -137,8 +141,8 @@ export const Chatbot = () => {
       prevSessions.map((session) =>
         session.id === currentSessionId
           ? { ...session, messages: [...session.messages, message] }
-          : session,
-      ),
+          : session
+      )
     );
   };
 
@@ -178,8 +182,8 @@ export const Chatbot = () => {
       prevSessions.map((session) =>
         session.id === currentSessionId
           ? { ...session, isLoading: true }
-          : session,
-      ),
+          : session
+      )
     );
     appendMessageToCurrentSession(userMessage);
 
@@ -189,7 +193,7 @@ export const Chatbot = () => {
       botReply = await fetchChatbotReplyWithFiles(
         currentSessionId!,
         trimmed || "Please analyze the attached file(s).",
-        filesToSend,
+        filesToSend
       );
     } else {
       botReply = await fetchChatbotReply(currentSessionId!, trimmed);
@@ -199,8 +203,8 @@ export const Chatbot = () => {
       prevSessions.map((session) =>
         session.id === currentSessionId
           ? { ...session, isLoading: false }
-          : session,
-      ),
+          : session
+      )
     );
     appendMessageToCurrentSession(botReply);
   };
@@ -244,6 +248,54 @@ export const Chatbot = () => {
   const openConfirmDeleteChatPopup = (chatSessionId: string) => {
     setSessionIdToDelete(chatSessionId);
     setIsPopupOpen(true);
+  };
+
+  const getConsoleLogContext = (): string => {
+    // 1. Try standard Jenkins console selector
+    const consoleElement = document.querySelector("pre.console-output");
+
+    if (!consoleElement || !consoleElement.textContent) {
+      return "";
+    }
+
+    const fullLog = consoleElement.textContent;
+
+    // 2. Truncate if too large (e.g., last 5000 characters)
+    // We only need the error at the end, and we don't want to overload the LLM.
+    const maxLength = 5000;
+    if (fullLog.length > maxLength) {
+      return "...(logs truncated due to size)...\n" + fullLog.slice(-maxLength);
+    }
+
+    return fullLog;
+  };
+
+  /**
+   * Handlers for Proactive Toast
+   */
+  const handleToastConfirm = () => {
+    setShowToast(false);
+    setIsOpen(true);
+
+    // 1. Scrape the logs
+    const logs = getConsoleLogContext();
+
+    // 2. Construct the prompt
+    if (logs) {
+      const messageWithContext = `I found a build failure. Here are the last 5000 characters of the log:\n\n\`\`\`\n${logs}\n\`\`\`\n\nCan you analyze this error?`;
+      setInput(messageWithContext);
+
+      // Optional: If you want to send it immediately without clicking the arrow button:
+      // sendMessage(messageWithContext);
+    } else {
+      setInput(
+        "I noticed a build failure, but I couldn't read the logs automatically. Can you paste them?"
+      );
+    }
+  };
+
+  const handleToastDismiss = () => {
+    setShowToast(false);
   };
 
   const getWelcomePage = () => {
@@ -301,6 +353,12 @@ export const Chatbot = () => {
       >
         {getChatbotText("toggleButtonLabel")}
       </button>
+      {showToast && !isOpen && (
+        <ProactiveToast
+          onConfirm={handleToastConfirm}
+          onDismiss={handleToastDismiss}
+        />
+      )}
 
       {isOpen && (
         <div

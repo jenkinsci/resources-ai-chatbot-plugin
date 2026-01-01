@@ -32,6 +32,11 @@ llm_config = CONFIG["llm"]
 retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 
+LOG_ANALYSIS_PATTERN = re.compile(
+    r"Here are the last \d+ characters of the log:\s*```\s*(.*?)\s*```\s*(.*)", 
+    re.DOTALL
+)
+
 
 def get_chatbot_reply(
     session_id: str,
@@ -52,6 +57,24 @@ def get_chatbot_reply(
     """
     logger.info("New message from session '%s'", session_id)
     logger.info("Handling the user query: %s", user_input)
+    
+    match = LOG_ANALYSIS_PATTERN.search(user_input)
+    
+    actual_query = user_input
+    log_context = None
+
+    if match:
+        logger.info("Log Analysis Pattern detected. Separating logs from query.")
+        log_content = match.group(1).strip()
+        user_question = match.group(2).strip()
+
+        if not user_question:
+            user_question = "Please analyze the build failure in these logs."
+
+        log_context = log_content
+        actual_query = user_question
+    
+    logger.info("Handling the user query: %s", actual_query)
 
     if files:
         logger.info("Processing %d uploaded file(s)", len(files))
@@ -61,7 +84,7 @@ def get_chatbot_reply(
         raise RuntimeError(
             f"Session '{session_id}' not found in the memory store.")
 
-    context = retrieve_context(user_input)
+    context = retrieve_context(actual_query)
     logger.info("Context retrieved: %s", context)
 
     # Add file context if files are provided
@@ -73,7 +96,7 @@ def get_chatbot_reply(
             logger.info("File context added: %d characters", len(file_context))
             context = f"{context}\n\n[User Uploaded Files]\n{file_context}"
 
-    prompt = build_prompt(user_input, context, memory)
+    prompt = build_prompt(actual_query, context, memory, log_context=log_context)
 
     logger.info("Generating answer with prompt: %s", prompt)
     reply = generate_answer(prompt)
