@@ -1,7 +1,9 @@
+"""Session management utilities."""
 import os
 import json
 import uuid
 from threading import Lock
+from langchain.memory import ConversationBufferMemory
 
 
 
@@ -37,19 +39,21 @@ def _load_session_from_json(session_id: str) -> list:
         return json.load(f)
 
 
-def _append_message_to_json(session_id: str, messages:list) -> None:
+def _append_message_to_json(session_id: str, messages:ConversationBufferMemory) -> None:
     """
     Persist the current session messages as a full snapshot using atomic write.
     """
     path = _get_session_file_path(session_id)
-    tmp_path = f"{path}.tmp"
+    if os.path.exists(path):
+        tmp_path = f"{path}.tmp"
 
-    with _FILE_LOCK:
+        with _FILE_LOCK:
 
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(messages, f, indent=2, ensure_ascii=False)
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(messages, f, indent=2, ensure_ascii=False)
 
-        os.replace(tmp_path, path)
+            os.replace(tmp_path, path)
+
 
 
 def _delete_session(session_id: str) -> bool:
@@ -89,4 +93,4 @@ def delete_session_file(session_id: str) -> bool:
     """
     Public function to delete a session's JSON file.
     """
-    return _delete_session(session_id)      
+    return _delete_session(session_id)

@@ -85,7 +85,7 @@ router = APIRouter()
 async def chatbot_stream(websocket: WebSocket, session_id: str):
     """
     WebSocket endpoint for real-time token streaming.
-    
+
     Accepts WebSocket connections and streams chatbot responses
     token-by-token for a more interactive user experience.
     """
@@ -156,7 +156,7 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
 def start_chat(response: Response):
     """
     Create a new chat session.
-    
+
     Returns a unique session ID that can be used for subsequent
     chatbot interactions.
     """
@@ -165,7 +165,7 @@ def start_chat(response: Response):
         f"/sessions/{session_id}/message"
     )
     return SessionResponse(session_id=session_id)
-   
+
 @router.delete(
     "/sessions/{session_id}",
     response_model=DeleteResponse,
@@ -173,7 +173,7 @@ def start_chat(response: Response):
 def delete_chat(session_id: str):
     """
     Delete an existing chat session.
-    
+
     Removes all conversation history and resources associated
     with the specified session.
     """
@@ -190,7 +190,7 @@ def delete_chat(session_id: str):
 
 # Chat Endpoint
 @router.post("/sessions/{session_id}/message", response_model=ChatResponse)
-def chatbot_reply(session_id: str, request: ChatRequest, background_tasks: BackgroundTasks):
+def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: BackgroundTasks):
 
     """
     POST endpoint to handle chatbot replies.
@@ -210,9 +210,11 @@ def chatbot_reply(session_id: str, request: ChatRequest, background_tasks: Backg
             status_code=404,
             detail="Session not found.",
         )
-
     reply =  get_chatbot_reply(session_id, request.message)
-    # background_tasks.add_task(append_message , session_id , get_session(session_id).chat_memory.messages) 
+    _background_tasks.add_task(
+        append_message,
+        session_id,
+        get_session(session_id).chat_memory.messages if get_session(session_id) else None,)
 
     return reply
 

@@ -19,7 +19,7 @@ _lock = Lock()
 def init_session() -> str:
     """
     Initialize a new chat session and store its memory object.
-    
+
     Returns:
     str: A newly generated UUID representing the session ID.
     """
@@ -45,6 +45,7 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
     """
 
     with _lock:
+
         session_data = _sessions.get(session_id)
 
         if session_data :
@@ -57,10 +58,12 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
 
         memory = ConversationBufferMemory(return_messages=True)
         for msg in history:
-            memory.chat_memory.add_message({
-                "role": msg["role"],
-                "content": msg["content"],
-            })
+            memory.chat_memory.add_message(# pylint: disable=no-member
+                {
+                    "role": msg["role"],
+                    "content": msg["content"],
+                }
+            )
 
         _sessions[session_id] = {
             "memory": memory,
@@ -127,12 +130,12 @@ def get_last_accessed(session_id: str) -> datetime | None:
         session_data = _sessions.get(session_id)
         if session_data is not None:
             return session_data["last_accessed"]
-        
+
         history = load_session(session_id)
         if not history:
             return None
-        
-        
+
+
     return history["last_accessed"]
 
 def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
@@ -151,11 +154,11 @@ def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
         if session_data:
             session_data["last_accessed"] = timestamp
             return True
-        
+
         history = load_session(session_id)
         if not history:
             return False
-        
+
         history["last_accessed"] = timestamp
         return True
 
