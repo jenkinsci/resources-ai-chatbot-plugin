@@ -37,12 +37,12 @@ export const Chatbot = () => {
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(
-    loadChatbotLastSessionId
+    loadChatbotLastSessionId,
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
   const [sessionIdToDelete, setSessionIdToDelete] = useState<string | null>(
-    null
+    null,
   );
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [supportedExtensions, setSupportedExtensions] =
@@ -147,8 +147,8 @@ export const Chatbot = () => {
       prevSessions.map((session) =>
         session.id === currentSessionId
           ? { ...session, messages: [...session.messages, message] }
-          : session
-      )
+          : session,
+      ),
     );
   };
 
@@ -178,8 +178,8 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: true } : s
-      )
+        s.id === currentSessionId ? { ...s, isLoading: true } : s,
+      ),
     );
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -193,13 +193,13 @@ export const Chatbot = () => {
               currentSessionId,
               trimmed || "Please analyze the attached file(s).",
               filesToSend,
-              controller.signal
+              controller.signal,
             )
           : controller.signal
             ? await fetchChatbotReply(
                 currentSessionId,
                 trimmed,
-                controller.signal
+                controller.signal,
               )
             : await fetchChatbotReply(currentSessionId, trimmed);
       appendMessageToCurrentSession(botReply);
@@ -213,8 +213,8 @@ export const Chatbot = () => {
       abortControllerRef.current = null;
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === currentSessionId ? { ...s, isLoading: false } : s
-        )
+          s.id === currentSessionId ? { ...s, isLoading: false } : s,
+        ),
       );
     }
   };
@@ -224,8 +224,8 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false } : s
-      )
+        s.id === currentSessionId ? { ...s, isLoading: false } : s,
+      ),
     );
   };
 
@@ -309,7 +309,7 @@ export const Chatbot = () => {
       // sendMessage(messageWithContext);
     } else {
       setInput(
-        "I noticed a build failure, but I couldn't read the logs automatically. Can you paste them?"
+        "I noticed a build failure, but I couldn't read the logs automatically. Can you paste them?",
       );
     }
   };

@@ -2,21 +2,28 @@ import { useState, useEffect } from "react";
 
 /**
  * Custom hook to monitor the user's context (URL and Scroll).
- * Triggers a toast if the user is on a console page and scrolling 
+ * Triggers a toast if the user is on a console page and scrolling
  * to the bottom (likely looking at an error).
  */
 export const useContextObserver = (isChatOpen: boolean) => {
   const [showToast, setShowToast] = useState(false);
-  const [toastTimer, setToastTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [toastTimer, setToastTimer] = useState<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   useEffect(() => {
     const checkContext = () => {
       // 1. URL Check
       const currentUrl = window.location.href;
       const isConsolePage = currentUrl.includes("/console");
-      
+
       // Debug log (remove later)
-      console.log("[Chatbot Observer] URL:", currentUrl, "| Is Console:", isConsolePage);
+      console.log(
+        "[Chatbot Observer] URL:",
+        currentUrl,
+        "| Is Console:",
+        isConsolePage,
+      );
 
       if (!isConsolePage) {
         setShowToast(false);
@@ -28,11 +35,13 @@ export const useContextObserver = (isChatOpen: boolean) => {
       const scrollPosition = window.innerHeight + window.scrollY;
       const pageHeight = document.documentElement.scrollHeight;
       const buffer = 150; // Increased buffer to 150px
-      
+
       const isAtBottom = scrollPosition >= pageHeight - buffer;
 
       // Debug log (remove later)
-      console.log(`[Chatbot Observer] Scroll: ${Math.round(scrollPosition)} / ${pageHeight} | At Bottom: ${isAtBottom}`);
+      console.log(
+        `[Chatbot Observer] Scroll: ${Math.round(scrollPosition)} / ${pageHeight} | At Bottom: ${isAtBottom}`,
+      );
 
       if (isAtBottom && !isChatOpen && !showToast) {
         if (!toastTimer) {
@@ -57,7 +66,7 @@ export const useContextObserver = (isChatOpen: boolean) => {
 
     // Run on every scroll event
     window.addEventListener("scroll", checkContext);
-    
+
     return () => {
       window.removeEventListener("scroll", checkContext);
       if (toastTimer) clearTimeout(toastTimer);
