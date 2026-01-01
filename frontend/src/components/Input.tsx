@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { getChatbotText } from "../data/chatbotTexts";
 import { chatbotStyles } from "../styles/styles";
 
@@ -19,6 +19,10 @@ export interface InputProps {
   enableFileUpload?: boolean;
   /** Optional: file validation function */
   validateFile?: (file: File) => { isValid: boolean; error?: string };
+  /** Optional: whether a message is currently being sent */
+  isLoading?: boolean;
+  /** Optional: cancel the in-flight message */
+  onCancel?: () => void;
 }
 
 /**
@@ -35,6 +39,8 @@ export const Input = ({
   onFileRemoved,
   enableFileUpload = true,
   validateFile,
+  isLoading = false,
+  onCancel,
 }: InputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -161,13 +167,24 @@ export const Input = ({
             width: enableFileUpload && onFilesAttached ? "75%" : "85%",
           }}
         />
-        <button
-          onClick={onSend}
-          disabled={!canSend}
-          style={chatbotStyles.sendButton(canSend ? "x" : "")}
-        >
-          {getChatbotText("sendMessage")}
-        </button>
+        {isLoading && onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            style={chatbotStyles.sendButton("x")}
+            aria-label="Cancel message"
+          >
+            Cancel
+          </button>
+        ) : (
+          <button
+            onClick={onSend}
+            disabled={!canSend}
+            style={chatbotStyles.sendButton(canSend ? "x" : "")}
+          >
+            {getChatbotText("sendMessage")}
+          </button>
+        )}
       </div>
     </div>
   );
