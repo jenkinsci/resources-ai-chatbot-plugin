@@ -178,8 +178,8 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: true } : s,
-      ),
+        s.id === currentSessionId ? { ...s, isLoading: true } : s
+      )
     );
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -193,13 +193,13 @@ export const Chatbot = () => {
               currentSessionId,
               trimmed || "Please analyze the attached file(s).",
               filesToSend,
-              controller.signal,
+              controller.signal
             )
           : controller.signal
             ? await fetchChatbotReply(
                 currentSessionId,
                 trimmed,
-                controller.signal,
+                controller.signal
               )
             : await fetchChatbotReply(currentSessionId, trimmed);
       appendMessageToCurrentSession(botReply);
@@ -213,8 +213,8 @@ export const Chatbot = () => {
       abortControllerRef.current = null;
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === currentSessionId ? { ...s, isLoading: false } : s,
-        ),
+          s.id === currentSessionId ? { ...s, isLoading: false } : s
+        )
       );
     }
   };
@@ -224,8 +224,8 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false } : s,
-      ),
+        s.id === currentSessionId ? { ...s, isLoading: false } : s
+      )
     );
   };
 
