@@ -7,13 +7,13 @@ from langchain.memory import ConversationBufferMemory
 from api.prompts.prompts import SYSTEM_INSTRUCTION, LOG_ANALYSIS_INSTRUCTION
 
 def build_prompt(
-    user_query: str, 
-    context: str, 
-    memory: ConversationBufferMemory, 
+    user_query: str,
+    context: str,
+    memory: ConversationBufferMemory,
     log_context: Optional[str] = None
 ) -> str:
     """
-    Build the full prompt by combining system instructions, chat history, context, 
+    Build the full prompt by combining system instructions, chat history, context,
     user question, and optional log data.
 
     Args:

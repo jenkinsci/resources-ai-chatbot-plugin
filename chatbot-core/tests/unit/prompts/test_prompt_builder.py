@@ -88,8 +88,12 @@ def get_prompt_indexes(prompt: str) -> tuple[int, int, int, int]:
 
 def get_prompt_sections(prompt: str) -> tuple[str, str, str]:
     """Helper to extract prompt sections by label."""
-    history_section = prompt.split("Chat History:")[1].split("Context (Documentation & Knowledge Base):")[0]
-    context_section = prompt.split("Context (Documentation & Knowledge Base):")[1].split("User Question:")[0]
+    history_part = prompt.split("Chat History:")[1]
+    history_section = history_part.split("Context (Documentation & Knowledge Base):")[0]
+
+    context_part = prompt.split("Context (Documentation & Knowledge Base):")[1]
+    context_section = context_part.split("User Question:")[0]
+
     question_section = prompt.split("User Question:")[1].split("Answer:")[0]
 
     return history_section, context_section, question_section
