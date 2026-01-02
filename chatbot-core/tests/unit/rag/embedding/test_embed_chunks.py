@@ -1,14 +1,27 @@
 """Unit Tests for embed_chunks module."""
 
 import json
-from rag.embedding.embed_chunks import embed_chunks, collect_all_chunks, load_chunks_from_file
+import os
+import sys
+import pytest
+from unittest.mock import MagicMock
 
-def test_embed_chunks_valid_chunks(
-    mock_collect_all_chunks,
-    mock_load_embedding_model,
-    mock_embed_documents,
-    mocker
-):
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "../../../../"))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+    
+from rag.embedding.embed_chunks import (
+    embed_chunks, 
+    collect_all_chunks, 
+    load_chunks_from_file
+)
+
+def test_embed_chunks_valid_chunks(mocker):
+    mock_collect_all_chunks = mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+    mock_load_embedding_model = mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+    mock_embed_documents = mocker.patch("rag.embedding.embed_chunks.embed_documents")
+    
     """Testing that embed_chunks processes valid chunks correctly."""
     mock_collect_all_chunks.return_value = get_mock_chunks("valid")
     mock_model = mocker.Mock()
@@ -32,13 +45,12 @@ def test_embed_chunks_valid_chunks(
     )
 
 
-def test_embed_chunks_skips_invalid_chunks(
-    mock_collect_all_chunks,
-    mock_load_embedding_model,
-    mock_embed_documents,
-    mocker
-):
+def test_embed_chunks_skips_invalid_chunks(mocker):
     """Testing that embed_chunks skips invalid chunks and logs warnings."""
+    mock_collect_all_chunks = mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+    mock_load_embedding_model = mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+    mock_embed_documents = mocker.patch("rag.embedding.embed_chunks.embed_documents")
+    
     mock_collect_all_chunks.return_value = get_mock_chunks("invalid")
     mock_model = mocker.Mock()
     mock_load_embedding_model.return_value = mock_model

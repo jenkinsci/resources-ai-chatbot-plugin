@@ -271,3 +271,23 @@ PRIORITY RULES:
 
 If the logs do not show a clear error, state: "I cannot find a specific error in the provided logs."
 """
+LOG_SUMMARY_PROMPT = """
+You are an expert system debugger.
+Your task is to extract a concise search query from the provided build logs.
+Identify the specific error message, exception type, or exit code.
+
+Do not explain the error. Just output the error signature.
+
+Example 1:
+Logs: "Check failed: 'test_pass'. Exit code 1."
+Output: Build failure exit code 1
+
+Example 2:
+Logs: "Exception in thread main java.lang.NullPointerException at com.example..."
+Output: java.lang.NullPointerException
+
+Logs:
+{log_data}
+
+Search Query:
+"""
