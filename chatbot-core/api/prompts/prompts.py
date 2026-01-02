@@ -44,7 +44,7 @@ Respond with only: SIMPLE or MULTI.
 ###
 Here are some examples:
 
-Query: How do I install Jenkins on Ubuntu? 
+Query: How do I install Jenkins on Ubuntu?
 Answer: SIMPLE
 
 Query: How do I install Jenkins and configure it to use the GitHub plugin?
@@ -259,12 +259,12 @@ Context:
 Relevance Analysis:
 """
 LOG_ANALYSIS_INSTRUCTION = """
-You are an expert Jenkins Log Analyzer. 
+You are an expert Jenkins Log Analyzer.
 
 Your SOLE goal is to identify the root cause of the build failure based on the provided logs.
 
 PRIORITY RULES:
-1. Focus 100% on the "User-Provided Log Data". 
+1. Focus 100% on the "User-Provided Log Data".
 2. Identify specific error messages, exceptions, or exit codes (e.g., "Build step 'Execute Windows batch command' marked build as failure").
 3. Only use the "Context" (documentation) if it helps explain the specific error found in the logs. If the context is unrelated, IGNORE IT.
 4. Do not be conversational. Go straight to the point: "The build failed because..."
