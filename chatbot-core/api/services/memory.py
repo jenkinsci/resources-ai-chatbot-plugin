@@ -8,7 +8,12 @@ from datetime import datetime, timedelta
 from threading import Lock
 from langchain.memory import ConversationBufferMemory
 from api.config.loader import CONFIG
-from api.services.sessionmanager import delete_session_file, load_session, session_exists_in_json
+from api.services.sessionmanager import(
+    delete_session_file,
+    load_session,
+    session_exists_in_json,
+    append_message
+)
 # sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
 
 
@@ -73,6 +78,17 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
         return memory
 
 
+def persist_session(session_id: str)-> None:
+    """
+    Persist the current session messages to disk.
+
+    Args:
+        session_id (str): The session identifier.
+    """
+    session_data = get_session(session_id)
+    if session_data:
+        messages = list(session_data.chat_memory.messages)
+        append_message(session_id, messages)
 
 
 

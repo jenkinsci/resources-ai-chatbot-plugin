@@ -3,7 +3,6 @@ import os
 import json
 import uuid
 from threading import Lock
-from langchain.memory import ConversationBufferMemory
 
 
 
@@ -39,7 +38,7 @@ def _load_session_from_json(session_id: str) -> list:
         return json.load(f)
 
 
-def _append_message_to_json(session_id: str, messages:ConversationBufferMemory) -> None:
+def _append_message_to_json(session_id: str, messages:list) -> None:
     """
     Persist the current session messages as a full snapshot using atomic write.
     """

@@ -47,7 +47,7 @@ from api.services.chat_service import (
 from api.services.memory import (
     delete_session,
     session_exists,
-    get_session,
+    persist_session,
     init_session,
 )
 from api.services.file_service import (
@@ -55,7 +55,6 @@ from api.services.file_service import (
     get_supported_extensions,
     FileProcessingError,
 )
-from api.services.sessionmanager import append_message
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -212,9 +211,9 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
         )
     reply =  get_chatbot_reply(session_id, request.message)
     _background_tasks.add_task(
-        append_message,
+        persist_session,
         session_id,
-        get_session(session_id).chat_memory.messages if get_session(session_id) else None,)
+        )
 
     return reply
 
