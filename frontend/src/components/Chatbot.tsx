@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { type Message, type FileAttachment } from "../model/Message";
+import { useState, useEffect, useRef } from "react";
+
+import { type Message } from "../model/Message";
 import { type ChatSession } from "../model/ChatSession";
 import {
   fetchChatbotReply,
@@ -26,7 +27,10 @@ import { v4 as uuidv4 } from "uuid";
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
  */
+
 export const Chatbot = () => {
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
@@ -122,12 +126,14 @@ export const Chatbot = () => {
       console.error("Add error showage for a couple of seconds.");
       return;
     }
+
     const newSession: ChatSession = {
       id,
       messages: [],
       createdAt: new Date().toISOString(),
       isLoading: false,
     };
+
     setSessions((prev) => [newSession, ...prev]);
     setCurrentSessionId(id);
   };
@@ -145,22 +151,15 @@ export const Chatbot = () => {
   /**
    * Handles the send process in a chat session.
    */
+
   const sendMessage = async () => {
     const trimmed = input.trim();
     const hasFiles = attachedFiles.length > 0;
 
-    if (!currentSessionId) {
-      console.error("No sessions available.");
-      return;
-    }
-    if (!trimmed && !hasFiles) {
-      console.error("Empty message and no files provided.");
-      return;
-    }
+    if (!currentSessionId) return;
+    if (!trimmed && !hasFiles) return;
 
-    // Create file attachments for display
-    const fileAttachments: FileAttachment[] =
-      attachedFiles.map(fileToAttachment);
+    const fileAttachments = attachedFiles.map(fileToAttachment);
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -169,40 +168,61 @@ export const Chatbot = () => {
       files: fileAttachments.length > 0 ? fileAttachments : undefined,
     };
 
-    // Clear input and files
     setInput("");
     const filesToSend = [...attachedFiles];
     setAttachedFiles([]);
 
-    setSessions((prevSessions) =>
-      prevSessions.map((session) =>
-        session.id === currentSessionId
-          ? { ...session, isLoading: true }
-          : session,
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === currentSessionId ? { ...s, isLoading: true } : s,
       ),
     );
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     appendMessageToCurrentSession(userMessage);
 
-    // Use file upload endpoint if files are present, otherwise use regular endpoint
-    let botReply: Message;
-    if (filesToSend.length > 0) {
-      botReply = await fetchChatbotReplyWithFiles(
-        currentSessionId!,
-        trimmed || "Please analyze the attached file(s).",
-        filesToSend,
+    try {
+      const botReply =
+        filesToSend.length > 0
+          ? await fetchChatbotReplyWithFiles(
+              currentSessionId,
+              trimmed || "Please analyze the attached file(s).",
+              filesToSend,
+              controller.signal,
+            )
+          : controller.signal
+            ? await fetchChatbotReply(
+                currentSessionId,
+                trimmed,
+                controller.signal,
+              )
+            : await fetchChatbotReply(currentSessionId, trimmed);
+      appendMessageToCurrentSession(botReply);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        // Request was intentionally cancelled
+        return;
+      }
+      throw error;
+    } finally {
+      abortControllerRef.current = null;
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentSessionId ? { ...s, isLoading: false } : s,
+        ),
       );
-    } else {
-      botReply = await fetchChatbotReply(currentSessionId!, trimmed);
     }
+  };
+  const handleCancelMessage = () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
 
-    setSessions((prevSessions) =>
-      prevSessions.map((session) =>
-        session.id === currentSessionId
-          ? { ...session, isLoading: false }
-          : session,
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === currentSessionId ? { ...s, isLoading: false } : s,
       ),
     );
-    appendMessageToCurrentSession(botReply);
   };
 
   /**
@@ -336,6 +356,8 @@ export const Chatbot = () => {
                 input={input}
                 setInput={setInput}
                 onSend={sendMessage}
+                onCancel={handleCancelMessage}
+                isLoading={getChatLoading()}
                 attachedFiles={attachedFiles}
                 onFilesAttached={handleFilesAttached}
                 onFileRemoved={handleFileRemoved}

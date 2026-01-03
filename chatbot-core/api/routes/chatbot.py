@@ -26,6 +26,7 @@ from fastapi import (
     UploadFile,
     File,
     Form,
+    BackgroundTasks
 )
 
 # =========================
@@ -45,8 +46,9 @@ from api.services.chat_service import (
 )
 from api.services.memory import (
     delete_session,
-    init_session,
     session_exists,
+    persist_session,
+    init_session,
 )
 from api.services.file_service import (
     process_uploaded_file,
@@ -58,17 +60,17 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # --- Optional dependency checks (feature flags) ---
-LLM_AVAILABLE = False
+LLM_AVAILABLE = False  # pylint: disable=invalid-name
 try:
     import llama_cpp  # noqa: F401 # pylint: disable=unused-import
-    LLM_AVAILABLE = True
+    LLM_AVAILABLE = True  # pylint: disable=invalid-name
 except ImportError:
     logger.warning("LLM not available - running in API-only mode")
 
-RETRIEVAL_AVAILABLE = False
+RETRIEVAL_AVAILABLE = False  # pylint: disable=invalid-name
 try:
     import retriv  # noqa: F401 # pylint: disable=unused-import
-    RETRIEVAL_AVAILABLE = True
+    RETRIEVAL_AVAILABLE = True  # pylint: disable=invalid-name
 except ImportError:
     logger.warning("Retrieval not available - limited functionality")
 
@@ -82,7 +84,7 @@ router = APIRouter()
 async def chatbot_stream(websocket: WebSocket, session_id: str):
     """
     WebSocket endpoint for real-time token streaming.
-    
+
     Accepts WebSocket connections and streams chatbot responses
     token-by-token for a more interactive user experience.
     """
@@ -153,7 +155,7 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
 def start_chat(response: Response):
     """
     Create a new chat session.
-    
+
     Returns a unique session ID that can be used for subsequent
     chatbot interactions.
     """
@@ -163,7 +165,6 @@ def start_chat(response: Response):
     )
     return SessionResponse(session_id=session_id)
 
-
 @router.delete(
     "/sessions/{session_id}",
     response_model=DeleteResponse,
@@ -171,7 +172,7 @@ def start_chat(response: Response):
 def delete_chat(session_id: str):
     """
     Delete an existing chat session.
-    
+
     Removes all conversation history and resources associated
     with the specified session.
     """
@@ -186,14 +187,10 @@ def delete_chat(session_id: str):
     )
 
 
-# =========================
-# Chat Endpoints
-# =========================
-@router.post(
-    "/sessions/{session_id}/message",
-    response_model=ChatResponse,
-)
-def chatbot_reply(session_id: str, request: ChatRequest):
+# Chat Endpoint
+@router.post("/sessions/{session_id}/message", response_model=ChatResponse)
+def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: BackgroundTasks):
+
     """
     POST endpoint to handle chatbot replies.
 
@@ -212,11 +209,13 @@ def chatbot_reply(session_id: str, request: ChatRequest):
             status_code=404,
             detail="Session not found.",
         )
-
-    return get_chatbot_reply(
+    reply =  get_chatbot_reply(session_id, request.message)
+    _background_tasks.add_task(
+        persist_session,
         session_id,
-        request.message,
-    )
+        )
+
+    return reply
 
 
 @router.post(

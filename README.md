@@ -2,38 +2,68 @@
 
 ## Introduction
 
-Beginners often struggle to take their first steps with Jenkins’ documentation and available resources. To address this challenge, this plugin integrates an **AI-powered assistant** directly into the Jenkins interface. It offers quick, intuitive support to users of all experience levels through a simple conversational UI.
+Beginners often struggle to take their first steps with Jenkins’ documentation and available resources. To address this challenge, this plugin integrates an AI-powered assistant directly into the Jenkins interface. It offers quick, intuitive support to users of all experience levels through a simple conversational UI.
 
 The plugin is designed to reduce the learning curve for newcomers while also improving accessibility and productivity for experienced users.
 
 This plugin was developed as part of a Google Summer of Code 2025 project.
 
-## Getting started
+## Prerequisites
 
-To get up and running with the **AI Chatbot for Jenkins** plugin, this repository provides a set of `Makefile` targets that streamline key development flows such as running the data pipeline, launching the API, building the frontend, and executing tests.
+- **Python**: 3.11+
+- **Build tools**: `make`, `cmake` (≥3.14), C/C++ compiler (`gcc`/`clang`/MSVC)
+- **Java**: JDK 11+ and Maven 3.6+ (for plugin development)
 
-If you're just getting started, the best way is to use the `Makefile` in the root directory. For example:
+### Example system package installation
 
-- Start the backend API server:
-    ```bash
-    make api
-    ```
-
-By default, the API will be available at `http://127.0.0.1:8000`. To check that everything is working as expected you can try creating a chat session by using the `/sessions` endpoint:
 ```bash
-curl -X POST http://localhost:8000/api/chatbot/sessions
+# Ubuntu/Debian/WSL
+sudo apt install -y make cmake gcc g++ python3.11 python3.11-venv python3.11-dev
+
+# macOS
+brew install cmake python@3.11 && xcode-select --install
 ```
 
-You should get returned the session id that have been created.
 
-In case you encounter any issues in running make targets we suggest running:
+
+## Getting Started
+
+### Setup
+
+Complete the full setup process in [docs/setup.md](docs/setup.md) before running any commands. This includes creating a virtual environment, installing Python dependencies (including llama-cpp-python), and configuring the data pipeline.
+
+### Running the API
+
+
+Once setup is complete, from the **project root directory** run:
 ```bash
-make clean && make <desired_target>
+make api
 ```
 
-For detailed instructions, deeper explanations of each target in the `Makefile`, please refer to [Doc README](docs/README.md).
+The API will be available at `http://127.0.0.1:8000`.
 
-> **Note:** For the necessary requirements you can check out the [setup-dedicated section](docs/setup.md).
+Verify it's working:
+```bash
+curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
+```
+
+
+
+See [docs/README.md](docs/README.md) for detailed explanations.
+
+## Troubleshooting
+
+**llama-cpp-python installation fails**: Ensure build tools are installed and use Python 3.11+
+
+**API crashes on startup**:
+This may be caused by missing optional dependencies (e.g. `retriv`).
+
+Try installing missing packages:
+```bash
+pip install llama-cpp-python retriv 
+```
+
+**General issues**: Run `make clean && make <target>`, verify your virtual environment is activated, and ensure all dependencies from [docs/setup.md](docs/setup.md) are installed.
 
 ## Developer Documentation
 
@@ -46,4 +76,5 @@ Refer to our [contribution guidelines](https://github.com/jenkinsci/.github/blob
 ## LICENSE
 
 Licensed under MIT, see [LICENSE](LICENSE.md)
+
 
