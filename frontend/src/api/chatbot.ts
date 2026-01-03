@@ -1,8 +1,9 @@
 import { type Message, type FileAttachment } from "../model/Message";
 import { getChatbotText } from "../data/chatbotTexts";
 import { v4 as uuidv4 } from "uuid";
-import { CHATBOT_API_TIMEOUTS_MS, API_BASE_URL } from "../config";
+import { CHATBOT_API_TIMEOUTS_MS, API_BASE_URL, WS_BASE_URL } from "../config";
 import { callChatbotApi } from "../utils/callChatbotApi";
+import { isWebSocketSupported } from "../utils/websocketSupport";
 
 /**
  * Supported file extensions response from the backend.
@@ -65,6 +66,95 @@ export const fetchChatbotReply = async (
 
   const botReply = data.reply || getChatbotText("errorMessage");
   return createBotMessage(botReply);
+};
+
+/**
+ * Streams chatbot reply via WebSocket, calling callbacks for each token received.
+ * Returns null if WebSocket is not supported.
+ *
+ * @param sessionId - The session id of the chat
+ * @param userMessage - The message input from the user
+ * @param onToken - Callback invoked for each token received: `{token: "word"}`
+ * @param onComplete - Callback invoked when stream completes: `{end: true}`
+ * @param onError - Callback invoked on error: `{error: "..."}` or connection error
+ * @returns WebSocket instance if created, null if WebSocket not supported
+ */
+export const streamChatbotReply = (
+  sessionId: string,
+  userMessage: string,
+  onToken: (token: string) => void,
+  onComplete: () => void,
+  onError: (error: Error) => void,
+): WebSocket | null => {
+  if (!isWebSocketSupported()) {
+    onError(new Error("WebSocket is not supported in this browser"));
+    return null;
+  }
+
+  const wsUrl = `${WS_BASE_URL}/api/chatbot/sessions/${sessionId}/stream`;
+  let websocket: WebSocket;
+
+  try {
+    websocket = new WebSocket(wsUrl);
+
+    websocket.onopen = () => {
+      // Send the user message once connection is open
+      if (websocket.readyState === WebSocket.OPEN) {
+        websocket.send(JSON.stringify({ message: userMessage }));
+      }
+    };
+
+    websocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.token !== undefined) {
+          // Token message: {token: "word"}
+          onToken(data.token);
+        } else if (data.end === true) {
+          // Completion message: {end: true}
+          onComplete();
+        } else if (data.error) {
+          // Error message: {error: "message"}
+          onError(new Error(data.error));
+        }
+      } catch (parseError) {
+        onError(
+          new Error(
+            `Failed to parse WebSocket message: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+          ),
+        );
+      }
+    };
+
+    websocket.onerror = (error) => {
+      onError(
+        new Error(
+          `WebSocket error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        ),
+      );
+    };
+
+    websocket.onclose = (event) => {
+      // If closed unexpectedly (not normal closure), trigger error
+      if (event.code !== 1000 && !event.wasClean) {
+        onError(
+          new Error(
+            `WebSocket closed unexpectedly: ${event.code} ${event.reason || "Unknown reason"}`,
+          ),
+        );
+      }
+    };
+
+    return websocket;
+  } catch (error) {
+    onError(
+      new Error(
+        `Failed to create WebSocket: ${error instanceof Error ? error.message : "Unknown error"}`,
+      ),
+    );
+    return null;
+  }
 };
 
 /**
