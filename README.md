@@ -94,9 +94,9 @@ make build-frontend
    ```
 
 3. **Access services:**
-   - Backend API: `http://localhost:8000`
-   - Frontend UI: `http://localhost:80`
-   - API Docs: `http://localhost:8000/docs`
+   - Backend API: `http://127.0.0.1:8000`
+   - Frontend UI: `http://127.0.0.1:80`
+   - API Docs: `http://127.0.0.1:8000/docs`
 
 **Stop containers:**
 
