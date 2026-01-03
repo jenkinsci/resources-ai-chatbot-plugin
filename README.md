@@ -11,10 +11,11 @@ This plugin was developed as part of a Google Summer of Code 2025 project.
 ## Prerequisites
 
 - **Python**: 3.11+
-- **Build tools**: `make`, `cmake` (≥3.14), C/C++ compiler (`gcc`/`clang`/MSVC)
-- **Java**: JDK 11+ and Maven 3.6+ (for plugin development)
+- **Node.js**: 20+ (for frontend)
+- **Build tools**: `make`, `cmake` (≥3.14), C/C++ compiler
+- **Java**: JDK 11+ and Maven 3.6+ (for Jenkins plugin)
 
-### Example system package installation
+**Install system dependencies:**
 
 ```bash
 # Ubuntu/Debian/WSL
@@ -24,57 +25,143 @@ sudo apt install -y make cmake gcc g++ python3.11 python3.11-venv python3.11-dev
 brew install cmake python@3.11 && xcode-select --install
 ```
 
+## Quick Start
 
+### 1. Setup Backend
 
-## Getting Started
+From project root:
 
-### Setup
+```bash
+# For CPU-only (recommended for most systems)
+make setup-backend IS_CPU_REQ=1
 
-Complete the full setup process in [docs/setup.md](docs/setup.md) before running any commands. This includes creating a virtual environment, installing Python dependencies (including llama-cpp-python), and configuring the data pipeline.
+# For GPU support
+make setup-backend
+```
 
-### Running the API
+### 2. Download LLM Model
 
+Download the Mistral model and place it in the correct location:
 
-Once setup is complete, from the **project root directory** run:
+```bash
+mkdir -p chatbot-core/api/models/mistral
+# Download mistral-7b-instruct-v0.2.Q4_K_M.gguf from:
+# https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
+# Place it in: chatbot-core/api/models/mistral/
+```
+
+### 3. Run API
+
 ```bash
 make api
 ```
 
-The API will be available at `http://127.0.0.1:8000`.
+API will be available at `http://127.0.0.1:8000`
 
-Verify it's working:
+**Verify it's working:**
+
 ```bash
 curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 ```
 
+### 4. Build Frontend
 
+```bash
+make build-frontend
+```
 
-See [docs/README.md](docs/README.md) for detailed explanations.
+### 5. Run with Docker (Alternative)
+
+**Prerequisites:**
+
+- Docker and Docker Compose installed
+
+**Steps:**
+
+1. **Download LLM Model** (if not already done):
+
+   ```bash
+   mkdir -p chatbot-core/api/models/mistral
+   # Download mistral-7b-instruct-v0.2.Q4_K_M.gguf from:
+   # https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
+   # Place it in: chatbot-core/api/models/mistral/
+   ```
+
+2. **Build and run containers:**
+
+   ```bash
+   docker-compose up --build
+   ```
+
+3. **Access services:**
+   - Backend API: `http://localhost:8000`
+   - Frontend UI: `http://localhost:80`
+   - API Docs: `http://localhost:8000/docs`
+
+**Stop containers:**
+
+```bash
+docker-compose down
+```
+
+**For GPU support:**
+
+```bash
+docker-compose -f docker-compose.gpu.yml up --build
+```
+
+## Data Pipeline
+
+To populate the knowledge base with Jenkins documentation:
+
+```bash
+make run-data-pipeline
+```
+
+This collects, preprocesses, chunks, and stores data in the vector database.
+
+## Testing
+
+```bash
+# Run all tests
+make run-test
+
+# Frontend tests only
+make run-frontend-tests
+
+# Backend tests only
+make run-backend-tests
+```
 
 ## Troubleshooting
 
-**llama-cpp-python installation fails**: Ensure build tools are installed and use Python 3.11+
+**llama-cpp-python installation fails:**
 
-**API crashes on startup**:
-This may be caused by missing optional dependencies (e.g. `retriv`).
-
-Try installing missing packages:
 ```bash
-pip install llama-cpp-python retriv 
+sudo apt install build-essential cmake  # Linux
+brew install cmake  # macOS
+pip install llama-cpp-python
 ```
 
-**General issues**: Run `make clean && make <target>`, verify your virtual environment is activated, and ensure all dependencies from [docs/setup.md](docs/setup.md) are installed.
+**API crashes on startup:**
 
-## Developer Documentation
+```bash
+cd chatbot-core && source venv/bin/activate
+pip install llama-cpp-python retriv
+```
 
-Development-related documentation can be found in the [`docs/`](docs/) directory.
+**Clean and rebuild:**
 
-## Contributing
+```bash
+make clean && make setup-backend IS_CPU_REQ=1
+```
 
-Refer to our [contribution guidelines](https://github.com/jenkinsci/.github/blob/master/CONTRIBUTING.md)
+## Documentation
 
-## LICENSE
+- Setup details: [docs/setup.md](docs/setup.md)
+- Architecture: [docs/README.md](docs/README.md)
+- API docs: [docs/chatbot-core/api/](docs/chatbot-core/api/)
 
-Licensed under MIT, see [LICENSE](LICENSE.md)
+## License
 
-
+MIT License - see [LICENSE.md](LICENSE.md)
