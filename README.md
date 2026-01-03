@@ -10,7 +10,7 @@ This plugin was developed as part of a Google Summer of Code 2025 project.
 
 ## Prerequisites
 
-- **Python**: 3.11+
+- **Python**: 3.11, 3.12, or 3.13 (Python 3.14+ not yet supported due to dependency limitations)
 - **Build tools**: `make`, `cmake` (≥3.14), C/C++ compiler (`gcc`/`clang`/MSVC)
 - **Java**: JDK 11+ and Maven 3.6+ (for plugin development)
 
@@ -18,10 +18,10 @@ This plugin was developed as part of a Google Summer of Code 2025 project.
 
 ```bash
 # Ubuntu/Debian/WSL
-sudo apt install -y make cmake gcc g++ python3.11 python3.11-venv python3.11-dev
+sudo apt install -y make cmake gcc g++ python3.12 python3.12-venv python3.12-dev
 
 # macOS
-brew install cmake python@3.11 && xcode-select --install
+brew install cmake python@3.12 && xcode-select --install
 ```
 
 
@@ -53,7 +53,13 @@ See [docs/README.md](docs/README.md) for detailed explanations.
 
 ## Troubleshooting
 
-**llama-cpp-python installation fails**: Ensure build tools are installed and use Python 3.11+
+**Python version compatibility**: Check if your Python version is supported:
+```bash
+python3 chatbot-core/scripts/check_python_compatibility.py
+```
+For Python 3.14+ status and detailed assessment, see [docs/PYTHON_3_14_ASSESSMENT.md](docs/PYTHON_3_14_ASSESSMENT.md)
+
+**llama-cpp-python installation fails**: Ensure build tools are installed and use Python 3.11-3.13
 
 **API crashes on startup**:
 This may be caused by missing optional dependencies (e.g. `retriv`).

@@ -5,7 +5,7 @@ For the setup instructions have been provided for *Linux* and *Windows*. Moreove
 ## Installation Guide for Linux
 
 ### Prerequisites
-* Python 3.11 or later
+* Python 3.11, 3.12, or 3.13 (Python 3.14+ not yet supported due to dependency limitations)
 * Git (to clone the repository)
 * Maven (for the Java components)
 * Sufficient disk space (at least 5GB for models and dependencies)
@@ -62,7 +62,7 @@ This guide provides step-by-step instructions for installing and running the Jen
 
 ### Prerequisites
 * Windows 10 or 11
-* Python 3.11 or later
+* Python 3.11, 3.12, or 3.13 (Python 3.14+ not yet supported due to dependency limitations)
 * Git (to clone the repository)
 * Maven (for the Java components)
 * Sufficient disk space (at least 5GB for models and dependencies)
@@ -162,9 +162,47 @@ For Linux (Ubuntu/Debian):
 ```bash
 sudo apt install build-essential cmake
 pip install llama-cpp-python
+```
 
 For macOS:
 ```bash
 brew install cmake
 pip install llama-cpp-python    
 ```
+
+---
+
+### Python 3.14+ Compatibility
+
+**Status**
+Python 3.14 and later versions are **not currently supported**.
+
+**Cause**
+Several critical dependencies have not yet released wheels compatible with Python 3.14:
+- `numpy` - Core numerical library
+- `torch`, `torchvision`, `torchaudio` - PyTorch ecosystem
+- `numba`, `llvmlite` - JIT compilation for BM25 retrieval
+
+**Solution**
+Use Python 3.11, 3.12, or 3.13 until dependency maintainers release Python 3.14-compatible versions.
+
+To check your Python version:
+```bash
+python3 --version
+```
+
+To install a specific Python version:
+```bash
+# Ubuntu/Debian/WSL
+sudo apt install python3.12 python3.12-venv python3.12-dev
+
+# macOS
+brew install python@3.12
+```
+
+**For detailed assessment and tracking**:
+See [PYTHON_3_14_ASSESSMENT.md](PYTHON_3_14_ASSESSMENT.md) for:
+- Comprehensive dependency analysis
+- Testing strategy and workarounds
+- Timeline and recommendations
+- Links to upstream issue trackers
