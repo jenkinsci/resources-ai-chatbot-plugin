@@ -15,10 +15,12 @@ from api.prompts.prompts import (
     QUERY_CLASSIFIER_PROMPT,
     RETRIEVER_AGENT_PROMPT,
     SPLIT_QUERY_PROMPT,
+    LOG_SUMMARY_PROMPT,
 )
 from api.services.memory import get_session
 from api.services.file_service import format_file_context
 from api.tools.tools import TOOL_REGISTRY
+from api.tools.sanitizer import sanitize_logs
 from api.tools.utils import (
     get_default_tools_call,
     make_placeholder_replacer,
@@ -31,6 +33,11 @@ logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
 retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
+
+LOG_ANALYSIS_PATTERN = re.compile(
+    r"Here are the last \d+ characters of the log:\s*```\s*(.*?)\s*```\s*(.*)",
+    re.DOTALL
+)
 
 
 def get_chatbot_reply(
@@ -53,6 +60,47 @@ def get_chatbot_reply(
     logger.info("New message from session '%s'", session_id)
     logger.info("Handling the user query: %s", user_input)
 
+    log_keywords = (
+        r"(Started by user|Running as SYSTEM|Building in workspace|"
+        r"FATAL:|ERROR:|Exception:|Stack trace|Build step .*? marked build as failure)"
+    )
+    is_log_detected = (
+        re.search(log_keywords, user_input, re.IGNORECASE) or
+        LOG_ANALYSIS_PATTERN.search(user_input)
+    )
+
+    retrieval_query = user_input
+    prompt_query = user_input
+    log_context = None
+
+    if is_log_detected:
+        logger.info("Log Analysis Pattern detected. Separating logs from query.")
+
+        strict_match = LOG_ANALYSIS_PATTERN.search(user_input)
+        if strict_match:
+            raw_log_content = strict_match.group(1).strip()
+            user_question = (
+            strict_match.group(2).strip() or
+            "Please analyze the build failure in these logs."
+            )
+        else:
+            raw_log_content = user_input
+            user_question = "Please analyze the build failure in these logs."
+
+
+        sanitized_logs = sanitize_logs(raw_log_content)
+
+        logger.info("Extracting error signature for efficient retrieval...")
+        error_signature = _generate_search_query_from_logs(sanitized_logs)
+        logger.info("Generated Search Query: %s", error_signature)
+
+        # Set variables for the next steps
+        log_context = sanitized_logs
+        retrieval_query = error_signature
+        prompt_query = user_question
+
+    logger.info("Handling the retrieval query: %s", retrieval_query)
+
     if files:
         logger.info("Processing %d uploaded file(s)", len(files))
 
@@ -61,7 +109,7 @@ def get_chatbot_reply(
         raise RuntimeError(
             f"Session '{session_id}' not found in the memory store.")
 
-    context = retrieve_context(user_input)
+    context = retrieve_context(retrieval_query)
     logger.info("Context retrieved: %s", context)
 
     # Add file context if files are provided
@@ -73,7 +121,7 @@ def get_chatbot_reply(
             logger.info("File context added: %d characters", len(file_context))
             context = f"{context}\n\n[User Uploaded Files]\n{file_context}"
 
-    prompt = build_prompt(user_input, context, memory)
+    prompt = build_prompt(prompt_query, context, memory, log_context=log_context)
 
     logger.info("Generating answer with prompt: %s", prompt)
     reply = generate_answer(prompt)
@@ -504,3 +552,16 @@ def _extract_relevance_score(response: str) -> str:
         relevance_score = 0
 
     return relevance_score
+
+def _generate_search_query_from_logs(log_text: str) -> str:
+    """
+    Uses the LLM to extract a concise error signature from the logs
+    to use as a search query for the vector database.
+    """
+    # Use .format() directly since we are using generate_answer
+    prompt = LOG_SUMMARY_PROMPT.format(log_data=log_text)
+
+    # Generate response using the existing function in this file
+    search_query = generate_answer(prompt)
+
+    return search_query.strip()

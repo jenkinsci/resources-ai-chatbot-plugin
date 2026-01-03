@@ -499,4 +499,63 @@ export const chatbotStyles = {
       cursor: "pointer",
       transition: "background 0.2s, border-left 0.2s",
     }) as CSSProperties,
+
+  // Toast Notification
+  toastContainer: {
+    position: "fixed",
+    bottom: "7rem",
+    right: "2rem",
+    width: "300px",
+    backgroundColor: "var(--card-background)",
+    border: "1px solid var(--border-color)",
+    borderRadius: "8px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+    padding: "1rem",
+    zIndex: 1000,
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+    animation: "fadeIn 0.3s ease-in-out",
+  } as CSSProperties,
+
+  toastHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    fontWeight: "bold",
+    fontSize: "0.9rem",
+    color: "var(--text-color)",
+  } as CSSProperties,
+
+  toastContent: {
+    fontSize: "0.85rem",
+    color: "var(--text-color-secondary)",
+    marginBottom: "0.5rem",
+  } as CSSProperties,
+
+  toastActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "0.5rem",
+  } as CSSProperties,
+
+  toastConfirmButton: {
+    backgroundColor: "#0073e6",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    padding: "4px 12px",
+    fontSize: "0.85rem",
+    cursor: "pointer",
+  } as CSSProperties,
+
+  toastCancelButton: {
+    backgroundColor: "transparent",
+    color: "var(--text-color)",
+    border: "1px solid var(--border-color)",
+    borderRadius: "4px",
+    padding: "4px 12px",
+    fontSize: "0.85rem",
+    cursor: "pointer",
+  } as CSSProperties,
 };

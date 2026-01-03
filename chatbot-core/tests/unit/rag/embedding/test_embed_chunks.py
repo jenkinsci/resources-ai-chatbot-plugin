@@ -1,15 +1,20 @@
 """Unit Tests for embed_chunks module."""
 
 import json
-from rag.embedding.embed_chunks import embed_chunks, collect_all_chunks, load_chunks_from_file
 
-def test_embed_chunks_valid_chunks(
-    mock_collect_all_chunks,
-    mock_load_embedding_model,
-    mock_embed_documents,
-    mocker
-):
+from rag.embedding.embed_chunks import (
+    embed_chunks,
+    collect_all_chunks,
+    load_chunks_from_file
+)
+
+def test_embed_chunks_valid_chunks(mocker):
     """Testing that embed_chunks processes valid chunks correctly."""
+    mock_collect_all_chunks = mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+    mock_load_embedding_model = mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+    mock_embed_documents = mocker.patch("rag.embedding.embed_chunks.embed_documents")
+
+
     mock_collect_all_chunks.return_value = get_mock_chunks("valid")
     mock_model = mocker.Mock()
     mock_load_embedding_model.return_value = mock_model
@@ -32,13 +37,12 @@ def test_embed_chunks_valid_chunks(
     )
 
 
-def test_embed_chunks_skips_invalid_chunks(
-    mock_collect_all_chunks,
-    mock_load_embedding_model,
-    mock_embed_documents,
-    mocker
-):
+def test_embed_chunks_skips_invalid_chunks(mocker):
     """Testing that embed_chunks skips invalid chunks and logs warnings."""
+    mock_collect_all_chunks = mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+    mock_load_embedding_model = mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+    mock_embed_documents = mocker.patch("rag.embedding.embed_chunks.embed_documents")
+
     mock_collect_all_chunks.return_value = get_mock_chunks("invalid")
     mock_model = mocker.Mock()
     mock_load_embedding_model.return_value = mock_model
@@ -59,12 +63,14 @@ def test_embed_chunks_skips_invalid_chunks(
     )
 
 
-def test_collect_all_chunks_with_custom_files(
-    patched_chunk_files,
-    mock_load_chunks_from_file,
-    mocker
-):
+def test_collect_all_chunks_with_custom_files(mocker):
     """Testing that collect_all_chunks aggregates chunks and logs warnings for empty files."""
+    patched_chunk_files = mocker.patch(
+        "rag.embedding.embed_chunks.CHUNK_FILES",
+        ["file1.json", "file2.json", "file3.json"]
+    )
+    mock_load_chunks_from_file = mocker.patch("rag.embedding.embed_chunks.load_chunks_from_file")
+
     _ = patched_chunk_files
     mock_load_chunks_from_file.side_effect = [
         get_mock_chunks("valid"),
@@ -125,13 +131,12 @@ def test_load_chunks_from_file_json_decode_error(mocker):
     assert "JSON decode error" in mock_logger.error.call_args[0][0]
 
 
-def test_embed_chunks_with_all_invalid_chunks(
-    mock_collect_all_chunks,
-    mock_load_embedding_model,
-    mock_embed_documents,
-    mocker
-):
+def test_embed_chunks_with_all_invalid_chunks(mocker):
     """Test embed_chunks returns empty lists if all chunks are invalid."""
+    mock_collect_all_chunks = mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+    mock_load_embedding_model = mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+    mock_embed_documents = mocker.patch("rag.embedding.embed_chunks.embed_documents")
+
     mock_collect_all_chunks.return_value = get_mock_chunks("all-invalid")
 
     mock_logger = mocker.Mock()
@@ -146,13 +151,12 @@ def test_embed_chunks_with_all_invalid_chunks(
     assert mock_logger.warning.call_count >= 1
 
 
-def test_embed_chunks_with_no_chunks(
-    mock_collect_all_chunks,
-    mock_load_embedding_model,
-    mock_embed_documents,
-    mocker
-):
+def test_embed_chunks_with_no_chunks(mocker):
     """Test embed_chunks returns empty lists if no chunks are loaded."""
+    mock_collect_all_chunks = mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+    mock_load_embedding_model = mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+    mock_embed_documents = mocker.patch("rag.embedding.embed_chunks.embed_documents")
+
     mock_collect_all_chunks.return_value = []
 
     mock_logger = mocker.Mock()

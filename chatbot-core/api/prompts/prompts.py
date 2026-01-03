@@ -44,7 +44,7 @@ Respond with only: SIMPLE or MULTI.
 ###
 Here are some examples:
 
-Query: How do I install Jenkins on Ubuntu? 
+Query: How do I install Jenkins on Ubuntu?
 Answer: SIMPLE
 
 Query: How do I install Jenkins and configure it to use the GitHub plugin?
@@ -257,4 +257,37 @@ Context:
 >>>
 
 Relevance Analysis:
+"""
+LOG_ANALYSIS_INSTRUCTION = """
+You are an expert Jenkins Log Analyzer.
+
+Your SOLE goal is to identify the root cause of the build failure based on the provided logs.
+
+PRIORITY RULES:
+1. Focus 100% on the "User-Provided Log Data".
+2. Identify specific error messages, exceptions, or exit codes (e.g., "Build step 'Execute Windows batch command' marked build as failure").
+3. Only use the "Context" (documentation) if it helps explain the specific error found in the logs. If the context is unrelated, IGNORE IT.
+4. Do not be conversational. Go straight to the point: "The build failed because..."
+
+If the logs do not show a clear error, state: "I cannot find a specific error in the provided logs."
+"""
+LOG_SUMMARY_PROMPT = """
+You are an expert system debugger.
+Your task is to extract a concise search query from the provided build logs.
+Identify the specific error message, exception type, or exit code.
+
+Do not explain the error. Just output the error signature.
+
+Example 1:
+Logs: "Check failed: 'test_pass'. Exit code 1."
+Output: Build failure exit code 1
+
+Example 2:
+Logs: "Exception in thread main java.lang.NullPointerException at com.example..."
+Output: java.lang.NullPointerException
+
+Logs:
+{log_data}
+
+Search Query:
 """
