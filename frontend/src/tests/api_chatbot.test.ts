@@ -48,7 +48,7 @@ describe("chatbotApi", () => {
         "sessions",
         { method: "POST" },
         { session_id: "" },
-        expect.any(Number)
+        expect.any(Number),
       );
     });
 
@@ -61,7 +61,7 @@ describe("chatbotApi", () => {
       expect(result).toBe("");
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to create chat session: session_id missing in response",
-        {}
+        {},
       );
 
       consoleErrorSpy.mockRestore();
@@ -90,7 +90,7 @@ describe("chatbotApi", () => {
           body: JSON.stringify({ message: "Hi!" }),
         },
         {},
-        expect.any(Number)
+        expect.any(Number),
       );
     });
 
@@ -119,7 +119,7 @@ describe("chatbotApi", () => {
         "sessions/session-xyz",
         { method: "DELETE" },
         undefined,
-        expect.any(Number)
+        expect.any(Number),
       );
     });
 
@@ -132,7 +132,7 @@ describe("chatbotApi", () => {
         "sessions/session-fail",
         { method: "DELETE" },
         undefined,
-        expect.any(Number)
+        expect.any(Number),
       );
     });
   });
@@ -145,7 +145,7 @@ describe("chatbotApi", () => {
     beforeEach(() => {
       // Create a new WebSocket server for each test
       server = new WS(
-        `ws://localhost:8000/api/chatbot/sessions/${sessionId}/stream`
+        `ws://localhost:8000/api/chatbot/sessions/${sessionId}/stream`,
       );
     });
 
@@ -163,7 +163,7 @@ describe("chatbotApi", () => {
         userMessage,
         onToken,
         onComplete,
-        onError
+        onError,
       );
 
       expect(ws).not.toBeNull();
@@ -241,7 +241,7 @@ describe("chatbotApi", () => {
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
           message: errorMessage,
-        })
+        }),
       );
       expect(onToken).not.toHaveBeenCalled();
       expect(onComplete).not.toHaveBeenCalled();
@@ -260,7 +260,7 @@ describe("chatbotApi", () => {
         userMessage,
         onToken,
         onComplete,
-        onError
+        onError,
       );
 
       // Wait for connection attempt to fail
@@ -286,14 +286,14 @@ describe("chatbotApi", () => {
         userMessage,
         onToken,
         onComplete,
-        onError
+        onError,
       );
 
       expect(ws).toBeNull();
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("WebSocket is not supported"),
-        })
+        }),
       );
 
       // Restore WebSocket
@@ -317,7 +317,7 @@ describe("chatbotApi", () => {
 
       expect(onError).toHaveBeenCalled();
       expect(onError.mock.calls[0][0].message).toContain(
-        "Failed to parse WebSocket message"
+        "Failed to parse WebSocket message",
       );
     });
   });

@@ -89,38 +89,38 @@ describe("Chatbot component", () => {
   it("renders toggle button", () => {
     render(<Chatbot />);
     expect(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     ).toBeInTheDocument();
   });
 
   it("shows welcome page when no sessions exist", () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
     expect(
-      screen.getByText(getChatbotText("welcomeMessage"))
+      screen.getByText(getChatbotText("welcomeMessage")),
     ).toBeInTheDocument();
   });
 
   it("creates a new chat when clicking create button", async () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("createNewChat") })
+      screen.getByRole("button", { name: getChatbotText("createNewChat") }),
     );
 
     await waitFor(() =>
-      expect(screen.getByTestId("messages")).toBeInTheDocument()
+      expect(screen.getByTestId("messages")).toBeInTheDocument(),
     );
   });
 
   it("opens sidebar and switches chat", async () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
 
     fireEvent.click(screen.getByText("Open Sidebar"));
@@ -133,20 +133,20 @@ describe("Chatbot component", () => {
   it("creates new chat from sidebar", async () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
     fireEvent.click(screen.getByText("Open Sidebar"));
     fireEvent.click(screen.getByText("New Chat"));
 
     await waitFor(() =>
-      expect(screen.getByTestId("messages")).toBeInTheDocument()
+      expect(screen.getByTestId("messages")).toBeInTheDocument(),
     );
   });
 
   it("deletes a chat", async () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
     fireEvent.click(screen.getByText("Open Sidebar"));
     fireEvent.click(screen.getByText("Delete Chat"));
@@ -156,7 +156,7 @@ describe("Chatbot component", () => {
     fireEvent.click(screen.getByText(getChatbotText("popupDeleteButton")));
 
     await waitFor(() =>
-      expect(chatbotApi.deleteChatSession).toHaveBeenCalledWith("session-1")
+      expect(chatbotApi.deleteChatSession).toHaveBeenCalledWith("session-1"),
     );
   });
 
@@ -170,7 +170,7 @@ describe("Chatbot component", () => {
           createdAt: "2024-01-01",
           isLoading: false,
         },
-      ])
+      ]),
     );
     sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
@@ -188,19 +188,19 @@ describe("Chatbot component", () => {
         _sessionId: string,
         _message: string,
         onToken: (token: string) => void,
-        onComplete: () => void
+        onComplete: () => void,
       ) => {
         setTimeout(() => {
           onToken("Bot reply");
           onComplete();
         }, 50);
         return mockWs;
-      }
+      },
     );
 
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
 
     fireEvent.click(screen.getByText("Set Input"));
@@ -211,14 +211,14 @@ describe("Chatbot component", () => {
         const messagesEl = screen.getByTestId("messages");
         expect(messagesEl.textContent).toContain("Bot reply");
       },
-      { timeout: 3000 }
+      { timeout: 3000 },
     );
   });
 
   it("persists sessions on unmount", () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
 
     window.dispatchEvent(new Event("beforeunload"));
@@ -233,13 +233,13 @@ describe("Chatbot component", () => {
 
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
     fireEvent.click(screen.getByText(getChatbotText("createNewChat")));
 
     await waitFor(() => {
       expect(errorSpy).toHaveBeenCalledWith(
-        "Add error showage for a couple of seconds."
+        "Add error showage for a couple of seconds.",
       );
     });
 
@@ -249,7 +249,7 @@ describe("Chatbot component", () => {
   it("closes delete popup and resets sessionIdToDelete when cancel button is clicked", () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
 
     fireEvent.click(screen.getByText("Open Sidebar"));
@@ -259,14 +259,14 @@ describe("Chatbot component", () => {
 
     fireEvent.click(screen.getByText(getChatbotText("popupCancelButton")));
     expect(
-      screen.queryByText(getChatbotText("popupTitle"))
+      screen.queryByText(getChatbotText("popupTitle")),
     ).not.toBeInTheDocument();
   });
 
   it("closes the sidebar when onClose is called", () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
 
     fireEvent.click(screen.getByText("Open Sidebar"));
@@ -287,7 +287,7 @@ describe("Chatbot component", () => {
             createdAt: "2024-01-01",
             isLoading: false,
           },
-        ])
+        ]),
       );
       sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
@@ -305,7 +305,7 @@ describe("Chatbot component", () => {
           _sessionId: string,
           _message: string,
           onToken: (token: string) => void,
-          onComplete: () => void
+          onComplete: () => void,
         ) => {
           // Simulate successful streaming
           setTimeout(() => {
@@ -315,14 +315,14 @@ describe("Chatbot component", () => {
             onComplete();
           }, 50);
           return mockWs;
-        }
+        },
       );
 
       render(<Chatbot />);
       fireEvent.click(
         screen.getByRole("button", {
           name: getChatbotText("toggleButtonLabel"),
-        })
+        }),
       );
 
       fireEvent.click(screen.getByText("Set Input"));
@@ -334,7 +334,7 @@ describe("Chatbot component", () => {
           "Hello bot",
           expect.any(Function),
           expect.any(Function),
-          expect.any(Function)
+          expect.any(Function),
         );
       });
 
@@ -344,7 +344,7 @@ describe("Chatbot component", () => {
           const messagesEl = screen.getByTestId("messages");
           expect(messagesEl.textContent).toContain("Hello World");
         },
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
 
       // Should NOT fallback to HTTP
@@ -361,7 +361,7 @@ describe("Chatbot component", () => {
             createdAt: "2024-01-01",
             isLoading: false,
           },
-        ])
+        ]),
       );
       sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
@@ -380,21 +380,21 @@ describe("Chatbot component", () => {
           _message: string,
           _onToken: (token: string) => void,
           _onComplete: () => void,
-          onError: (error: Error) => void
+          onError: (error: Error) => void,
         ) => {
           // Simulate WebSocket error
           setTimeout(() => {
             onError(new Error("WebSocket connection failed"));
           }, 50);
           return mockWs;
-        }
+        },
       );
 
       render(<Chatbot />);
       fireEvent.click(
         screen.getByRole("button", {
           name: getChatbotText("toggleButtonLabel"),
-        })
+        }),
       );
 
       fireEvent.click(screen.getByText("Set Input"));
@@ -406,10 +406,10 @@ describe("Chatbot component", () => {
           expect(chatbotApi.fetchChatbotReply).toHaveBeenCalledWith(
             "session-1",
             "Hello bot",
-            expect.anything()
+            expect.anything(),
           );
         },
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
 
       // Verify bot reply from HTTP fallback appears
@@ -429,7 +429,7 @@ describe("Chatbot component", () => {
             createdAt: "2024-01-01",
             isLoading: false,
           },
-        ])
+        ]),
       );
       sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
@@ -447,7 +447,7 @@ describe("Chatbot component", () => {
           _sessionId: string,
           _message: string,
           onToken: (token: string) => void,
-          onComplete: () => void
+          onComplete: () => void,
         ) => {
           // Simulate longer streaming
           setTimeout(() => {
@@ -455,14 +455,14 @@ describe("Chatbot component", () => {
             onComplete();
           }, 500);
           return mockWs;
-        }
+        },
       );
 
       render(<Chatbot />);
       fireEvent.click(
         screen.getByRole("button", {
           name: getChatbotText("toggleButtonLabel"),
-        })
+        }),
       );
 
       fireEvent.click(screen.getByText("Set Input"));
@@ -489,7 +489,7 @@ describe("Chatbot component", () => {
             createdAt: "2024-01-01",
             isLoading: false,
           },
-        ])
+        ]),
       );
       sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
@@ -497,7 +497,7 @@ describe("Chatbot component", () => {
       fireEvent.click(
         screen.getByRole("button", {
           name: getChatbotText("toggleButtonLabel"),
-        })
+        }),
       );
 
       // Simulate file upload scenario by calling the component's sendMessage with files
@@ -522,7 +522,7 @@ describe("Chatbot component", () => {
             createdAt: "2024-01-01",
             isLoading: false,
           },
-        ])
+        ]),
       );
       sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
@@ -565,7 +565,7 @@ describe("Chatbot component", () => {
           _sessionId: string,
           _message: string,
           onToken: (token: string) => void,
-          onComplete: () => void
+          onComplete: () => void,
         ) => {
           callCount++;
           const currentCall = callCount;
@@ -581,14 +581,14 @@ describe("Chatbot component", () => {
             }, 20);
           }, 50);
           return mockWs;
-        }
+        },
       );
 
       render(<Chatbot />);
       fireEvent.click(
         screen.getByRole("button", {
           name: getChatbotText("toggleButtonLabel"),
-        })
+        }),
       );
 
       // Send first message
@@ -602,7 +602,7 @@ describe("Chatbot component", () => {
           // Also ensure not in loading state
           expect(messagesEl.textContent).not.toBe("Loading...");
         },
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
 
       // Wait for isLoading state to be fully cleared and component ready for next message
@@ -622,7 +622,7 @@ describe("Chatbot component", () => {
           const messagesEl = screen.getByTestId("messages");
           expect(messagesEl.textContent).toContain("Response 2");
         },
-        { timeout: 5000 }
+        { timeout: 5000 },
       );
 
       // streamChatbotReply should be called once for the first message
@@ -641,7 +641,7 @@ describe("Chatbot component", () => {
             createdAt: "2024-01-01",
             isLoading: false,
           },
-        ])
+        ]),
       );
       sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
@@ -659,21 +659,21 @@ describe("Chatbot component", () => {
           _sessionId: string,
           _message: string,
           onToken: (token: string) => void,
-          onComplete: () => void
+          onComplete: () => void,
         ) => {
           setTimeout(() => {
             onToken("Test");
             onComplete();
           }, 50);
           return mockWs;
-        }
+        },
       );
 
       const { unmount } = render(<Chatbot />);
       fireEvent.click(
         screen.getByRole("button", {
           name: getChatbotText("toggleButtonLabel"),
-        })
+        }),
       );
 
       fireEvent.click(screen.getByText("Set Input"));
@@ -702,7 +702,7 @@ describe("Chatbot component", () => {
             createdAt: "2024-01-01",
             isLoading: false,
           },
-        ])
+        ]),
       );
       sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
@@ -720,21 +720,21 @@ describe("Chatbot component", () => {
           _sessionId: string,
           _message: string,
           onToken: (token: string) => void,
-          onComplete: () => void
+          onComplete: () => void,
         ) => {
           setTimeout(() => {
             onToken("Response");
             onComplete();
           }, 300);
           return mockWs;
-        }
+        },
       );
 
       render(<Chatbot />);
       fireEvent.click(
         screen.getByRole("button", {
           name: getChatbotText("toggleButtonLabel"),
-        })
+        }),
       );
 
       // Rapidly click send multiple times
