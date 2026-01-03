@@ -1,4 +1,4 @@
-FROM python:3.14-slim AS builder
+FROM python:3.12 AS builder
 
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -13,10 +13,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY requirements-cpu.txt /app/requirements.cpu.txt
+COPY requirements-cpu.txt /app/requirements-cpu.txt
 
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.cpu.txt
+    pip install --no-cache-dir -r requirements-cpu.txt
 
 FROM python:3.14-slim
 
@@ -47,6 +47,6 @@ USER appuser
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/docs || exit 1
+    CMD curl -f http://127.0.0.1:8000/docs || exit 1
 
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

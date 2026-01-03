@@ -33,7 +33,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_BASE_URL=
+        - VITE_API_BASE_URL=/api/chatbot
     container_name: chatbot-frontend
     ports:
       - "80:80"

@@ -1,22 +1,39 @@
-FROM nvidia/cuda:12.6.0-runtime-ubuntu22.04 AS base
+FROM nvidia/cuda:12.6.0-runtime-ubuntu24.04 AS base
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
     software-properties-common \
+    curl \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update && apt-get install -y \
-    python3.14 \
-    python3.14-dev \
-    python3.14-distutils \
+    python3.12 \
+    python3.12-dev \
+    python3.12-distutils \
+    libstdc++6 \
+    libxml2 \
+    libxslt1.1 \
+    libopenblas0 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.14
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.14 1 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.14 1
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
 
-FROM base AS builder
+
+FROM nvidia/cuda:12.6.0-devel-ubuntu24.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    curl \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y \
+    python3.12 \
+    python3.12-dev \
+    python3.12-distutils \
     build-essential \
     cmake \
     git \
@@ -27,22 +44,23 @@ RUN apt-get update && apt-get install -y \
     libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12
+
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+
 WORKDIR /app
 
 COPY requirements.txt /app/requirements.gpu.txt
 
+ENV CMAKE_ARGS="-DGGML_CUDA=on"
+ENV FORCE_CMAKE=1
+
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.gpu.txt
 
-FROM base
 
-RUN apt-get update && apt-get install -y \
-    libstdc++6 \
-    libxml2 \
-    libxslt1.1 \
-    libopenblas0 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+FROM base
 
 RUN useradd -m -u 1000 appuser && \
     mkdir -p /app/data /app/models && \
@@ -50,8 +68,8 @@ RUN useradd -m -u 1000 appuser && \
 
 WORKDIR /app
 
-COPY --from=builder /usr/local/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
-COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY --chown=appuser:appuser . /app
 
@@ -63,6 +81,6 @@ USER appuser
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/docs || exit 1
+    CMD curl -f http://127.0.0.1:8000/docs || exit 1
 
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
