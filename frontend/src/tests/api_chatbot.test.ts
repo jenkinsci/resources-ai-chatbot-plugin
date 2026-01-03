@@ -168,6 +168,8 @@ describe("chatbotApi", () => {
 
       expect(ws).not.toBeNull();
       await server.connected;
+      // Wait for onopen handler to execute and send message
+      await new Promise((resolve) => setTimeout(resolve, 10));
       expect(server).toHaveReceivedMessages([
         JSON.stringify({ message: userMessage }),
       ]);

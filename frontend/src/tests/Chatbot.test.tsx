@@ -534,7 +534,7 @@ describe("Chatbot component", () => {
 
       const mockWs = {
         readyState: WebSocket.OPEN,
-        send: jest.fn((data: string) => {
+        send: jest.fn(() => {
           // When send() is called on reused connection,
           // trigger the onmessage handler that the component sets
           if (mockWs.onmessage) {
