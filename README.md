@@ -10,7 +10,7 @@ This plugin was developed as part of a Google Summer of Code 2025 project.
 
 ## Prerequisites
 
-- **Python**: 3.11, 3.12, or 3.13 (Python 3.14+ not yet supported due to dependency limitations)
+- **Python**: 3.11, 3.12, or 3.13 (Python 3.14 not yet supported due to dependency limitations)
 - **Build tools**: `make`, `cmake` (≥3.14), C/C++ compiler (`gcc`/`clang`/MSVC)
 - **Java**: JDK 11+ and Maven 3.6+ (for plugin development)
 
@@ -52,12 +52,6 @@ curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 See [docs/README.md](docs/README.md) for detailed explanations.
 
 ## Troubleshooting
-
-**Python version compatibility**: Check if your Python version is supported:
-```bash
-python3 chatbot-core/scripts/check_python_compatibility.py
-```
-For Python 3.14+ status and detailed assessment, see [docs/PYTHON_3_14_ASSESSMENT.md](docs/PYTHON_3_14_ASSESSMENT.md)
 
 **llama-cpp-python installation fails**: Ensure build tools are installed and use Python 3.11-3.13
 
