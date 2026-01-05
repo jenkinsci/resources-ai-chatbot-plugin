@@ -21,12 +21,12 @@ describe("Messages component", () => {
   });
 
   it("renders a single message", () => {
-    render(<Messages messages={[exampleMessages[0]]} loading={false} />);
+    render(<Messages messages={[exampleMessages[0]]} loadingStatus={null} />);
     expect(screen.getByText("Hello")).toBeInTheDocument();
   });
 
   it("renders multiple messages", () => {
-    render(<Messages messages={exampleMessages} loading={false} />);
+    render(<Messages messages={exampleMessages} loadingStatus={null} />);
     expect(screen.getByText("Hello")).toBeInTheDocument();
     expect(screen.getByText("Hi there!")).toBeInTheDocument();
   });
@@ -38,28 +38,30 @@ describe("Messages component", () => {
       text: "Line 1\nLine 2\nLine 3",
     };
 
-    render(<Messages messages={[multiLineMessage]} loading={false} />);
+    render(<Messages messages={[multiLineMessage]} loadingStatus={null} />);
 
     expect(
-      screen.getByText((content) => content.includes("Line 1")),
+      screen.getByText((content) => content.includes("Line 1"))
     ).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes("Line 2")),
+      screen.getByText((content) => content.includes("Line 2"))
     ).toBeInTheDocument();
     expect(
-      screen.getByText((content) => content.includes("Line 3")),
+      screen.getByText((content) => content.includes("Line 3"))
     ).toBeInTheDocument();
   });
 
   it("renders loading message when loading is true", () => {
-    render(<Messages messages={[]} loading={true} />);
+    render(<Messages messages={[]} loadingStatus={null} />);
     expect(
-      screen.getByText(getChatbotText("generatingMessage")),
+      screen.getByText(getChatbotText("generatingMessage"))
     ).toBeInTheDocument();
   });
 
   it("calls scrollIntoView when messages change", () => {
-    const { rerender } = render(<Messages messages={[]} loading={false} />);
+    const { rerender } = render(
+      <Messages messages={[]} loadingStatus={null} />
+    );
 
     const scrollMock = window.HTMLElement.prototype.scrollIntoView as jest.Mock;
     scrollMock.mockClear();
@@ -67,8 +69,8 @@ describe("Messages component", () => {
     rerender(
       <Messages
         messages={[{ id: "1", sender: "user", text: "Hello" }]}
-        loading={false}
-      />,
+        loadingStatus={null}
+      />
     );
 
     expect(scrollMock).toHaveBeenCalledWith({ behavior: "smooth" });

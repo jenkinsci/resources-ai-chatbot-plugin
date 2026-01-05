@@ -558,4 +558,32 @@ export const chatbotStyles = {
     fontSize: "0.85rem",
     cursor: "pointer",
   } as CSSProperties,
+
+  // Loading State
+  botMessage: {
+    display: "flex",
+    justifyContent: "flex-start",
+    marginBottom: "0.5rem",
+    paddingLeft: "0.5rem",
+  } as CSSProperties,
+
+  loadingContainer: {
+    display: "flex",
+    alignItems: "center",
+    padding: "0.75rem 1rem",
+    backgroundColor: "var(--item-background--hover)", // Matches standard bot bubble color
+    borderRadius: "0.75rem",
+    borderTopLeftRadius: "6px", // Matches bot message style
+    border: "var(--jenkins-border--subtle)",
+    color: "var(--text-color)",
+    width: "fit-content",
+    minHeight: "40px",
+  } as CSSProperties,
+
+  loadingDot: {
+    fontSize: "1.5rem",
+    lineHeight: "1rem",
+    margin: "0 2px",
+    animation: "blink 1.4s infinite both", // Requires a @keyframes blink in your global CSS
+  } as CSSProperties,
 };

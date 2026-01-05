@@ -30,6 +30,9 @@ import { useContextObserver } from "../utils/useContextObserver";
  * Chatbot is the core component responsible for managing the chatbot display.
  */
 
+const LOG_PATTERN =
+  /(Started by user|Running as SYSTEM|Building in workspace|FATAL:|ERROR:|Exception:|Stack trace|Build step .*? marked build as failure)/i;
+
 export const Chatbot = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -37,12 +40,12 @@ export const Chatbot = () => {
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(
-    loadChatbotLastSessionId,
+    loadChatbotLastSessionId
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
   const [sessionIdToDelete, setSessionIdToDelete] = useState<string | null>(
-    null,
+    null
   );
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [supportedExtensions, setSupportedExtensions] =
@@ -135,7 +138,7 @@ export const Chatbot = () => {
       id,
       messages: [],
       createdAt: new Date().toISOString(),
-      isLoading: false,
+      loadingStatus: null,
     };
 
     setSessions((prev) => [newSession, ...prev]);
@@ -147,8 +150,8 @@ export const Chatbot = () => {
       prevSessions.map((session) =>
         session.id === currentSessionId
           ? { ...session, messages: [...session.messages, message] }
-          : session,
-      ),
+          : session
+      )
     );
   };
 
@@ -175,11 +178,15 @@ export const Chatbot = () => {
     setInput("");
     const filesToSend = [...attachedFiles];
     setAttachedFiles([]);
+    const isLogAnalysis = LOG_PATTERN.test(trimmed);
+    const statusMessage = isLogAnalysis
+      ? getChatbotText("analyzingLogs")
+      : getChatbotText("generatingMessage");
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: true } : s,
-      ),
+        s.id === currentSessionId ? { ...s, loadingStatus: statusMessage } : s
+      )
     );
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -193,13 +200,13 @@ export const Chatbot = () => {
               currentSessionId,
               trimmed || "Please analyze the attached file(s).",
               filesToSend,
-              controller.signal,
+              controller.signal
             )
           : controller.signal
             ? await fetchChatbotReply(
                 currentSessionId,
                 trimmed,
-                controller.signal,
+                controller.signal
               )
             : await fetchChatbotReply(currentSessionId, trimmed);
       appendMessageToCurrentSession(botReply);
@@ -213,8 +220,8 @@ export const Chatbot = () => {
       abortControllerRef.current = null;
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === currentSessionId ? { ...s, isLoading: false } : s,
-        ),
+          s.id === currentSessionId ? { ...s, loadingStatus: null } : s
+        )
       );
     }
   };
@@ -224,8 +231,8 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false } : s,
-      ),
+        s.id === currentSessionId ? { ...s, isLoading: false } : s
+      )
     );
   };
 
@@ -250,10 +257,10 @@ export const Chatbot = () => {
     return validateFile(file, supportedExtensions);
   };
 
-  const getChatLoading = (): boolean => {
+  const getChatLoading = (): string | null => {
     const currentChat = sessions.find((chat) => chat.id === currentSessionId);
 
-    return currentChat ? currentChat.isLoading : false;
+    return currentChat ? currentChat.loadingStatus : null;
   };
 
   const openSideBar = () => {
@@ -309,7 +316,7 @@ export const Chatbot = () => {
       // sendMessage(messageWithContext);
     } else {
       setInput(
-        "I noticed a build failure, but I couldn't read the logs automatically. Can you paste them?",
+        "I noticed a build failure, but I couldn't read the logs automatically. Can you paste them?"
       );
     }
   };
@@ -408,14 +415,14 @@ export const Chatbot = () => {
             <>
               <Messages
                 messages={getSessionMessages(currentSessionId)}
-                loading={getChatLoading()}
+                loadingStatus={getChatLoading()}
               />
               <Input
                 input={input}
                 setInput={setInput}
                 onSend={sendMessage}
                 onCancel={handleCancelMessage}
-                isLoading={getChatLoading()}
+                loadingStatus={getChatLoading()}
                 attachedFiles={attachedFiles}
                 onFilesAttached={handleFilesAttached}
                 onFileRemoved={handleFileRemoved}

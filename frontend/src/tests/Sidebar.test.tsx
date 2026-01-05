@@ -20,13 +20,13 @@ const exampleChats: ChatSession[] = [
     id: "chat-1",
     messages: [],
     createdAt: "2024-01-01T00:00:00Z",
-    isLoading: false,
+    loadingStatus: null,
   },
   {
     id: "chat-2",
     messages: [{ id: "msg-1", sender: "user", text: "Hello world" }],
     createdAt: "2024-01-02T00:00:00Z",
-    isLoading: false,
+    loadingStatus: null,
   },
 ];
 
@@ -38,17 +38,17 @@ describe("Sidebar component", () => {
   it("renders close and new chat buttons", () => {
     render(<Sidebar {...baseProps} chatList={[]} />);
     expect(
-      screen.getByText(getChatbotText("sidebarCreateNewChat")),
+      screen.getByText(getChatbotText("sidebarCreateNewChat"))
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Close Sidebar" }),
+      screen.getByRole("button", { name: "Close Sidebar" })
     ).toBeInTheDocument();
   });
 
   it("renders no chats message when chatList is empty", () => {
     render(<Sidebar {...baseProps} chatList={[]} />);
     expect(
-      screen.getByText(getChatbotText("sidebarNoActiveChats")),
+      screen.getByText(getChatbotText("sidebarNoActiveChats"))
     ).toBeInTheDocument();
   });
 
@@ -88,7 +88,7 @@ describe("Sidebar component", () => {
 
   it("renders active chat styling when activeChatId matches", () => {
     render(
-      <Sidebar {...baseProps} chatList={exampleChats} activeChatId="chat-2" />,
+      <Sidebar {...baseProps} chatList={exampleChats} activeChatId="chat-2" />
     );
     expect(screen.getByText("Hello world")).toBeInTheDocument();
   });
@@ -98,7 +98,7 @@ describe("Sidebar component", () => {
       id: "chat-short",
       messages: [{ id: "msg-1", sender: "user", text: "Short message" }],
       createdAt: "2024-01-01T00:00:00Z",
-      isLoading: false,
+      loadingStatus: null,
     };
 
     render(<Sidebar {...baseProps} chatList={[shortMessageChat]} />);
@@ -116,7 +116,7 @@ describe("Sidebar component", () => {
         },
       ],
       createdAt: "2024-01-03T00:00:00Z",
-      isLoading: false,
+      loadingStatus: null,
     };
 
     render(
@@ -124,7 +124,7 @@ describe("Sidebar component", () => {
         {...baseProps}
         chatList={[longMessageChat]}
         activeChatId={null}
-      />,
+      />
     );
 
     const expectedTruncated = "This is a very long messa...";

@@ -5,14 +5,13 @@ import {
   type FileAttachment,
 } from "../model/Message";
 import { chatbotStyles } from "../styles/styles";
-import { getChatbotText } from "../data/chatbotTexts";
 
 /**
  * Props for the Messages component.
  */
 export interface MessagesProps {
   messages: Message[];
-  loading: boolean;
+  loadingStatus: string | null;
 }
 
 /**
@@ -67,7 +66,7 @@ const FileAttachmentDisplay: React.FC<{ file: FileAttachment }> = ({
  * message when the bot is generating a response and automatically scrolls
  * to the newest message on update.
  */
-export const Messages = ({ messages, loading }: MessagesProps) => {
+export const Messages = ({ messages, loadingStatus }: MessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -78,7 +77,7 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
     text: string,
     sender: Sender,
     key: React.Key,
-    files?: FileAttachment[],
+    files?: FileAttachment[]
   ) => (
     <div key={key} style={chatbotStyles.messageContainer(sender)}>
       <span style={chatbotStyles.messageBubble(sender)}>
@@ -107,14 +106,32 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
   return (
     <div style={chatbotStyles.messagesMain}>
       {messages.map((msg) =>
-        renderMessage(msg.text, msg.sender, msg.id, msg.files),
+        renderMessage(msg.text, msg.sender, msg.id, msg.files)
       )}
-      {loading &&
-        renderMessage(
-          getChatbotText("generatingMessage"),
-          "jenkins-bot",
-          "loading",
-        )}
+      {loadingStatus && (
+        <div style={chatbotStyles.botMessage}>
+          <div style={chatbotStyles.loadingContainer}>
+            <span style={{ ...chatbotStyles.loadingDot, animationDelay: "0s" }}>
+              •
+            </span>
+            <span
+              style={{ ...chatbotStyles.loadingDot, animationDelay: "0.2s" }}
+            >
+              •
+            </span>
+            <span
+              style={{ ...chatbotStyles.loadingDot, animationDelay: "0.4s" }}
+            >
+              •
+            </span>
+            <span
+              style={{ marginLeft: "10px", fontStyle: "italic", color: "#666" }}
+            >
+              {loadingStatus}
+            </span>
+          </div>
+        </div>
+      )}
       <div ref={messagesEndRef} />
     </div>
   );

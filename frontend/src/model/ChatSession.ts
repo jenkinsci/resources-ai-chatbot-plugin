@@ -7,7 +7,7 @@ export interface ChatSession {
   id: string;
   messages: Message[];
   createdAt: string;
-  isLoading: boolean;
+  loadingStatus: string | null;
 }
 
 /**

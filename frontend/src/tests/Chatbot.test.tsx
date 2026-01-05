@@ -71,9 +71,9 @@ jest.mock("../components/Input", () => ({
 }));
 
 jest.mock("../components/Messages", () => ({
-  Messages: ({ messages, loading }: MessagesProps) => (
+  Messages: ({ messages, loadingStatus }: MessagesProps) => (
     <div data-testid="messages">
-      {loading ? "Loading..." : messages.map((m) => m.text).join(",")}
+      {loadingStatus ? "Loading..." : messages.map((m) => m.text).join(",")}
     </div>
   ),
 }));
@@ -87,38 +87,38 @@ describe("Chatbot component", () => {
   it("renders toggle button", () => {
     render(<Chatbot />);
     expect(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     ).toBeInTheDocument();
   });
 
   it("shows welcome page when no sessions exist", () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
     expect(
-      screen.getByText(getChatbotText("welcomeMessage")),
+      screen.getByText(getChatbotText("welcomeMessage"))
     ).toBeInTheDocument();
   });
 
   it("creates a new chat when clicking create button", async () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("createNewChat") }),
+      screen.getByRole("button", { name: getChatbotText("createNewChat") })
     );
 
     await waitFor(() =>
-      expect(screen.getByTestId("messages")).toBeInTheDocument(),
+      expect(screen.getByTestId("messages")).toBeInTheDocument()
     );
   });
 
   it("opens sidebar and switches chat", async () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
 
     fireEvent.click(screen.getByText("Open Sidebar"));
@@ -131,20 +131,20 @@ describe("Chatbot component", () => {
   it("creates new chat from sidebar", async () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
     fireEvent.click(screen.getByText("Open Sidebar"));
     fireEvent.click(screen.getByText("New Chat"));
 
     await waitFor(() =>
-      expect(screen.getByTestId("messages")).toBeInTheDocument(),
+      expect(screen.getByTestId("messages")).toBeInTheDocument()
     );
   });
 
   it("deletes a chat", async () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
     fireEvent.click(screen.getByText("Open Sidebar"));
     fireEvent.click(screen.getByText("Delete Chat"));
@@ -154,7 +154,7 @@ describe("Chatbot component", () => {
     fireEvent.click(screen.getByText(getChatbotText("popupDeleteButton")));
 
     await waitFor(() =>
-      expect(chatbotApi.deleteChatSession).toHaveBeenCalledWith("session-1"),
+      expect(chatbotApi.deleteChatSession).toHaveBeenCalledWith("session-1")
     );
   });
 
@@ -168,13 +168,13 @@ describe("Chatbot component", () => {
           createdAt: "2024-01-01",
           isLoading: false,
         },
-      ]),
+      ])
     );
     sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
 
     fireEvent.click(screen.getByText("Set Input"));
@@ -184,7 +184,7 @@ describe("Chatbot component", () => {
       expect(chatbotApi.fetchChatbotReply).toHaveBeenCalledWith(
         "session-1",
         "Hello bot",
-        expect.anything(),
+        expect.anything()
       );
     });
   });
@@ -192,7 +192,7 @@ describe("Chatbot component", () => {
   it("persists sessions on unmount", () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
 
     window.dispatchEvent(new Event("beforeunload"));
@@ -207,13 +207,13 @@ describe("Chatbot component", () => {
 
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
     fireEvent.click(screen.getByText(getChatbotText("createNewChat")));
 
     await waitFor(() => {
       expect(errorSpy).toHaveBeenCalledWith(
-        "Add error showage for a couple of seconds.",
+        "Add error showage for a couple of seconds."
       );
     });
 
@@ -223,7 +223,7 @@ describe("Chatbot component", () => {
   it("closes delete popup and resets sessionIdToDelete when cancel button is clicked", () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
 
     fireEvent.click(screen.getByText("Open Sidebar"));
@@ -233,14 +233,14 @@ describe("Chatbot component", () => {
 
     fireEvent.click(screen.getByText(getChatbotText("popupCancelButton")));
     expect(
-      screen.queryByText(getChatbotText("popupTitle")),
+      screen.queryByText(getChatbotText("popupTitle"))
     ).not.toBeInTheDocument();
   });
 
   it("closes the sidebar when onClose is called", () => {
     render(<Chatbot />);
     fireEvent.click(
-      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") })
     );
 
     fireEvent.click(screen.getByText("Open Sidebar"));

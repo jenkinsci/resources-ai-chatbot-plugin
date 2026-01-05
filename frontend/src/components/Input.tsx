@@ -20,7 +20,7 @@ export interface InputProps {
   /** Optional: file validation function */
   validateFile?: (file: File) => { isValid: boolean; error?: string };
   /** Optional: whether a message is currently being sent */
-  isLoading?: boolean;
+  loadingStatus?: string | null;
   /** Optional: cancel the in-flight message */
   onCancel?: () => void;
 }
@@ -39,7 +39,7 @@ export const Input = ({
   onFileRemoved,
   enableFileUpload = true,
   validateFile,
-  isLoading = false,
+  loadingStatus = null,
   onCancel,
 }: InputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -167,7 +167,7 @@ export const Input = ({
             width: enableFileUpload && onFilesAttached ? "75%" : "85%",
           }}
         />
-        {isLoading && onCancel ? (
+        {loadingStatus && onCancel ? (
           <button
             type="button"
             onClick={onCancel}
