@@ -19,17 +19,18 @@ class LogSanitizer:
     """Sanitizes logs to remove PII and sensitive information"""
     
     # Patterns for common sensitive data
-    PATTERNS = {
-        'api_key': r'(?i)(api[_-]?key|apikey)[\s:=]+["\']?([a-zA-Z0-9_\-]{20,})["\']?',
-        'password': r'(?i)(password|passwd|pwd)[\s:=]+["\']?([^\s"\']{8,})["\']?',
-        'token': r'(?i)(token|auth|bearer)[\s:=]+["\']?([a-zA-Z0-9_\-\.]{20,})["\']?',
-        'aws_key': r'(?i)(aws_access_key_id|aws_secret_access_key)[\s:=]+["\']?([A-Z0-9]{20,})["\']?',
-        'private_key': r'-----BEGIN (RSA |DSA |EC )?PRIVATE KEY-----[\s\S]*?-----END (RSA |DSA |EC )?PRIVATE KEY-----',
-        'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-        'ip_address': r'\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b',
-        'url_with_credentials': r'https?://[^:]+:[^@]+@[^\s]+',
-        'jwt_token': r'eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*',
-    }
+    # Order matters - more specific patterns should be checked first
+    PATTERNS = [
+        ('url_with_credentials', r'https?://[^:]+:[^@]+@[^\s]+'),
+        ('private_key', r'-----BEGIN (RSA |DSA |EC )?PRIVATE KEY-----[\s\S]*?-----END (RSA |DSA |EC )?PRIVATE KEY-----'),
+        ('jwt_token', r'eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*'),
+        ('aws_key', r'(?i)(aws_access_key_id|aws_secret_access_key)[\s:=]+["\']?([A-Za-z0-9/+=]{20,})["\']?'),
+        ('api_key', r'(?i)(api[_-]?key|apikey)[\s:=]+["\']?([a-zA-Z0-9_\-]{20,})["\']?'),
+        ('password', r'(?i)(password|passwd|pwd)[\s:=]+["\']?([^\s"\']{8,})["\']?'),
+        ('token', r'(?i)(token|auth|bearer)[\s:=]+["\']?([a-zA-Z0-9_\-\.]{20,})["\']?'),
+        ('email', r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'),
+        ('ip_address', r'\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b'),
+    ]
     
     @classmethod
     def sanitize(cls, log_content: str) -> Tuple[str, List[str]]:
@@ -45,7 +46,7 @@ class LogSanitizer:
         sanitized = log_content
         redacted_types = []
         
-        for pattern_name, pattern in cls.PATTERNS.items():
+        for pattern_name, pattern in cls.PATTERNS:
             matches = re.findall(pattern, sanitized)
             if matches:
                 redacted_types.append(pattern_name)
