@@ -44,7 +44,7 @@ describe("storageUtils", () => {
       expect(result).toEqual([]);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to parse saved chat sessions",
-        expect.any(SyntaxError)
+        expect.any(SyntaxError),
       );
     });
 
@@ -66,7 +66,7 @@ describe("storageUtils", () => {
       expect(result).toEqual([]);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Invalid chat session data structure:",
-        expect.anything()
+        expect.anything(),
       );
 
       consoleErrorSpy.mockRestore();
@@ -99,7 +99,7 @@ describe("storageUtils", () => {
       sessionStorage.setItem("chatbot-last-session-id", "non-existent-id");
       const result = loadChatbotLastSessionId();
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        "No last session id found: setting the current session to the first item."
+        "No last session id found: setting the current session to the first item.",
       );
       expect(result).toBe("session-1");
     });

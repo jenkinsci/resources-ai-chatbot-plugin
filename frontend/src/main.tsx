@@ -8,5 +8,5 @@ const footerRoot = document.getElementById("chatbot-root")!;
 createRoot(footerRoot).render(
   <StrictMode>
     <Chatbot />
-  </StrictMode>
+  </StrictMode>,
 );

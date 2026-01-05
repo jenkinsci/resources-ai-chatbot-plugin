@@ -38,17 +38,17 @@ describe("Sidebar component", () => {
   it("renders close and new chat buttons", () => {
     render(<Sidebar {...baseProps} chatList={[]} />);
     expect(
-      screen.getByText(getChatbotText("sidebarCreateNewChat"))
+      screen.getByText(getChatbotText("sidebarCreateNewChat")),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Close Sidebar" })
+      screen.getByRole("button", { name: "Close Sidebar" }),
     ).toBeInTheDocument();
   });
 
   it("renders no chats message when chatList is empty", () => {
     render(<Sidebar {...baseProps} chatList={[]} />);
     expect(
-      screen.getByText(getChatbotText("sidebarNoActiveChats"))
+      screen.getByText(getChatbotText("sidebarNoActiveChats")),
     ).toBeInTheDocument();
   });
 
@@ -88,7 +88,7 @@ describe("Sidebar component", () => {
 
   it("renders active chat styling when activeChatId matches", () => {
     render(
-      <Sidebar {...baseProps} chatList={exampleChats} activeChatId="chat-2" />
+      <Sidebar {...baseProps} chatList={exampleChats} activeChatId="chat-2" />,
     );
     expect(screen.getByText("Hello world")).toBeInTheDocument();
   });
@@ -124,7 +124,7 @@ describe("Sidebar component", () => {
         {...baseProps}
         chatList={[longMessageChat]}
         activeChatId={null}
-      />
+      />,
     );
 
     const expectedTruncated = "This is a very long messa...";

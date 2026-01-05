@@ -20,7 +20,6 @@ from api.prompts.prompts import (
 from api.services.memory import get_session
 from api.services.file_service import format_file_context
 from api.tools.tools import TOOL_REGISTRY
-from api.tools.sanitizer import sanitize_logs
 from api.tools.utils import (
     get_default_tools_call,
     make_placeholder_replacer,
@@ -60,82 +59,58 @@ def get_chatbot_reply(
     logger.info("New message from session '%s'", session_id)
     logger.info("Handling the user query: %s", user_input)
 
-    log_keywords = (
-        r"(Started by user|Running as SYSTEM|Building in workspace|"
-        r"FATAL:|ERROR:|Exception:|Stack trace|Build step .*? marked build as failure)"
-    )
-    is_log_detected = (
-        re.search(log_keywords, user_input, re.IGNORECASE) or
-        LOG_ANALYSIS_PATTERN.search(user_input)
-    )
-
-    retrieval_query = user_input
-    prompt_query = user_input
-    log_context = None
-
-    if is_log_detected:
-        logger.info("Log Analysis Pattern detected. Separating logs from query.")
-
-        strict_match = LOG_ANALYSIS_PATTERN.search(user_input)
-        if strict_match:
-            raw_log_content = strict_match.group(1).strip()
-            user_question = (
-            strict_match.group(2).strip() or
-            "Please analyze the build failure in these logs."
-            )
-        else:
-            raw_log_content = user_input
-            user_question = "Please analyze the build failure in these logs."
-
-
-        sanitized_logs = sanitize_logs(raw_log_content)
-
-        logger.info("Extracting error signature for efficient retrieval...")
-        error_signature = _generate_search_query_from_logs(sanitized_logs)
-        logger.info("Generated Search Query: %s", error_signature)
-
-        # Set variables for the next steps
-        log_context = sanitized_logs
-        retrieval_query = error_signature
-        prompt_query = user_question
-
-    logger.info("Handling the retrieval query: %s", retrieval_query)
-
-    if files:
-        logger.info("Processing %d uploaded file(s)", len(files))
-
     memory = get_session(session_id)
     if memory is None:
-        raise RuntimeError(
-            f"Session '{session_id}' not found in the memory store.")
+        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
 
-    context = retrieve_context(retrieval_query)
+    context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
 
-    # Add file context if files are provided
-    file_context = ""
-    if files:
-        file_dicts = [file.model_dump() for file in files]
-        file_context = format_file_context(file_dicts)
-        if file_context:
-            logger.info("File context added: %d characters", len(file_context))
-            context = f"{context}\n\n[User Uploaded Files]\n{file_context}"
+    # Process file context if files are provided
+    context = _process_file_context(context, files)
 
-    prompt = build_prompt(prompt_query, context, memory, log_context=log_context)
+    prompt = build_prompt(user_input, context, memory)
 
     logger.info("Generating answer with prompt: %s", prompt)
     reply = generate_answer(prompt)
 
-    # Include file info in memory message
-    user_message = user_input
-    if files:
-        file_names = [f.filename for f in files]
-        user_message = f"{user_input}\n[Attached files: {', '.join(file_names)}]"
+    # Format user message with file info for memory
+    user_message = _format_user_message_for_memory(user_input, files)
 
     memory.chat_memory.add_user_message(user_message)
     memory.chat_memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)
+
+
+def _process_file_context(context: str, files: Optional[List[FileAttachment]]) -> str:
+    """
+    Helper function to process uploaded files and append them to the context.
+    """
+    if not files:
+        return context
+
+    logger.info("Processing %d uploaded file(s)", len(files))
+    file_dicts = [file.model_dump() for file in files]
+    file_context = format_file_context(file_dicts)
+
+    if file_context:
+        logger.info("File context added: %d characters", len(file_context))
+        return f"{context}\n\n[User Uploaded Files]\n{file_context}"
+
+    return context
+
+
+def _format_user_message_for_memory(user_input: str, files: Optional[List[FileAttachment]]) -> str:
+    """
+    Helper function to format the user message for memory storage,
+    appending the names of attached files.
+    """
+    if not files:
+        return user_input
+
+    file_names = [f.filename for f in files]
+    return f"{user_input}\n[Attached files: {', '.join(file_names)}]"
 
 
 def get_chatbot_reply_new_architecture(

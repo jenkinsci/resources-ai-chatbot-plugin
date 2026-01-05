@@ -24,6 +24,6 @@ export const isChatSession = (obj: unknown): obj is ChatSession => {
     typeof o.id === "string" &&
     Array.isArray(o.messages) &&
     typeof o.createdAt === "string" &&
-    typeof o.isLoading === "boolean"
+    (typeof o.loadingStatus === "string" || o.loadingStatus === null)
   );
 };

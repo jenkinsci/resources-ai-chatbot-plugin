@@ -77,7 +77,7 @@ export const Messages = ({ messages, loadingStatus }: MessagesProps) => {
     text: string,
     sender: Sender,
     key: React.Key,
-    files?: FileAttachment[]
+    files?: FileAttachment[],
   ) => (
     <div key={key} style={chatbotStyles.messageContainer(sender)}>
       <span style={chatbotStyles.messageBubble(sender)}>
@@ -106,7 +106,7 @@ export const Messages = ({ messages, loadingStatus }: MessagesProps) => {
   return (
     <div style={chatbotStyles.messagesMain}>
       {messages.map((msg) =>
-        renderMessage(msg.text, msg.sender, msg.id, msg.files)
+        renderMessage(msg.text, msg.sender, msg.id, msg.files),
       )}
       {loadingStatus && (
         <div style={chatbotStyles.botMessage}>
