@@ -6,7 +6,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import chatbot
+from api.routes import chatbot, build_analysis
 from api.config.loader import CONFIG
 from api.services.memory import cleanup_expired_sessions
 from utils import LoggerFactory
@@ -65,3 +65,4 @@ app.add_middleware(
 
 # Routes
 app.include_router(chatbot.router, prefix=CONFIG["api"]["prefix"])
+app.include_router(build_analysis.router, prefix=CONFIG["api"]["prefix"])

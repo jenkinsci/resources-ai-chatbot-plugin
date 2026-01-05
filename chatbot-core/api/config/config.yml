@@ -39,3 +39,17 @@ tool_names:
 cors:
   allowed_origins:
     - "*"
+
+# Jenkins configuration for build failure analysis
+jenkins:
+  url: "http://localhost:8080"  # Default Jenkins URL
+  username: ""  # Set via environment variable JENKINS_USERNAME
+  api_token: ""  # Set via environment variable JENKINS_API_TOKEN
+
+# Build failure analysis settings
+build_analysis:
+  max_log_size_bytes: 5242880  # 5MB max log size
+  context_lines: 50  # Number of lines to extract around errors
+  enable_pii_detection: true  # Always sanitize PII
+  timeout_seconds: 30  # Timeout for Jenkins API calls
+  max_similar_issues: 5  # Number of similar issues to search for
