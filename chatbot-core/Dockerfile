@@ -18,7 +18,7 @@ COPY requirements-cpu.txt /app/requirements-cpu.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements-cpu.txt
 
-FROM python:3.14-slim
+FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y \
     libstdc++6 \
