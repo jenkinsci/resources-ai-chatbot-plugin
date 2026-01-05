@@ -1,14 +1,15 @@
-"""
+﻿"""
 API endpoints for build failure analysis
 Provides REST API for analyzing Jenkins build failures
 """
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+import json
+import logging
 from typing import Optional, List, Dict
 from urllib.parse import urlparse
-import logging
-import json
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/build-analysis", tags=["Build Analysis"])
@@ -17,45 +18,45 @@ router = APIRouter(prefix="/build-analysis", tags=["Build Analysis"])
 def _validate_jenkins_url(url: str) -> bool:
     """
     Validate Jenkins URL to prevent SSRF attacks
-    
+
     Args:
         url: Jenkins URL to validate
-        
+
     Returns:
         True if URL is safe, False otherwise
     """
     if not url:
         return True  # Will use config default
-    
+
     try:
         parsed = urlparse(url)
-        
+
         # Must use http or https
         if parsed.scheme not in ['http', 'https']:
             return False
-        
+
         # Block internal/private IPs and metadata endpoints
         blocked_hosts = [
             'localhost', '127.0.0.1', '0.0.0.0',
             '169.254.169.254',  # AWS metadata
             '::1', '[::]'  # IPv6 localhost
         ]
-        
+
         hostname = parsed.hostname
         if not hostname:
             return False
-        
+
         # Check if hostname is blocked
         if hostname.lower() in blocked_hosts:
             return False
-        
+
         # Block private IP ranges (basic check)
         if hostname.startswith('10.') or hostname.startswith('192.168.') or hostname.startswith('172.'):
             # These are private IP ranges - require explicit allowlist
             return False
-        
+
         return True
-        
+
     except Exception:
         return False
 
@@ -97,20 +98,20 @@ class BuildAnalysisResponse(BaseModel):
 async def analyze_build_failure(request: BuildAnalysisRequest):
     """
     Analyze a failed Jenkins build
-    
+
     This endpoint:
     1. Fetches the console log from Jenkins
     2. Sanitizes PII and sensitive data (CRITICAL for security)
     3. Extracts error context
     4. Searches vector database for similar issues
     5. Provides analysis and suggestions
-    
+
     Args:
         request: Build analysis request with job name and build number
-        
+
     Returns:
         BuildAnalysisResponse with analysis results and similar issues
-        
+
     Raises:
         HTTPException: If analysis fails
     """
@@ -118,25 +119,25 @@ async def analyze_build_failure(request: BuildAnalysisRequest):
         # Import here to avoid circular dependencies
         from api.services.tools.build_failure_analyzer import BuildFailureAnalyzer
         from api.config.loader import get_config
-        
+
         config = get_config()
-        
+
         # Validate Jenkins URL to prevent SSRF
         if request.jenkins_url and not _validate_jenkins_url(request.jenkins_url):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid Jenkins URL. Use configured Jenkins instance or provide a valid external URL."
             )
-        
+
         # Note: Vector store integration would require FAISS index to be loaded
         # For now, we pass None and the tool will skip similarity search
         # To enable: load the FAISS index from rag.retriever.retriever_utils
         vector_store = None
         logger.info("Vector store not loaded - similarity search will be skipped")
-        
+
         # Use configured URL if not provided, or validate provided URL
         jenkins_url = request.jenkins_url or config.get('jenkins', {}).get('url')
-        
+
         # Create analyzer with configuration
         analyzer = BuildFailureAnalyzer(
             jenkins_url=jenkins_url,
@@ -144,7 +145,7 @@ async def analyze_build_failure(request: BuildAnalysisRequest):
             api_token=request.api_token or config.get('jenkins', {}).get('api_token'),
             vector_store=vector_store
         )
-        
+
         # Prepare query for the tool
         query = json.dumps({
             'job_name': request.job_name,
@@ -153,28 +154,28 @@ async def analyze_build_failure(request: BuildAnalysisRequest):
             'username': analyzer.username,
             'api_token': analyzer.api_token
         })
-        
+
         logger.info(f"Analyzing build {request.job_name} #{request.build_number}")
-        
+
         # Run analysis
         result = analyzer._run(query)
         analysis = json.loads(result)
-        
+
         if analysis['status'] == 'error':
             raise HTTPException(status_code=500, detail=analysis['message'])
-        
+
         # Generate suggested fix based on error type
         suggested_fix = _generate_fix_suggestion(
             analysis['error_type'],
             analysis['sanitized_log'],
             analysis.get('similar_issues', [])
         )
-        
+
         # Convert similar issues to proper model
         similar_issues = [
             SimilarIssue(**issue) for issue in analysis.get('similar_issues', [])
         ]
-        
+
         return BuildAnalysisResponse(
             status=analysis['status'],
             job_name=analysis['job_name'],
@@ -188,7 +189,7 @@ async def analyze_build_failure(request: BuildAnalysisRequest):
             total_similar_issues=analysis.get('total_similar_issues', 0),
             suggested_fix=suggested_fix
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -199,16 +200,16 @@ async def analyze_build_failure(request: BuildAnalysisRequest):
 def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dict]) -> str:
     """
     Generate contextual fix suggestions based on error type and similar issues
-    
+
     Args:
         error_type: Classified error type
         log: Sanitized log content
         similar_issues: Similar issues found in knowledge base
-        
+
     Returns:
         Suggested fix as markdown text
     """
-    
+
     # Base suggestions by error type
     base_suggestions = {
         'compilation_error': """
@@ -225,7 +226,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 3. Ensure Java version in `pom.xml` or `build.gradle` matches your code
 4. Run `mvn clean compile` locally to reproduce the issue
         """,
-        
+
         'test_failure': """
 ## Test Failure Detected
 
@@ -240,7 +241,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 3. Verify environment-specific configurations (database, API endpoints)
 4. Run the specific test locally: `mvn test -Dtest=TestClassName`
         """,
-        
+
         'dependency_error': """
 ## Dependency Resolution Error
 
@@ -256,7 +257,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 3. Clear local cache: `mvn clean` or `gradle clean --refresh-dependencies`
 4. Check for version conflicts using `mvn dependency:tree`
         """,
-        
+
         'null_pointer_exception': """
 ## NullPointerException Detected
 
@@ -273,7 +274,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 4. Check configuration values that might be null
 5. Use Optional<T> for nullable return values
         """,
-        
+
         'permission_error': """
 ## Permission Error Detected
 
@@ -288,7 +289,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 3. Review workspace cleanup settings
 4. Ensure the Jenkins user has access to required directories
         """,
-        
+
         'timeout_error': """
 ## Timeout Error Detected
 
@@ -303,7 +304,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 3. Review long-running processes in your build
 4. Consider parallelizing slow operations
         """,
-        
+
         'out_of_memory': """
 ## Out of Memory Error
 
@@ -318,7 +319,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 3. Check for memory leaks in your code
 4. Reduce parallel test execution
         """,
-        
+
         'network_error': """
 ## Network Error Detected
 
@@ -333,7 +334,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 3. Review firewall and proxy settings
 4. Add retry logic for transient network failures
         """,
-        
+
         'configuration_error': """
 ## Configuration Error Detected
 
@@ -348,7 +349,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 3. Validate configuration syntax
 4. Ensure configuration values match expected format
         """,
-        
+
         'unknown_error': """
 ## Build Error Detected
 
@@ -359,14 +360,14 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
 4. Try reproducing the build locally
         """
     }
-    
+
     suggestion = base_suggestions.get(error_type, base_suggestions['unknown_error'])
-    
+
     # Add information about similar issues if found
     if similar_issues:
         suggestion += "\n\n## Similar Issues Found in Knowledge Base\n\n"
         suggestion += f"Found {len(similar_issues)} similar issues that might help:\n\n"
-        
+
         for i, issue in enumerate(similar_issues[:3], 1):  # Show top 3
             suggestion += f"{i}. **{issue.get('title', 'Untitled')}**\n"
             if issue.get('url'):
@@ -374,7 +375,7 @@ def _generate_fix_suggestion(error_type: str, log: str, similar_issues: List[Dic
             suggestion += f"   - {issue.get('excerpt', 'No description')[:150]}...\n\n"
     else:
         suggestion += "\n\n_No similar issues found in knowledge base. The error might be unique to your setup._\n"
-    
+
     return suggestion
 
 
