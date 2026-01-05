@@ -76,11 +76,15 @@ Content-Type: application/json
 {
   "job_name": "my-jenkins-job",
   "build_number": 123,
-  "jenkins_url": "http://jenkins.example.com",  // optional
-  "username": "jenkins_user",  // optional
-  "api_token": "jenkins_api_token"  // optional
+  "jenkins_url": "https://jenkins.example.com",
+  "username": "jenkins_user",
+  "api_token": "jenkins_api_token"
 }
 ```
+
+**Note**: `jenkins_url`, `username`, and `api_token` are optional if configured in `config.yml`.
+
+**Security**: The API validates Jenkins URLs to prevent SSRF attacks. Private IPs and internal endpoints are blocked. Use the configured Jenkins instance or explicitly allowlist external Jenkins servers.
 
 ### Response
 
@@ -113,16 +117,18 @@ Content-Type: application/json
 Add to `.env` file (optional - overrides config.yml):
 
 ```bash
-JENKINS_URL=http://your-jenkins-url:8080
+JENKINS_URL=https://your-jenkins-url:8443
 JENKINS_USERNAME=your_username
 JENKINS_API_TOKEN=your_api_token
 ```
+
+**⚠️ Security Note**: Always use HTTPS for Jenkins connections to protect credentials and log data in transit.
 
 Or update `api/config/config.yml`:
 
 ```yaml
 jenkins:
-  url: "http://localhost:8080"
+  url: "https://localhost:8443"
   username: "admin"
   api_token: "your_token_here"
 

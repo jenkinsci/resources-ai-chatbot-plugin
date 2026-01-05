@@ -3,14 +3,61 @@ API endpoints for build failure analysis
 Provides REST API for analyzing Jenkins build failures
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
+from urllib.parse import urlparse
 import logging
 import json
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/build-analysis", tags=["Build Analysis"])
+
+
+def _validate_jenkins_url(url: str) -> bool:
+    """
+    Validate Jenkins URL to prevent SSRF attacks
+    
+    Args:
+        url: Jenkins URL to validate
+        
+    Returns:
+        True if URL is safe, False otherwise
+    """
+    if not url:
+        return True  # Will use config default
+    
+    try:
+        parsed = urlparse(url)
+        
+        # Must use http or https
+        if parsed.scheme not in ['http', 'https']:
+            return False
+        
+        # Block internal/private IPs and metadata endpoints
+        blocked_hosts = [
+            'localhost', '127.0.0.1', '0.0.0.0',
+            '169.254.169.254',  # AWS metadata
+            '::1', '[::]'  # IPv6 localhost
+        ]
+        
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        
+        # Check if hostname is blocked
+        if hostname.lower() in blocked_hosts:
+            return False
+        
+        # Block private IP ranges (basic check)
+        if hostname.startswith('10.') or hostname.startswith('192.168.') or hostname.startswith('172.'):
+            # These are private IP ranges - require explicit allowlist
+            return False
+        
+        return True
+        
+    except Exception:
+        return False
 
 
 class BuildAnalysisRequest(BaseModel):
@@ -74,15 +121,25 @@ async def analyze_build_failure(request: BuildAnalysisRequest):
         
         config = get_config()
         
+        # Validate Jenkins URL to prevent SSRF
+        if request.jenkins_url and not _validate_jenkins_url(request.jenkins_url):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid Jenkins URL. Use configured Jenkins instance or provide a valid external URL."
+            )
+        
         # Note: Vector store integration would require FAISS index to be loaded
         # For now, we pass None and the tool will skip similarity search
         # To enable: load the FAISS index from rag.retriever.retriever_utils
         vector_store = None
         logger.info("Vector store not loaded - similarity search will be skipped")
         
+        # Use configured URL if not provided, or validate provided URL
+        jenkins_url = request.jenkins_url or config.get('jenkins', {}).get('url')
+        
         # Create analyzer with configuration
         analyzer = BuildFailureAnalyzer(
-            jenkins_url=request.jenkins_url or config.get('jenkins', {}).get('url'),
+            jenkins_url=jenkins_url,
             username=request.username or config.get('jenkins', {}).get('username'),
             api_token=request.api_token or config.get('jenkins', {}).get('api_token'),
             vector_store=vector_store

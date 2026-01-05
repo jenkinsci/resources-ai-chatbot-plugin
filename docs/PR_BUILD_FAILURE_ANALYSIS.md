@@ -105,16 +105,18 @@ python validate_build_analyzer.py
 
 ### Option 1: Environment Variables (Recommended)
 ```bash
-export JENKINS_URL=http://your-jenkins-url:8080
+export JENKINS_URL=https://your-jenkins-url:8443
 export JENKINS_USERNAME=your_username
 export JENKINS_API_TOKEN=your_api_token
 ```
+
+**⚠️ Security**: Always use HTTPS for Jenkins connections to protect credentials and log data.
 
 ### Option 2: Update config.yml
 Already added to `api/config/config.yml`:
 ```yaml
 jenkins:
-  url: "http://localhost:8080"
+  url: "https://localhost:8443"
   username: ""
   api_token: ""
 

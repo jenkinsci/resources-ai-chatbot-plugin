@@ -243,8 +243,15 @@ class BuildFailureAnalyzer(BaseTool):
         if username and api_token:
             auth = HTTPBasicAuth(username, api_token)
         
+        # Get timeout from config or use default
+        try:
+            from api.config.loader import CONFIG
+            timeout = CONFIG.get('build_analysis', {}).get('timeout_seconds', 30)
+        except Exception:
+            timeout = 30
+        
         logger.info(f"Fetching from: {url}")
-        response = requests.get(url, auth=auth, timeout=30)
+        response = requests.get(url, auth=auth, timeout=timeout)
         response.raise_for_status()
         
         return response.text

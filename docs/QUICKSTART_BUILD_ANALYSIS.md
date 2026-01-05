@@ -19,7 +19,7 @@ Expected output: ✅ ALL TESTS PASSED
 
 **Environment Variables:**
 ```bash
-export JENKINS_URL=http://jenkins:8080
+export JENKINS_URL=https://jenkins:8443
 export JENKINS_USERNAME=your_username
 export JENKINS_API_TOKEN=your_token
 ```
@@ -27,10 +27,12 @@ export JENKINS_API_TOKEN=your_token
 **Or edit `chatbot-core/api/config/config.yml`:**
 ```yaml
 jenkins:
-  url: "http://jenkins:8080"
+  url: "https://jenkins:8443"
   username: "your_username"
   api_token: "your_token"
 ```
+
+**⚠️ Security**: Always use HTTPS for Jenkins URLs to protect credentials in transit.
 
 ### 2. Start Server:
 ```bash
