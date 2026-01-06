@@ -41,9 +41,7 @@ const WS_CONFIG = {
   /** Interval to check timeout (milliseconds) */
   CHECK_INTERVAL_MS: 100,
   /** Enable detailed error logging for debugging - controlled via VITE_DEBUG_LOGGING env var */
-  DEBUG_LOGGING:
-    import.meta.env.VITE_DEBUG_LOGGING === "true" ||
-    import.meta.env.DEV === true,
+  DEBUG_LOGGING: process.env.VITE_DEBUG_LOGGING === "true",
 } as const;
 
 /**
@@ -60,12 +58,12 @@ export const Chatbot = () => {
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(
-    loadChatbotLastSessionId
+    loadChatbotLastSessionId,
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
   const [sessionIdToDelete, setSessionIdToDelete] = useState<string | null>(
-    null
+    null,
   );
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [supportedExtensions, setSupportedExtensions] =
@@ -108,7 +106,7 @@ export const Chatbot = () => {
     return () => {
       if (WS_CONFIG.DEBUG_LOGGING) {
         console.debug(
-          "Chatbot component unmounting, cleaning up WebSocket connections"
+          "Chatbot component unmounting, cleaning up WebSocket connections",
         );
       }
       // Clear any pending timeout
@@ -134,7 +132,7 @@ export const Chatbot = () => {
       if (wsConnectionRef.current) {
         if (WS_CONFIG.DEBUG_LOGGING) {
           console.debug(
-            `Session switched from ${currentSessionWsRef.current} to ${currentSessionId}, closing previous connection`
+            `Session switched from ${currentSessionWsRef.current} to ${currentSessionId}, closing previous connection`,
           );
         }
         wsConnectionRef.current.close();
@@ -216,8 +214,8 @@ export const Chatbot = () => {
       prevSessions.map((session) =>
         session.id === currentSessionId
           ? { ...session, messages: [...session.messages, message] }
-          : session
-      )
+          : session,
+      ),
     );
   };
 
@@ -253,8 +251,8 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: true } : s
-      )
+        s.id === currentSessionId ? { ...s, isLoading: true } : s,
+      ),
     );
 
     appendMessageToCurrentSession(userMessage);
@@ -269,7 +267,7 @@ export const Chatbot = () => {
           currentSessionId,
           trimmed || "Please analyze the attached file(s).",
           filesToSend,
-          controller.signal
+          controller.signal,
         );
         appendMessageToCurrentSession(botReply);
       } catch (error) {
@@ -282,8 +280,8 @@ export const Chatbot = () => {
         abortControllerRef.current = null;
         setSessions((prev) =>
           prev.map((s) =>
-            s.id === currentSessionId ? { ...s, isLoading: false } : s
-          )
+            s.id === currentSessionId ? { ...s, isLoading: false } : s,
+          ),
         );
       }
       return;
@@ -306,11 +304,11 @@ export const Chatbot = () => {
                 messages: session.messages.map((msg) =>
                   msg.id === STREAMING_MESSAGE_ID
                     ? { ...msg, text: streamingText }
-                    : msg
+                    : msg,
                 ),
               }
-            : session
-        )
+            : session,
+        ),
       );
     };
 
@@ -343,11 +341,11 @@ export const Chatbot = () => {
             if (!streamingCompleted && !streamingError && !event.wasClean) {
               if (WS_CONFIG.DEBUG_LOGGING) {
                 console.warn(
-                  `WebSocket connection closed unexpectedly: ${event.code} ${event.reason || "Unknown reason"}`
+                  `WebSocket connection closed unexpectedly: ${event.code} ${event.reason || "Unknown reason"}`,
                 );
               }
               streamingError = new Error(
-                `WebSocket disconnected mid-stream (code: ${event.code})`
+                `WebSocket disconnected mid-stream (code: ${event.code})`,
               );
             }
             // Restore previous handler
@@ -360,7 +358,7 @@ export const Chatbot = () => {
                 console.error("WebSocket error during streaming:", error);
               }
               streamingError = new Error(
-                `WebSocket error: ${error instanceof Error ? error.message : "Unknown error"}`
+                `WebSocket error: ${error instanceof Error ? error.message : "Unknown error"}`,
               );
             }
             // Restore previous handler
@@ -403,8 +401,8 @@ export const Chatbot = () => {
             } catch (parseError) {
               onError(
                 new Error(
-                  `Failed to parse WebSocket message: ${parseError instanceof Error ? parseError.message : "Unknown error"}`
-                )
+                  `Failed to parse WebSocket message: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+                ),
               );
               ws.onmessage = previousOnMessage;
             }
@@ -417,7 +415,7 @@ export const Chatbot = () => {
           if (ws.readyState === WebSocket.OPEN) {
             if (WS_CONFIG.DEBUG_LOGGING) {
               console.debug(
-                `Reusing WebSocket connection for session ${currentSessionId}`
+                `Reusing WebSocket connection for session ${currentSessionId}`,
               );
             }
             ws.send(JSON.stringify({ message: trimmed }));
@@ -425,7 +423,7 @@ export const Chatbot = () => {
             // Connection lost, create new one
             if (WS_CONFIG.DEBUG_LOGGING) {
               console.warn(
-                `Connection lost (readyState: ${ws.readyState}), creating new connection`
+                `Connection lost (readyState: ${ws.readyState}), creating new connection`,
               );
             }
             wsConnectionRef.current = streamChatbotReply(
@@ -433,7 +431,7 @@ export const Chatbot = () => {
               trimmed,
               onToken,
               onComplete,
-              onError
+              onError,
             );
             if (wsConnectionRef.current) {
               setupDisconnectionHandler(wsConnectionRef.current);
@@ -443,7 +441,7 @@ export const Chatbot = () => {
           // Create new connection for this session
           if (WS_CONFIG.DEBUG_LOGGING) {
             console.debug(
-              `Creating new WebSocket connection for session ${currentSessionId}`
+              `Creating new WebSocket connection for session ${currentSessionId}`,
             );
           }
           wsConnectionRef.current = streamChatbotReply(
@@ -451,7 +449,7 @@ export const Chatbot = () => {
             trimmed,
             onToken,
             onComplete,
-            onError
+            onError,
           );
           currentSessionWsRef.current = currentSessionId;
 
@@ -474,13 +472,13 @@ export const Chatbot = () => {
           ) {
             if (WS_CONFIG.DEBUG_LOGGING) {
               console.warn(
-                "WebSocket disconnected, triggering fallback to HTTP"
+                "WebSocket disconnected, triggering fallback to HTTP",
               );
             }
             clearInterval(timeoutInterval);
             if (!streamingError) {
               streamingError = new Error(
-                "WebSocket disconnected mid-stream, falling back to HTTP"
+                "WebSocket disconnected mid-stream, falling back to HTTP",
               );
             }
             return;
@@ -492,11 +490,11 @@ export const Chatbot = () => {
             if (!streamingCompleted && !streamingError) {
               if (WS_CONFIG.DEBUG_LOGGING) {
                 console.warn(
-                  `WebSocket connection timeout (${WS_CONFIG.TIMEOUT_MS}ms), falling back to HTTP`
+                  `WebSocket connection timeout (${WS_CONFIG.TIMEOUT_MS}ms), falling back to HTTP`,
                 );
               }
               streamingError = new Error(
-                `WebSocket connection timeout after ${WS_CONFIG.TIMEOUT_MS}ms, falling back to HTTP`
+                `WebSocket connection timeout after ${WS_CONFIG.TIMEOUT_MS}ms, falling back to HTTP`,
               );
               if (wsConnectionRef.current) {
                 wsConnectionRef.current.close();
@@ -516,7 +514,7 @@ export const Chatbot = () => {
           timeout <= WS_CONFIG.TIMEOUT_MS
         ) {
           await new Promise((resolve) =>
-            setTimeout(resolve, WS_CONFIG.CHECK_INTERVAL_MS)
+            setTimeout(resolve, WS_CONFIG.CHECK_INTERVAL_MS),
           );
         }
 
@@ -531,11 +529,11 @@ export const Chatbot = () => {
                 ? {
                     ...session,
                     messages: session.messages.filter(
-                      (msg) => msg.id !== STREAMING_MESSAGE_ID
+                      (msg) => msg.id !== STREAMING_MESSAGE_ID,
                     ),
                   }
-                : session
-            )
+                : session,
+            ),
           );
 
           // Fallback to HTTP
@@ -545,7 +543,7 @@ export const Chatbot = () => {
               : "Unknown error";
             console.warn(
               `WebSocket streaming failed: ${errorMsg}\nFalling back to HTTP for session ${currentSessionId}`,
-              streamingError
+              streamingError,
             );
           }
           const controller = new AbortController();
@@ -554,25 +552,25 @@ export const Chatbot = () => {
           try {
             if (WS_CONFIG.DEBUG_LOGGING) {
               console.debug(
-                `Attempting HTTP fallback for session ${currentSessionId}`
+                `Attempting HTTP fallback for session ${currentSessionId}`,
               );
             }
             const botReply = await fetchChatbotReply(
               currentSessionId,
               trimmed,
-              controller.signal
+              controller.signal,
             );
             appendMessageToCurrentSession(botReply);
             if (WS_CONFIG.DEBUG_LOGGING) {
               console.debug(
-                `HTTP fallback successful for session ${currentSessionId}`
+                `HTTP fallback successful for session ${currentSessionId}`,
               );
             }
           } catch (error) {
             if (error instanceof DOMException && error.name === "AbortError") {
               if (WS_CONFIG.DEBUG_LOGGING) {
                 console.debug(
-                  `HTTP request cancelled for session ${currentSessionId}`
+                  `HTTP request cancelled for session ${currentSessionId}`,
                 );
               }
               return;
@@ -580,7 +578,7 @@ export const Chatbot = () => {
             if (WS_CONFIG.DEBUG_LOGGING) {
               console.error(
                 `HTTP fallback also failed for session ${currentSessionId}:`,
-                error
+                error,
               );
             }
             throw error;
@@ -597,7 +595,7 @@ export const Chatbot = () => {
 
           if (WS_CONFIG.DEBUG_LOGGING) {
             console.debug(
-              `WebSocket streaming completed successfully for session ${currentSessionId}`
+              `WebSocket streaming completed successfully for session ${currentSessionId}`,
             );
           }
 
@@ -607,18 +605,18 @@ export const Chatbot = () => {
                 ? {
                     ...session,
                     messages: session.messages.map((msg) =>
-                      msg.id === STREAMING_MESSAGE_ID ? finalMessage : msg
+                      msg.id === STREAMING_MESSAGE_ID ? finalMessage : msg,
                     ),
                   }
-                : session
-            )
+                : session,
+            ),
           );
         }
       } catch (error) {
         if (WS_CONFIG.DEBUG_LOGGING) {
           console.error(
             `Unexpected error in WebSocket streaming for session ${currentSessionId}:`,
-            error
+            error,
           );
         }
 
@@ -629,11 +627,11 @@ export const Chatbot = () => {
               ? {
                   ...session,
                   messages: session.messages.filter(
-                    (msg) => msg.id !== STREAMING_MESSAGE_ID
+                    (msg) => msg.id !== STREAMING_MESSAGE_ID,
                   ),
                 }
-              : session
-          )
+              : session,
+          ),
         );
 
         // Fallback to HTTP
@@ -643,18 +641,18 @@ export const Chatbot = () => {
         try {
           if (WS_CONFIG.DEBUG_LOGGING) {
             console.debug(
-              `Error in WebSocket streaming, attempting HTTP fallback for session ${currentSessionId}`
+              `Error in WebSocket streaming, attempting HTTP fallback for session ${currentSessionId}`,
             );
           }
           const botReply = await fetchChatbotReply(
             currentSessionId,
             trimmed,
-            controller.signal
+            controller.signal,
           );
           appendMessageToCurrentSession(botReply);
           if (WS_CONFIG.DEBUG_LOGGING) {
             console.debug(
-              `HTTP fallback successful after error for session ${currentSessionId}`
+              `HTTP fallback successful after error for session ${currentSessionId}`,
             );
           }
         } catch (innerError) {
@@ -664,7 +662,7 @@ export const Chatbot = () => {
           ) {
             if (WS_CONFIG.DEBUG_LOGGING) {
               console.debug(
-                `HTTP fallback request cancelled for session ${currentSessionId}`
+                `HTTP fallback request cancelled for session ${currentSessionId}`,
               );
             }
             return;
@@ -672,7 +670,7 @@ export const Chatbot = () => {
           if (WS_CONFIG.DEBUG_LOGGING) {
             console.error(
               `HTTP fallback also failed after WebSocket error for session ${currentSessionId}:`,
-              innerError
+              innerError,
             );
           }
           throw innerError;
@@ -684,7 +682,7 @@ export const Chatbot = () => {
       // WebSocket not supported, use HTTP directly
       if (WS_CONFIG.DEBUG_LOGGING) {
         console.debug(
-          `WebSocket not supported, using HTTP for session ${currentSessionId}`
+          `WebSocket not supported, using HTTP for session ${currentSessionId}`,
         );
       }
       const controller = new AbortController();
@@ -694,14 +692,14 @@ export const Chatbot = () => {
         const botReply = await fetchChatbotReply(
           currentSessionId,
           trimmed,
-          controller.signal
+          controller.signal,
         );
         appendMessageToCurrentSession(botReply);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           if (WS_CONFIG.DEBUG_LOGGING) {
             console.debug(
-              `HTTP request cancelled for session ${currentSessionId}`
+              `HTTP request cancelled for session ${currentSessionId}`,
             );
           }
           return;
@@ -709,7 +707,7 @@ export const Chatbot = () => {
         if (WS_CONFIG.DEBUG_LOGGING) {
           console.error(
             `HTTP request failed for session ${currentSessionId}:`,
-            error
+            error,
           );
         }
         throw error;
@@ -721,8 +719,8 @@ export const Chatbot = () => {
     // Mark loading complete
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false } : s
-      )
+        s.id === currentSessionId ? { ...s, isLoading: false } : s,
+      ),
     );
   };
 
@@ -742,11 +740,11 @@ export const Chatbot = () => {
             ? {
                 ...session,
                 messages: session.messages.filter(
-                  (msg) => msg.id !== STREAMING_MESSAGE_ID
+                  (msg) => msg.id !== STREAMING_MESSAGE_ID,
                 ),
               }
-            : session
-        )
+            : session,
+        ),
       );
     }
 
@@ -756,8 +754,8 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false } : s
-      )
+        s.id === currentSessionId ? { ...s, isLoading: false } : s,
+      ),
     );
   };
 
