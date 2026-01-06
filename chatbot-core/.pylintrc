@@ -1,0 +1,70 @@
+[MASTER]
+# Python code to execute, usually for sys.path manipulation
+init-hook='import sys; sys.path.insert(0, ".")'
+
+[MESSAGES CONTROL]
+# Disable specific pylint checks that are acceptable for this project
+disable=
+    # Line length - Some docstrings and URLs exceed 100 chars
+    line-too-long,
+    # Logging - F-strings are more readable than % formatting
+    logging-fstring-interpolation,
+    # Design - Project-specific architectural decisions
+    too-few-public-methods,
+    too-many-locals,
+    too-many-arguments,
+    too-many-positional-arguments,
+    too-many-return-statements,
+    # LangChain - Required for BaseTool interface
+    arguments-differ,
+    # Error handling - Intentional broad catches for robustness
+    broad-exception-caught,
+    raise-missing-from,
+    # Imports - Conditional imports for lazy loading
+    import-outside-toplevel,
+    import-error,
+    wrong-import-position,
+    # Pydantic/Type inference issues
+    no-member,
+    no-name-in-module,
+    # Function signatures
+    unused-argument,
+    # Testing - Acceptable in test files
+    protected-access,
+    unused-variable,
+    # Code duplication - Test cases intentionally duplicate validation
+    duplicate-code,
+    # Style - Minor issues
+    use-implicit-booleaness-not-comparison,
+    # Documentation - Covered by docstrings
+    missing-function-docstring,
+    # Control flow - Simple cases
+    no-else-return
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=100
+
+[BASIC]
+# Good variable names which should always be accepted
+good-names=i,j,k,e,ex,_,id,df,db,logger
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=7
+
+# Maximum number of locals for function / method body
+max-locals=20
+
+# Maximum number of return statements for function / method body
+max-returns=8
+
+[REPORTS]
+# Set the output format
+output-format=colorized
+
+# Tells whether to display a full report or only the messages
+reports=no
+
+# Activate the evaluation score
+score=yes
