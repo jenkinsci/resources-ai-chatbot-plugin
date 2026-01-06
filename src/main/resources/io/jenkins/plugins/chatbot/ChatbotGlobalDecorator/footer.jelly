@@ -1,5 +1,14 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core">
   <div id="chatbot-root"></div>
+
+  <script>
+    window.jenkinsChatbotConfig = {
+      baseUrl: "${rootURL}/chatbot",
+      crumbFieldName: "${app.crumbIssuer.crumbRequestField}",
+      crumbToken: "${app.crumbIssuer.crumb}"
+    };
+  </script>
+
   <script type="module" src="${rootURL}/plugin/resources-ai-chatbot/static/assets/index.js"></script>
 </j:jelly>

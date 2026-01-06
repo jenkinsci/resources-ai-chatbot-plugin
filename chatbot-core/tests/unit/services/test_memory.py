@@ -17,15 +17,17 @@ def reset_memory_sessions():
 
 def test_init_session_creates_new_session():
     """Test that a new session is initialized with a valid UUID and is stored."""
-    session_id = memory.init_session()
+    session_id = memory.init_session(user_id="test-user")
 
     assert isinstance(session_id, str)
     assert uuid.UUID(session_id)
     assert memory.session_exists(session_id)
+    user_sessions = memory.get_user_sessions("test-user")
+    assert session_id in user_sessions
 
 def test_get_session_returns_existing_session():
     """Test that get_session retrieves the correct memory object for a valid session."""
-    session_id = memory.init_session()
+    session_id = memory.init_session(user_id="test-user")
     session = memory.get_session(session_id)
 
     assert isinstance(session, ConversationBufferMemory)
@@ -37,7 +39,7 @@ def test_get_session_returns_none_for_invalid_id():
 
 def test_delete_session_removes_existing_session():
     """Test that delete_session successfully removes an existing session."""
-    session_id = memory.init_session()
+    session_id = memory.init_session(user_id="test-user")
     deleted = memory.delete_session(session_id)
 
     assert deleted is True
@@ -52,7 +54,7 @@ def test_delete_session_returns_false_if_not_exists():
 
 def test_session_exists_returns_true_for_existing_session():
     """Test that session_exists returns True for a valid, initialized session."""
-    session_id = memory.init_session()
+    session_id = memory.init_session(user_id="test-user")
 
     assert memory.session_exists(session_id)
 
@@ -66,7 +68,7 @@ def test_session_exists_returns_false_for_missing_session():
 
 def test_init_session_creates_session_with_timestamp():
     """Test that new sessions are created with last_accessed timestamp."""
-    session_id = memory.init_session()
+    session_id = memory.init_session(user_id="test-user")
 
     # Check that session exists and has last_accessed timestamp
     assert memory.session_exists(session_id)
@@ -77,7 +79,7 @@ def test_init_session_creates_session_with_timestamp():
 
 def test_get_session_updates_timestamp():
     """Test that accessing a session updates its last_accessed timestamp."""
-    session_id = memory.init_session()
+    session_id = memory.init_session(user_id="test-user")
     initial_timestamp = memory.get_last_accessed(session_id)
 
     # Wait a bit to ensure timestamp difference
@@ -94,9 +96,9 @@ def test_get_session_updates_timestamp():
 def test_cleanup_expired_sessions_removes_old_sessions():
     """Test that cleanup_expired_sessions removes sessions older than timeout."""
     # Create test sessions
-    session1 = memory.init_session()
-    session2 = memory.init_session()
-    session3 = memory.init_session()
+    session1 = memory.init_session(user_id="user1")
+    session2 = memory.init_session(user_id="user1")
+    session3 = memory.init_session(user_id="user2")
 
     # Manually set session1 and session2 to be expired (>24 hours old)
     old_timestamp = datetime.now() - timedelta(hours=25)
@@ -120,8 +122,8 @@ def test_cleanup_expired_sessions_removes_old_sessions():
 def test_cleanup_expired_sessions_preserves_active_sessions():
     """Test that cleanup preserves sessions within the timeout period."""
     # Create sessions
-    session1 = memory.init_session()
-    session2 = memory.init_session()
+    session1 = memory.init_session(user_id="test-user")
+    session2 = memory.init_session(user_id="test-user")
 
     # Both sessions are fresh (just created)
     initial_count = memory.get_session_count()

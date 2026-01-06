@@ -38,6 +38,7 @@ from api.models.schemas import (
     SessionResponse,
     FileAttachment,
     SupportedExtensionsResponse,
+    CreateSessionRequest
 )
 from api.services.chat_service import (
     get_chatbot_reply,
@@ -82,7 +83,7 @@ router = APIRouter()
 async def chatbot_stream(websocket: WebSocket, session_id: str):
     """
     WebSocket endpoint for real-time token streaming.
-    
+
     Accepts WebSocket connections and streams chatbot responses
     token-by-token for a more interactive user experience.
     """
@@ -150,14 +151,14 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
     response_model=SessionResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def start_chat(response: Response):
+def start_chat(request: CreateSessionRequest, response: Response):
     """
-    Create a new chat session.
-    
+    Create a new chat session linked to the authenticated user.
+
     Returns a unique session ID that can be used for subsequent
     chatbot interactions.
     """
-    session_id = init_session()
+    session_id = init_session(user_id=request.user_id)
     response.headers["Location"] = (
         f"/sessions/{session_id}/message"
     )
@@ -171,7 +172,7 @@ def start_chat(response: Response):
 def delete_chat(session_id: str):
     """
     Delete an existing chat session.
-    
+
     Removes all conversation history and resources associated
     with the specified session.
     """

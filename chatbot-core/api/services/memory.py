@@ -6,17 +6,20 @@ Provides utility functions for session lifecycle.
 import uuid
 from datetime import datetime, timedelta
 from threading import Lock
+from typing import List, Dict
 from langchain.memory import ConversationBufferMemory
 from api.config.loader import CONFIG
 
 # sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
-_sessions = {}
+_sessions: Dict[str, Dict] = {}
+_user_sessions: Dict[str, List[str]] = {}
 _lock = Lock()
 
-def init_session() -> str:
+def init_session(user_id: str) -> str:
     """
     Initialize a new chat session and store its memory object.
-
+    Args:
+        user_id (str): The Jenkins User ID.
     Returns:
         str: A newly generated UUID representing the session ID.
     """
@@ -24,9 +27,20 @@ def init_session() -> str:
     with _lock:
         _sessions[session_id] = {
             "memory": ConversationBufferMemory(return_messages=True),
-            "last_accessed": datetime.now()
+            "last_accessed": datetime.now(),
+            "user_id": user_id
         }
+        if user_id not in _user_sessions:
+            _user_sessions[user_id] = []
+        _user_sessions[user_id].append(session_id)
     return session_id
+
+def get_user_sessions(user_id: str) -> List[str]:
+    """
+    Retrieve all session IDs associated with a specific user.
+    """
+    with _lock:
+        return _user_sessions.get(user_id, []).copy()
 
 def get_session(session_id: str) -> ConversationBufferMemory | None:
     """

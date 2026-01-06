@@ -4,7 +4,9 @@
     "jsx": "react-jsx",
     "types": ["jest", "@testing-library/jest-dom"],
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "target": "ES2015",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"]
   },
   "references": [
     { "path": "./tsconfig.app.json" },
