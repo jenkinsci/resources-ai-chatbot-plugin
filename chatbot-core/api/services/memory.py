@@ -6,6 +6,7 @@ Provides utility functions for session lifecycle.
 import uuid
 from datetime import datetime, timedelta
 from threading import Lock
+import asyncio
 from langchain.memory import ConversationBufferMemory
 from api.config.loader import CONFIG
 from api.services.sessionmanager import(
@@ -76,6 +77,13 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
         }
 
         return memory
+
+
+async def get_session_async(session_id: str) -> ConversationBufferMemory | None:
+    """
+    Asynchronous version of get_session that offloads blocking I/O to a thread pool.
+    """
+    return await asyncio.to_thread(get_session, session_id)
 
 
 def persist_session(session_id: str)-> None:
