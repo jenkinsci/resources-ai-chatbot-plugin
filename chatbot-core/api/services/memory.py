@@ -2,7 +2,7 @@
 Handles in-memory chat session state (conversation memory).
 Provides utility functions for session lifecycle.
 """
-
+import asyncio
 import uuid
 from datetime import datetime, timedelta
 from threading import Lock
@@ -216,7 +216,6 @@ def cleanup_expired_sessions() -> int:
     return len(expired_session_ids)
 
 
-import asyncio
 
 async def get_session_async(session_id: str):
     """
