@@ -16,7 +16,8 @@ from api.prompts.prompts import (
     RETRIEVER_AGENT_PROMPT,
     SPLIT_QUERY_PROMPT,
 )
-from api.services.memory import get_session
+
+from api.services.memory import get_session, get_session_async
 from api.services.file_service import format_file_context
 from api.tools.tools import TOOL_REGISTRY
 from api.tools.utils import (
@@ -33,7 +34,7 @@ retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 
 
-def get_chatbot_reply(
+async def get_chatbot_reply(
     session_id: str,
     user_input: str,
     files: Optional[List[FileAttachment]] = None
@@ -56,7 +57,7 @@ def get_chatbot_reply(
     if files:
         logger.info("Processing %d uploaded file(s)", len(files))
 
-    memory = get_session(session_id)
+    memory = await get_session_async(session_id)
     if memory is None:
         raise RuntimeError(
             f"Session '{session_id}' not found in the memory store.")

@@ -214,3 +214,17 @@ def cleanup_expired_sessions() -> int:
                 delete_session_file(session_id)
 
     return len(expired_session_ids)
+
+
+import asyncio
+
+async def get_session_async(session_id: str):
+    """
+    Async wrapper for get_session to prevent event loop blocking.
+    """
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None,
+        get_session,
+        session_id
+    )
