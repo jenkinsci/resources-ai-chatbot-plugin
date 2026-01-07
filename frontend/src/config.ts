@@ -1,10 +1,18 @@
+type ViteEnv = {
+  VITE_API_BASE_URL?: string;
+  PROD: boolean;
+  DEV: boolean;
+  MODE: string;
+};
+
 const getApiBaseUrl = (): string => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const env = (import.meta as unknown as { env: ViteEnv }).env;
+  const envUrl = env.VITE_API_BASE_URL;
   if (envUrl !== undefined && envUrl !== '') {
     return envUrl;
   }
-  
-  return import.meta.env.PROD ? '' : 'http://localhost:8000';
+
+  return env.PROD ? '' : 'http://localhost:8000';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
