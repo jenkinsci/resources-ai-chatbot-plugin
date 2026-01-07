@@ -34,7 +34,7 @@ retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 
 
-async def get_chatbot_reply(
+def get_chatbot_reply(
     session_id: str,
     user_input: str,
     files: Optional[List[FileAttachment]] = None
@@ -57,7 +57,7 @@ async def get_chatbot_reply(
     if files:
         logger.info("Processing %d uploaded file(s)", len(files))
 
-    memory = await get_session_async(session_id)
+    memory = get_session(session_id)
     if memory is None:
         raise RuntimeError(
             f"Session '{session_id}' not found in the memory store.")
@@ -463,7 +463,8 @@ async def get_chatbot_reply_stream(
     logger.info("Streaming message from session '%s'", session_id)
     logger.info("Handling user query: %s", user_input)
 
-    memory = get_session(session_id)
+    memory = await get_session_async(session_id)
+
     if memory is None:
         raise RuntimeError(
             f"Session '{session_id}' not found in memory store.")
