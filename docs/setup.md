@@ -43,6 +43,15 @@ For the setup instructions have been provided for *Linux* and *Windows*. Moreove
     ```bash
     pip install -r requirements.txt
     ```
+
+    > **Note:** The backend requires `python-multipart` for multipart form handling.
+    > This dependency is included in the requirements file, but if you encounter
+    > runtime errors related to multipart requests, ensure it is installed:
+    >
+    > ```bash
+    > pip install python-multipart
+    > ```
+
 5. **Set the `PYTHONPATH` to the current directory(`chatbot-core/`)**
     ```bash
     export PYTHONPATH=$(pwd)
@@ -111,6 +120,14 @@ This guide provides step-by-step instructions for installing and running the Jen
     ```bash
     pip install -r requirements-cpu.txt
     ```
+    > **Note:** The backend requires `python-multipart` for multipart form handling.
+    > This dependency is included in the requirements file, but if you encounter
+    > runtime errors related to multipart requests, ensure it is installed:
+    >
+    > ```powershell
+    > pip install python-multipart
+    > ```
+
     > **Note**: If you encounter any dependency issues, especially with NVIDIA packages, use the `requirements-cpu.txt` file which excludes GPU-specific dependencies.
 
 5. **Set the PYTHONPATH**
@@ -189,18 +206,6 @@ This section covers common issues encountered during setup, especially when inst
 dependencies that require native compilation (e.g. `llama-cpp-python`).
 
 ---
-
-### Missing `python-multipart` dependency
-
-Some API routes require multipart form handling.
-If `python-multipart` is not installed, the backend may fail
-during startup with a runtime error.
-
-To install it manually:
-
-```bash
-pip install python-multipart
-```
 
 ### llama-cpp-python fails to install
 
