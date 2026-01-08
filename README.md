@@ -52,7 +52,8 @@ curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 See [docs/README.md](docs/README.md) for detailed explanations.
 
 ## 🎥 Setup Video Tutorial
-[Video Tutorial of the local setup of the project ](https://drive.google.com/file/d/1bztz4Vd6G3rdMZj3r33R-MsUiypYydsq/view?usp=sharing)
+
+[![Local Setup Video Tutorial](https://img.youtube.com/vi/1DnMNA4aLyE/0.jpg)](https://youtu.be/1DnMNA4aLyE)
 
 The tutorial shows how to fork the repo, set up the backend, download the LLM model, run the frontend, and verify the chatbot works.
 
