@@ -1,3 +1,4 @@
+"""Session management utilities."""
 import os
 import json
 import uuid
