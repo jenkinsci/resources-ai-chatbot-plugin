@@ -221,9 +221,5 @@ async def get_session_async(session_id: str):
     """
     Async wrapper for get_session to prevent event loop blocking.
     """
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
-        None,
-        get_session,
-        session_id
-    )
+    return await asyncio.to_thread(get_session, session_id)
+
