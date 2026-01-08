@@ -77,6 +77,12 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
 
         return memory
 
+async def get_session_async(session_id: str) -> ConversationBufferMemory | None:
+    """
+    Async wrapper for get_session to prevent event loop blocking.
+    """
+    return await asyncio.to_thread(get_session, session_id)
+
 
 def persist_session(session_id: str)-> None:
     """
@@ -214,12 +220,3 @@ def cleanup_expired_sessions() -> int:
                 delete_session_file(session_id)
 
     return len(expired_session_ids)
-
-
-
-async def get_session_async(session_id: str):
-    """
-    Async wrapper for get_session to prevent event loop blocking.
-    """
-    return await asyncio.to_thread(get_session, session_id)
-
