@@ -1,12 +1,12 @@
 {
-	"extends": "./tsconfig.app.json",
-	"compilerOptions": {
-		"verbatimModuleSyntax": false,
-		"module": "nodenext",
-		"moduleResolution": "nodenext",
-		"esModuleInterop": true,
-		"allowSyntheticDefaultImports": true,
-		"resolveJsonModule": true
-	},
-	"include": ["src"]
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "verbatimModuleSyntax": false,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src"]
 }
