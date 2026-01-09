@@ -9,7 +9,7 @@ const config: Config = {
 
   globals: {
     "ts-jest": {
-      tsconfig: "<rootDir>/tsconfig.app.json",
+      tsconfig: "<rootDir>/tsconfig.jest.json",
     },
   },
   setupFilesAfterEnv: ["<rootDir>/src/tests/setupTests.ts"],
