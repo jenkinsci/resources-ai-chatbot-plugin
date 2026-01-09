@@ -6,6 +6,12 @@ const config: Config = {
   transform: {
     "^.+\\.tsx?$": "ts-jest",
   },
+
+  globals: {
+    "ts-jest": {
+      tsconfig: "<rootDir>/tsconfig.app.json",
+    },
+  },
   setupFilesAfterEnv: ["<rootDir>/src/tests/setupTests.ts"],
 };
 
