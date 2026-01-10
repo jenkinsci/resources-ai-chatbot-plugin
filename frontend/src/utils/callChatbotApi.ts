@@ -17,7 +17,7 @@ export const callChatbotApi = async <T>(
   endpoint: string,
   options: RequestInit,
   fallbackErrorValue: T,
-  timeoutMs: number
+  timeoutMs: number,
 ): Promise<T> => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -49,7 +49,7 @@ export const callChatbotApi = async <T>(
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name == "AbortError") {
       console.error(
-        `API request to ${endpoint} timed out aftr ${timeoutMs}ms.`
+        `API request to ${endpoint} timed out aftr ${timeoutMs}ms.`,
       );
     } else {
       console.error(`API error calling ${endpoint}:`, error);

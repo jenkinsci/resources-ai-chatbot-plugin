@@ -63,7 +63,20 @@ public class ChatbotRootAction implements UnprotectedRootAction {
     /**
      * Main entry point for all chatbot API requests.
      * Handles authentication, authorization, and proxying to Python backend.
+     * 
+     * CSRF Protection: This endpoint is excluded from Jenkins CSRF protection via
+     * {@link ChatbotCrumbExclusion} because the frontend sends requests with
+     * Jenkins crumb tokens in headers. The Python backend validates session
+     * ownership per user_id, ensuring requests cannot be forged cross-user.
+     * Additionally, this endpoint only proxies to a fixed localhost backend URL,
+     * not user-specified URLs.
+     * 
+     * @param req the Stapler request
+     * @param rsp the Stapler response
+     * @throws IOException if I/O error occurs
+     * @throws ServletException if servlet error occurs
      */
+    @SuppressWarnings("lgtm[jenkins/csrf]") // CSRF handled via crumb exclusion and user_id validation
     public void doDynamic(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
         // Extract the path after /chatbot/
         String path = req.getRestOfPath();

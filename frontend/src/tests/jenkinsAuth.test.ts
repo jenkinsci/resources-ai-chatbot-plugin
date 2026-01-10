@@ -4,17 +4,23 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 describe("Jenkins Configuration", () => {
   let originalJenkinsConfig: any;
 
   beforeEach(() => {
     // Save original config
     originalJenkinsConfig = (window as any).jenkinsConfig;
+    // Clear module cache before each test to allow fresh imports
+    jest.resetModules();
   });
 
   afterEach(() => {
     // Restore original config
     (window as any).jenkinsConfig = originalJenkinsConfig;
+    // Clear module cache after each test
+    jest.resetModules();
   });
 
   it("should use Jenkins config when available", async () => {
@@ -27,7 +33,6 @@ describe("Jenkins Configuration", () => {
     };
 
     // Dynamically import config to get the values based on mocked window object
-    // Note: In actual implementation, this would need proper module reloading
     const {
       API_BASE_URL,
       JENKINS_CRUMB_FIELD,
@@ -42,7 +47,7 @@ describe("Jenkins Configuration", () => {
   });
 
   it("should fall back to localhost when Jenkins config is unavailable", async () => {
-    // Remove Jenkins config
+    // Ensure Jenkins config is not set
     delete (window as any).jenkinsConfig;
 
     const { API_BASE_URL, JENKINS_CRUMB_FIELD, JENKINS_CRUMB_VALUE } =
@@ -55,7 +60,12 @@ describe("Jenkins Configuration", () => {
 });
 
 describe("CSRF Token Handling in API Calls", () => {
+  let originalFetch: typeof fetch;
+
   beforeEach(() => {
+    // Clear module cache before each test to ensure fresh imports
+    jest.resetModules();
+
     // Mock Jenkins config with CSRF token
     (window as any).jenkinsConfig = {
       rootURL: "https://jenkins.example.com",
@@ -64,20 +74,25 @@ describe("CSRF Token Handling in API Calls", () => {
       crumbValue: "secure-token-456",
     };
 
-    // Mock fetch
-    global.fetch = jest.fn();
+    // Save original fetch and mock it
+    originalFetch = globalThis.fetch;
+    globalThis.fetch = jest.fn() as any;
   });
 
   afterEach(() => {
+    // Restore original fetch
+    globalThis.fetch = originalFetch;
     jest.restoreAllMocks();
+    // Clear module cache after each test
+    jest.resetModules();
   });
 
   it("should include CSRF token in request headers", async () => {
-    const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>;
+    const mockFetch = globalThis.fetch as jest.Mock;
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ session_id: "test-session" }),
-    } as Response);
+    });
 
     const { callChatbotApi } = await import("../utils/callChatbotApi");
 
@@ -85,7 +100,7 @@ describe("CSRF Token Handling in API Calls", () => {
       "sessions",
       { method: "POST" },
       { session_id: "" },
-      3000
+      3000,
     );
 
     // Verify fetch was called with CSRF token
@@ -96,16 +111,16 @@ describe("CSRF Token Handling in API Calls", () => {
           "Jenkins-Crumb": "secure-token-456",
         }),
         credentials: "same-origin",
-      })
+      }),
     );
   });
 
   it("should include credentials in all API requests", async () => {
-    const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>;
+    const mockFetch = globalThis.fetch as jest.Mock;
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ reply: "test reply" }),
-    } as Response);
+    });
 
     const { callChatbotApi } = await import("../utils/callChatbotApi");
 
@@ -113,7 +128,7 @@ describe("CSRF Token Handling in API Calls", () => {
       "sessions/123/message",
       { method: "POST", headers: { "Content-Type": "application/json" } },
       {},
-      300000
+      300000,
     );
 
     // Verify credentials are included
@@ -121,7 +136,7 @@ describe("CSRF Token Handling in API Calls", () => {
       expect.any(String),
       expect.objectContaining({
         credentials: "same-origin",
-      })
+      }),
     );
   });
 });
