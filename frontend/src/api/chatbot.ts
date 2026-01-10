@@ -1,7 +1,12 @@
 import { type Message, type FileAttachment } from "../model/Message";
 import { getChatbotText } from "../data/chatbotTexts";
 import { v4 as uuidv4 } from "uuid";
-import { CHATBOT_API_TIMEOUTS_MS, API_BASE_URL } from "../config";
+import {
+  CHATBOT_API_TIMEOUTS_MS,
+  API_BASE_URL,
+  JENKINS_CRUMB_FIELD,
+  JENKINS_CRUMB_VALUE,
+} from "../config";
 import { callChatbotApi } from "../utils/callChatbotApi";
 
 /**
@@ -25,13 +30,13 @@ export const createChatSession = async (): Promise<string> => {
     "sessions",
     { method: "POST" },
     { session_id: "" },
-    CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION,
+    CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION
   );
 
   if (!data.session_id) {
     console.error(
       "Failed to create chat session: session_id missing in response",
-      data,
+      data
     );
     return "";
   }
@@ -49,7 +54,7 @@ export const createChatSession = async (): Promise<string> => {
 export const fetchChatbotReply = async (
   sessionId: string,
   userMessage: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<Message> => {
   const data = await callChatbotApi<{ reply?: string }>(
     `sessions/${sessionId}/message`,
@@ -60,7 +65,7 @@ export const fetchChatbotReply = async (
       signal,
     },
     {},
-    CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
+    CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE
   );
 
   const botReply = data.reply || getChatbotText("errorMessage");
@@ -80,12 +85,12 @@ export const fetchChatbotReplyWithFiles = async (
   sessionId: string,
   userMessage: string,
   files: File[],
-  signal: AbortSignal,
+  signal: AbortSignal
 ): Promise<Message> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(
     () => controller.abort(),
-    CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
+    CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE
   );
 
   try {
@@ -96,13 +101,21 @@ export const fetchChatbotReplyWithFiles = async (
       formData.append("files", file);
     });
 
+    // Prepare headers with CSRF token
+    const headers: Record<string, string> = {};
+    if (JENKINS_CRUMB_FIELD && JENKINS_CRUMB_VALUE) {
+      headers[JENKINS_CRUMB_FIELD] = JENKINS_CRUMB_VALUE;
+    }
+
     const response = await fetch(
       `${API_BASE_URL}/api/chatbot/sessions/${sessionId}/message/upload`,
       {
         method: "POST",
+        headers,
         body: formData,
+        credentials: "same-origin", // Send cookies for authentication
         signal: signal,
-      },
+      }
     );
 
     if (!response.ok) {
@@ -118,7 +131,7 @@ export const fetchChatbotReplyWithFiles = async (
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name === "AbortError") {
       console.error(
-        `API request timed out after ${CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE}ms`,
+        `API request timed out after ${CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE}ms`
       );
     } else {
       console.error("API error uploading files:", error);
@@ -141,7 +154,7 @@ export const fetchSupportedExtensions =
         "files/supported-extensions",
         { method: "GET" },
         { text: [], image: [], max_text_size_mb: 5, max_image_size_mb: 10 },
-        CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION,
+        CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION
       );
       return data;
     } catch (error) {
@@ -160,7 +173,7 @@ export const deleteChatSession = async (sessionId: string): Promise<void> => {
     `sessions/${sessionId}`,
     { method: "DELETE" },
     undefined,
-    CHATBOT_API_TIMEOUTS_MS.DELETE_SESSION,
+    CHATBOT_API_TIMEOUTS_MS.DELETE_SESSION
   );
 };
 
@@ -203,7 +216,7 @@ export const fileToAttachment = (file: File): FileAttachment => {
  */
 export const validateFile = (
   file: File,
-  supportedExtensions?: SupportedExtensions | null,
+  supportedExtensions?: SupportedExtensions | null
 ): { isValid: boolean; error?: string } => {
   if (!supportedExtensions) {
     // Default validation if extensions not loaded
