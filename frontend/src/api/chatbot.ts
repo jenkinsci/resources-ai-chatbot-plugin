@@ -38,7 +38,6 @@ export const createChatSession = async (): Promise<string> => {
 
   return data.session_id;
 };
-
 /**
  * Sends the user's message to the backend chatbot API and returns the bot's response.
  * If the API call fails or returns an invalid response, a fallback error message is used.
@@ -50,6 +49,7 @@ export const createChatSession = async (): Promise<string> => {
 export const fetchChatbotReply = async (
   sessionId: string,
   userMessage: string,
+  signal?: AbortSignal,
 ): Promise<Message> => {
   const data = await callChatbotApi<{ reply?: string }>(
     `sessions/${sessionId}/message`,
@@ -57,6 +57,7 @@ export const fetchChatbotReply = async (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: userMessage }),
+      signal,
     },
     {},
     CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
@@ -79,6 +80,7 @@ export const fetchChatbotReplyWithFiles = async (
   sessionId: string,
   userMessage: string,
   files: File[],
+  signal: AbortSignal,
 ): Promise<Message> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(
@@ -99,7 +101,7 @@ export const fetchChatbotReplyWithFiles = async (
       {
         method: "POST",
         body: formData,
-        signal: controller.signal,
+        signal: signal,
       },
     );
 
@@ -213,8 +215,8 @@ export const validateFile = (
   }
 
   const extension = "." + file.name.split(".").pop()?.toLowerCase();
-  const isTextFile = supportedExtensions.text.includes(extension);
-  const isImageFile = supportedExtensions.image.includes(extension);
+  const isTextFile = supportedExtensions.text.indexOf(extension) !== -1;
+  const isImageFile = supportedExtensions.image.indexOf(extension) !== -1;
 
   if (!isTextFile && !isImageFile) {
     return {

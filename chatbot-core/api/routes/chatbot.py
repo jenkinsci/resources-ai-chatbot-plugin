@@ -26,6 +26,7 @@ from fastapi import (
     UploadFile,
     File,
     Form,
+    BackgroundTasks
 )
 
 # =========================
@@ -46,8 +47,9 @@ from api.services.chat_service import (
 )
 from api.services.memory import (
     delete_session,
-    init_session,
     session_exists,
+    persist_session,
+    init_session,
 )
 from api.services.file_service import (
     process_uploaded_file,
@@ -164,7 +166,6 @@ def start_chat(request: CreateSessionRequest, response: Response):
     )
     return SessionResponse(session_id=session_id)
 
-
 @router.delete(
     "/sessions/{session_id}",
     response_model=DeleteResponse,
@@ -187,14 +188,10 @@ def delete_chat(session_id: str):
     )
 
 
-# =========================
-# Chat Endpoints
-# =========================
-@router.post(
-    "/sessions/{session_id}/message",
-    response_model=ChatResponse,
-)
-def chatbot_reply(session_id: str, request: ChatRequest):
+# Chat Endpoint
+@router.post("/sessions/{session_id}/message", response_model=ChatResponse)
+def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: BackgroundTasks):
+
     """
     POST endpoint to handle chatbot replies.
 
@@ -213,11 +210,13 @@ def chatbot_reply(session_id: str, request: ChatRequest):
             status_code=404,
             detail="Session not found.",
         )
-
-    return get_chatbot_reply(
+    reply =  get_chatbot_reply(session_id, request.message)
+    _background_tasks.add_task(
+        persist_session,
         session_id,
-        request.message,
-    )
+        )
+
+    return reply
 
 
 @router.post(

@@ -26,12 +26,7 @@ jest.mock("../api/chatbot", () => ({
   }),
   createChatSession: jest.fn().mockResolvedValue("new-session-id"),
   deleteChatSession: jest.fn().mockResolvedValue(undefined),
-  fetchSupportedExtensions: jest.fn().mockResolvedValue({
-    text: [".txt", ".log", ".md"],
-    image: [".png", ".jpg"],
-    max_text_size_mb: 5,
-    max_image_size_mb: 10,
-  }),
+  fetchSupportedExtensions: jest.fn().mockResolvedValue(null),
   validateFile: jest.fn().mockReturnValue({ isValid: true }),
   fileToAttachment: jest.fn().mockReturnValue({
     filename: "test.txt",
@@ -236,6 +231,7 @@ describe("Chatbot component", () => {
       expect(chatbotApi.fetchChatbotReply).toHaveBeenCalledWith(
         "session-1",
         "Hello bot",
+        expect.anything(),
       );
     });
   });
