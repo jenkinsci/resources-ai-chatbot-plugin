@@ -10,7 +10,7 @@ const getHeaders = (existingHeaders?: HeadersInit): HeadersInit => {
     ...(existingHeaders as Record<string, string>),
   };
 
-  const jenkinsConfig = (window as any).jenkinsChatbotConfig;
+  const jenkinsConfig = window.jenkinsChatbotConfig;
 
   // If we are in Jenkins, add the Anti-Forgery Token (Crumb)
   if (

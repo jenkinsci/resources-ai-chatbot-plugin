@@ -1,14 +1,17 @@
-interface JenkinsConfig {
+export interface JenkinsConfig {
   baseUrl: string;
   crumbFieldName: string;
   crumbToken: string;
 }
-const jenkinsConfig = (window as any).jenkinsChatbotConfig as
-  | JenkinsConfig
-  | undefined;
-export const API_BASE_URL = jenkinsConfig
-  ? jenkinsConfig.baseUrl
-  : "http://localhost:8000";
+declare global {
+  interface Window {
+    jenkinsChatbotConfig?: JenkinsConfig;
+  }
+}
+
+const jenkinsConfig = window.jenkinsChatbotConfig;
+export const API_BASE_URL =
+  jenkinsConfig?.baseUrl || "http://localhost:8000/api/chatbot";
 export const CHATBOT_API_TIMEOUTS_MS = {
   CREATE_SESSION: 3000,
   DELETE_SESSION: 3000,
