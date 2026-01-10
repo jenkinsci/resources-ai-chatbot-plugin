@@ -2,6 +2,7 @@
 import os
 import json
 import uuid
+from datetime import datetime
 from threading import Lock
 
 
@@ -125,8 +126,6 @@ def save_session_metadata(session_id: str, user_id: str) -> None:
     metadata_path = _get_session_metadata_path(session_id)
     if not metadata_path:
         return
-
-    from datetime import datetime
 
     metadata = {
         "user_id": user_id,
