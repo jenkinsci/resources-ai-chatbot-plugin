@@ -6,7 +6,7 @@ Provides utility functions for session lifecycle.
 import uuid
 from datetime import datetime, timedelta
 from threading import Lock
-from typing import List, Set
+from typing import List
 from langchain.memory import ConversationBufferMemory
 from api.config.loader import CONFIG
 from api.services.sessionmanager import (
@@ -171,6 +171,7 @@ def reset_sessions():
     """Helper function to clear all sessions. Useful for testing."""
     with _lock:
         _sessions.clear()
+        _user_sessions.clear()
 
 
 def get_last_accessed(session_id: str) -> datetime | None:

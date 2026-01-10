@@ -4,10 +4,10 @@ def test_start_chat(client, mock_init_session):
     """Testing that creating a session returns session ID and location."""
     mock_init_session.return_value = "test-session-id"
 
-    response = client.post("/sessions")
+    response = client.post("/sessions", json={"user_id": "test-user"})
 
     assert response.status_code == 201
-    assert response.json() == {"session_id": "test-session-id"}
+    assert response.json() == {"session_id": "test-session-id", "user_id": "test-user"}
     assert response.headers["location"] == "/sessions/test-session-id/message"
 
 
@@ -46,8 +46,9 @@ def test_chatbot_reply_empty_message_returns_422(client, mock_session_exists):
     assert "Message cannot be empty." in errors[0]["msg"]
 
 
-def test_delete_chat_success(client, mock_delete_session):
+def test_delete_chat_success(client, mock_delete_session, mock_session_exists):
     """Testing that deleting an existing session returns confirmation."""
+    mock_session_exists.return_value = True
     mock_delete_session.return_value = True
 
     response = client.delete("/sessions/test-session-id")
@@ -56,9 +57,9 @@ def test_delete_chat_success(client, mock_delete_session):
     assert response.json() == {"message": "Session test-session-id deleted."}
 
 
-def test_delete_chat_not_found(client, mock_delete_session):
+def test_delete_chat_not_found(client, mock_session_exists):
     """Testing that deleting a session that does not exist returns 404."""
-    mock_delete_session.return_value = False
+    mock_session_exists.return_value = False
 
     response = client.delete("/sessions/nonexistent-id")
 
