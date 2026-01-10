@@ -4,7 +4,7 @@ def test_start_chat(client, mock_init_session):
     """Testing that creating a session returns session ID and location."""
     mock_init_session.return_value = "test-session-id"
 
-    response = client.post("/sessions")
+    response = client.post("/sessions", json={"user_id":  "test-user"})
 
     assert response.status_code == 201
     assert response.json() == {"session_id": "test-session-id"}

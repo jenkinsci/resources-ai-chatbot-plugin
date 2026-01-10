@@ -3,20 +3,18 @@ package io.jenkins.plugins.chatbot;
 import hudson.Extension;
 import hudson.model.RootAction;
 import hudson.model.User;
-import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
-import org.apache.commons.io.IOUtils;
-import org.kohsuke.stapler.StaplerRequest2;
-import org.kohsuke.stapler.StaplerResponse2;
-import org.kohsuke.stapler.verb.GET;
-//import org.kohsuke.stapler.verb.POST;
-
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
+import org.apache.commons.io.IOUtils;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
+import org.kohsuke.stapler.verb.GET;
 
 @Extension
 public class ChatbotRootAction implements RootAction {
@@ -71,13 +69,13 @@ public class ChatbotRootAction implements RootAction {
 
         String method = req.getMethod();
         if ("POST".equalsIgnoreCase(method)) {
-             proxyStreamRequest(req, rsp, targetUrl);
+            proxyStreamRequest(req, rsp, targetUrl);
         } else if ("GET".equalsIgnoreCase(method)) {
-             proxyGetRequest(rsp, targetUrl);
+            proxyGetRequest(rsp, targetUrl);
         } else if ("DELETE".equalsIgnoreCase(method)) {
-             proxyDeleteRequest(rsp, targetUrl);
+            proxyDeleteRequest(rsp, targetUrl);
         } else {
-             rsp.sendError(405, "Method Not Allowed");
+            rsp.sendError(405, "Method Not Allowed");
         }
     }
 
