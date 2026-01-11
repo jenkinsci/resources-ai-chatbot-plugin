@@ -1,0 +1,117 @@
+# Makefile for Docker operations
+# Provides convenient commands for managing the containerized application
+
+.PHONY: help build up down restart logs ps clean health test
+
+# Default target
+.DEFAULT_GOAL := help
+
+# Colors for output
+BLUE := \033[0;34m
+GREEN := \033[0;32m
+RED := \033[0;31m
+NC := \033[0m # No Color
+
+help: ## Show this help message
+	@echo "$(BLUE)Jenkins AI Chatbot - Docker Commands$(NC)"
+	@echo ""
+	@echo "Available commands:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+
+build: ## Build all Docker images
+	@echo "$(BLUE)Building Docker images...$(NC)"
+	docker-compose build
+
+up: ## Start all services
+	@echo "$(BLUE)Starting services...$(NC)"
+	docker-compose up -d
+	@echo "$(GREEN)Services started!$(NC)"
+	@echo "Frontend: http://localhost"
+	@echo "Backend API: http://localhost:8000"
+	@echo "API Docs: http://localhost:8000/docs"
+
+up-qdrant: ## Start services with Qdrant vector database
+	@echo "$(BLUE)Starting services with Qdrant...$(NC)"
+	docker-compose --profile qdrant up -d
+
+up-redis: ## Start services with Redis
+	@echo "$(BLUE)Starting services with Redis...$(NC)"
+	docker-compose --profile redis up -d
+
+up-all: ## Start all services including optional ones
+	@echo "$(BLUE)Starting all services...$(NC)"
+	docker-compose --profile qdrant --profile redis up -d
+
+down: ## Stop all services
+	@echo "$(BLUE)Stopping services...$(NC)"
+	docker-compose down
+	@echo "$(GREEN)Services stopped$(NC)"
+
+restart: down up ## Restart all services
+
+logs: ## View logs from all services
+	docker-compose logs -f
+
+logs-backend: ## View backend logs only
+	docker-compose logs -f backend
+
+logs-frontend: ## View frontend logs only
+	docker-compose logs -f frontend
+
+ps: ## Show running containers
+	@echo "$(BLUE)Container Status:$(NC)"
+	@docker-compose ps
+
+health: ## Check health of all services
+	@echo "$(BLUE)Running health checks...$(NC)"
+	@bash health-check.sh || echo "$(RED)Run 'chmod +x health-check.sh' first$(NC)"
+
+clean: ## Remove all containers, volumes, and images
+	@echo "$(RED)WARNING: This will remove all containers, volumes, and images$(NC)"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		docker-compose down -v --rmi all; \
+		echo "$(GREEN)Cleanup complete$(NC)"; \
+	else \
+		echo "$(BLUE)Cleanup cancelled$(NC)"; \
+	fi
+
+clean-volumes: ## Remove only volumes (keeps containers and images)
+	@echo "$(BLUE)Removing volumes...$(NC)"
+	docker-compose down -v
+
+rebuild: clean build up ## Clean rebuild of all services
+
+exec-backend: ## Open a shell in the backend container
+	docker-compose exec backend bash
+
+exec-frontend: ## Open a shell in the frontend container
+	docker-compose exec frontend sh
+
+stats: ## Show resource usage statistics
+	docker stats
+
+test: ## Run tests in containers
+	@echo "$(BLUE)Running tests...$(NC)"
+	docker-compose exec backend pytest tests/
+	docker-compose exec frontend npm test
+
+dev: ## Start services in development mode with live logs
+	docker-compose up
+
+backup: ## Backup volumes
+	@echo "$(BLUE)Creating backup...$(NC)"
+	@mkdir -p backups
+	@docker run --rm \
+		-v chatbot_qdrant_storage:/data \
+		-v $$(pwd)/backups:/backup \
+		alpine tar czf /backup/qdrant-backup-$$(date +%Y%m%d-%H%M%S).tar.gz /data
+	@echo "$(GREEN)Backup created in ./backups/$(NC)"
+
+pull: ## Pull latest images
+	docker-compose pull
+
+update: pull build restart ## Update and restart services
+	@echo "$(GREEN)Services updated!$(NC)"

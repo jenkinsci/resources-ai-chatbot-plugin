@@ -1,0 +1,130 @@
+services:
+  # ==============================
+  # FastAPI Backend Service
+  # ==============================
+  backend:
+    build:
+      context: ./chatbot-core
+      dockerfile: Dockerfile
+    container_name: chatbot-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount model directory for llama.cpp models
+      - ./chatbot-core/api/models:/app/api/models:ro
+      # Mount data directory for vector stores and embeddings
+      - ./chatbot-core/data:/app/data
+      # Mount config files (optional override)
+      - ./chatbot-core/api/config/config.yml:/app/api/config/config.yml:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_PATH=/app/api/config/config.yml
+      # Vector store configuration
+      - FAISS_INDEX_PATH=/app/data/embeddings
+      # Optional: Use Qdrant instead of FAISS
+      # - VECTOR_STORE=qdrant
+      # - QDRANT_HOST=qdrant
+      # - QDRANT_PORT=6333
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/chatbot/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      qdrant:
+        condition: service_healthy
+        required: false
+
+  # ==============================
+  # Frontend Service with Nginx
+  # ==============================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chatbot-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - chatbot-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # ==============================
+  # Qdrant Vector Database (Optional)
+  # Alternative to FAISS for production deployments
+  # Uncomment to enable Qdrant
+  # ==============================
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: chatbot-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6333/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - qdrant  # Only start when explicitly specified
+
+  # ==============================
+  # Redis (Optional)
+  # For distributed session management
+  # Uncomment to enable Redis
+  # ==============================
+  redis:
+    image: redis:7-alpine
+    container_name: chatbot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    profiles:
+      - redis  # Only start when explicitly specified
+
+# ==============================
+# Networks
+# ==============================
+networks:
+  chatbot-network:
+    driver: bridge
+    name: chatbot-network
+
+# ==============================
+# Volumes
+# ==============================
+volumes:
+  qdrant_storage:
+    name: chatbot_qdrant_storage
+  redis_data:
+    name: chatbot_redis_data

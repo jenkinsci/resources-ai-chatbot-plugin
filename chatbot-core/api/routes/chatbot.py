@@ -78,6 +78,18 @@ router = APIRouter()
 
 
 # =========================
+# Health Check Endpoint
+# =========================
+@router.get("/health")
+async def health_check():
+    """
+    Health check endpoint for container orchestration.
+    Returns 200 OK if the service is running.
+    """
+    return {"status": "healthy", "service": "chatbot-api"}
+
+
+# =========================
 # WebSocket Endpoints
 # =========================
 @router.websocket("/sessions/{session_id}/stream")
