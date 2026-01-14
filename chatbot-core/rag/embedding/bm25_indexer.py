@@ -104,5 +104,6 @@ indexer = BM25Indexer(
         logger= LoggerFactory.instance().get_logger("bm25indexer")
     )
 
-if not CONFIG["is_test_mode"]:
-    indexer.build()
+if __name__ == "__main__":
+    if not CONFIG["is_test_mode"]:
+        indexer.build()
