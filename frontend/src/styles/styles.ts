@@ -580,10 +580,37 @@ export const chatbotStyles = {
     minHeight: "40px",
   } as CSSProperties,
 
-  loadingDot: {
-    fontSize: "1.5rem",
-    lineHeight: "1rem",
-    margin: "0 2px",
-    animation: "blink 1.4s infinite both", // Requires a @keyframes blink in your global CSS
+  // Define explicit styles for each dot to avoid inline styling in the component
+  loadingDot1: {
+    width: "6px",
+    height: "6px",
+    backgroundColor: "var(--text-color)",
+    borderRadius: "50%",
+    animation: "bounce 1.4s infinite ease-in-out both",
+    animationDelay: "0s",
+  } as CSSProperties,
+
+  loadingDot2: {
+    width: "6px",
+    height: "6px",
+    backgroundColor: "var(--text-color)",
+    borderRadius: "50%",
+    animation: "bounce 1.4s infinite ease-in-out both",
+    animationDelay: "0.2s",
+  } as CSSProperties,
+
+  loadingDot3: {
+    width: "6px",
+    height: "6px",
+    backgroundColor: "var(--text-color)",
+    borderRadius: "50%",
+    animation: "bounce 1.4s infinite ease-in-out both",
+    animationDelay: "0.4s",
+  } as CSSProperties,
+
+  loadingText: {
+    marginLeft: "10px",
+    fontStyle: "italic",
+    opacity: 0.8,
   } as CSSProperties,
 };

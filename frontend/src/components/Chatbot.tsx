@@ -136,6 +136,7 @@ export const Chatbot = () => {
       id,
       messages: [],
       createdAt: new Date().toISOString(),
+      isLoading: false,
       loadingStatus: null,
     };
 
@@ -183,7 +184,9 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, loadingStatus: statusMessage } : s,
+        s.id === currentSessionId
+          ? { ...s, isLoading: true, loadingStatus: statusMessage }
+          : s,
       ),
     );
     const controller = new AbortController();
@@ -218,7 +221,9 @@ export const Chatbot = () => {
       abortControllerRef.current = null;
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === currentSessionId ? { ...s, loadingStatus: null } : s,
+          s.id === currentSessionId
+            ? { ...s, isLoading: false, loadingStatus: null }
+            : s,
         ),
       );
     }
@@ -229,7 +234,9 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false } : s,
+        s.id === currentSessionId
+          ? { ...s, isLoading: false, loadingStatus: null }
+          : s,
       ),
     );
   };
@@ -255,9 +262,13 @@ export const Chatbot = () => {
     return validateFile(file, supportedExtensions);
   };
 
-  const getChatLoading = (): string | null => {
+  const getChatLoading = (): boolean => {
     const currentChat = sessions.find((chat) => chat.id === currentSessionId);
+    return currentChat ? currentChat.isLoading : false;
+  };
 
+  const getChatLoadingStatus = (): string | null => {
+    const currentChat = sessions.find((chat) => chat.id === currentSessionId);
     return currentChat ? currentChat.loadingStatus : null;
   };
 
@@ -413,14 +424,15 @@ export const Chatbot = () => {
             <>
               <Messages
                 messages={getSessionMessages(currentSessionId)}
-                loadingStatus={getChatLoading()}
+                isLoading={getChatLoading()}
+                loadingStatus={getChatLoadingStatus()}
               />
               <Input
                 input={input}
                 setInput={setInput}
                 onSend={sendMessage}
                 onCancel={handleCancelMessage}
-                loadingStatus={getChatLoading()}
+                isLoading={getChatLoading()}
                 attachedFiles={attachedFiles}
                 onFilesAttached={handleFilesAttached}
                 onFileRemoved={handleFileRemoved}

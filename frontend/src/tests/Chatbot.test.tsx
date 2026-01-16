@@ -166,6 +166,7 @@ describe("Chatbot component", () => {
           id: "session-1",
           messages: [],
           createdAt: "2024-01-01",
+          isLoading: false,
           loadingStatus: null,
         },
       ]),

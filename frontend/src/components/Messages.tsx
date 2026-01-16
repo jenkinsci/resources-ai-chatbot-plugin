@@ -5,12 +5,14 @@ import {
   type FileAttachment,
 } from "../model/Message";
 import { chatbotStyles } from "../styles/styles";
+import { LoadingDots } from "./LoadingDots";
 
 /**
  * Props for the Messages component.
  */
 export interface MessagesProps {
   messages: Message[];
+  isLoading: boolean;
   loadingStatus: string | null;
 }
 
@@ -111,24 +113,8 @@ export const Messages = ({ messages, loadingStatus }: MessagesProps) => {
       {loadingStatus && (
         <div style={chatbotStyles.botMessage}>
           <div style={chatbotStyles.loadingContainer}>
-            <span style={{ ...chatbotStyles.loadingDot, animationDelay: "0s" }}>
-              •
-            </span>
-            <span
-              style={{ ...chatbotStyles.loadingDot, animationDelay: "0.2s" }}
-            >
-              •
-            </span>
-            <span
-              style={{ ...chatbotStyles.loadingDot, animationDelay: "0.4s" }}
-            >
-              •
-            </span>
-            <span
-              style={{ marginLeft: "10px", fontStyle: "italic", color: "#666" }}
-            >
-              {loadingStatus}
-            </span>
+            <LoadingDots />
+            <span style={chatbotStyles.loadingText}>{loadingStatus}</span>
           </div>
         </div>
       )}
