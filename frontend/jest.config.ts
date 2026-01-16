@@ -4,13 +4,12 @@ const config: Config = {
   verbose: true,
   testEnvironment: "jsdom",
   transform: {
-    "^.+\\.tsx?$": "ts-jest",
-  },
-
-  globals: {
-    "ts-jest": {
-      tsconfig: "<rootDir>/tsconfig.jest.json",
-    },
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        tsconfig: "<rootDir>/tsconfig.jest.json",
+      },
+    ],
   },
   setupFilesAfterEnv: ["<rootDir>/src/tests/setupTests.ts"],
 };

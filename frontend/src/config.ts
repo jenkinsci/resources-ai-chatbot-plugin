@@ -1,31 +1,25 @@
-type ViteEnv = {
-  VITE_API_BASE_URL?: string;
-  PROD: boolean;
-  DEV: boolean;
-  MODE: string;
+const isProduction = (): boolean => {
+  if (typeof process !== "undefined" && process.env?.NODE_ENV) {
+    return process.env.NODE_ENV === "production";
+  }
+  return false;
 };
 
-const getEnv = (): ViteEnv => {
-  if (typeof import.meta !== "undefined" && (import.meta as any).env) {
-    return (import.meta as any).env as ViteEnv;
+const getApiBaseUrlFromEnv = (): string | undefined => {
+  if (typeof process !== "undefined" && process.env?.VITE_API_BASE_URL) {
+    return process.env.VITE_API_BASE_URL;
   }
-
-  return {
-    VITE_API_BASE_URL: process.env.VITE_API_BASE_URL,
-    PROD: process.env.NODE_ENV === "production",
-    DEV: process.env.NODE_ENV !== "production",
-    MODE: process.env.NODE_ENV ?? "test",
-  };
+  return undefined;
 };
 
 const getApiBaseUrl = (): string => {
-  const env = getEnv();
+  const envUrl = getApiBaseUrlFromEnv();
 
-  if (env.VITE_API_BASE_URL) {
-    return env.VITE_API_BASE_URL;
+  if (envUrl) {
+    return envUrl;
   }
 
-  return env.PROD ? "" : "http://localhost:8000";
+  return isProduction() ? "" : "http://localhost:8000";
 };
 
 export const API_BASE_URL = getApiBaseUrl();
