@@ -44,3 +44,5 @@ src/main/webapp/static/*
 .settings
 .classpath
 .project
+
+.env
