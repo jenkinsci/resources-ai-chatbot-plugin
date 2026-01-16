@@ -35,6 +35,7 @@ from fastapi import (
 from api.models.schemas import (
     ChatRequest,
     ChatResponse,
+    CreateSessionRequest,
     DeleteResponse,
     SessionResponse,
     FileAttachment,
@@ -49,6 +50,7 @@ from api.services.memory import (
     session_exists,
     persist_session,
     init_session,
+    validate_session_owner,
 )
 from api.services.file_service import (
     process_uploaded_file,
@@ -81,12 +83,20 @@ router = APIRouter()
 # WebSocket Endpoints
 # =========================
 @router.websocket("/sessions/{session_id}/stream")
-async def chatbot_stream(websocket: WebSocket, session_id: str):
+async def chatbot_stream(
+        websocket: WebSocket,
+        session_id: str,
+        user_id: Optional[str] = None):
     """
     WebSocket endpoint for real-time token streaming.
 
     Accepts WebSocket connections and streams chatbot responses
     token-by-token for a more interactive user experience.
+
+    Args:
+        websocket (WebSocket): The WebSocket connection.
+        session_id (str): The session identifier.
+        user_id (Optional[str]): The Jenkins user ID (passed as query parameter).
     """
     logger.info("WebSocket connection attempt for session: %s", session_id)
     await websocket.accept()
@@ -95,6 +105,14 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
     if not session_exists(session_id):
         await websocket.send_text(
             json.dumps({"error": "Session not found"})
+        )
+        await websocket.close()
+        return
+
+    # Validate session ownership if user_id provided
+    if user_id and not validate_session_owner(session_id, user_id):
+        await websocket.send_text(
+            json.dumps({"error": "Unauthorized: Session belongs to another user"})
         )
         await websocket.close()
         return
@@ -152,30 +170,51 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
     response_model=SessionResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def start_chat(response: Response):
+def start_chat(request: CreateSessionRequest, response: Response):
     """
-    Create a new chat session.
+    Create a new chat session for an authenticated user.
+
+    The user_id should be injected by the Java gatekeeper proxy.
 
     Returns a unique session ID that can be used for subsequent
     chatbot interactions.
     """
-    session_id = init_session()
+    session_id = init_session(request.user_id)
     response.headers["Location"] = (
         f"/sessions/{session_id}/message"
     )
-    return SessionResponse(session_id=session_id)
+    return SessionResponse(session_id=session_id, user_id=request.user_id)
+
 
 @router.delete(
     "/sessions/{session_id}",
     response_model=DeleteResponse,
 )
-def delete_chat(session_id: str):
+def delete_chat(session_id: str, user_id: str = None):
     """
     Delete an existing chat session.
 
     Removes all conversation history and resources associated
-    with the specified session.
+    with the specified session. Validates that the session belongs
+    to the authenticated user.
+
+    Args:
+        session_id (str): The session identifier.
+        user_id (str): The Jenkins user ID (injected by gatekeeper).
     """
+    if not session_exists(session_id):
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found.",
+        )
+
+    # Validate session ownership if user_id provided
+    if user_id and not validate_session_owner(session_id, user_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized: Session belongs to another user.",
+        )
+
     if not delete_session(session_id):
         raise HTTPException(
             status_code=404,
@@ -189,17 +228,19 @@ def delete_chat(session_id: str):
 
 # Chat Endpoint
 @router.post("/sessions/{session_id}/message", response_model=ChatResponse)
-def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: BackgroundTasks):
-
+def chatbot_reply(
+        session_id: str,
+        request: ChatRequest,
+        _background_tasks: BackgroundTasks):
     """
     POST endpoint to handle chatbot replies.
 
     Receives a user message and returns the assistant's reply.
-    Validates that the session exists before processing.
+    Validates that the session exists and belongs to the user before processing.
 
     Args:
         session_id (str): The session identifier.
-        request (ChatRequest): The request containing the user message.
+        request (ChatRequest): The request containing the user message and user_id.
 
     Returns:
         ChatResponse: The assistant's reply.
@@ -209,11 +250,20 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
             status_code=404,
             detail="Session not found.",
         )
-    reply =  get_chatbot_reply(session_id, request.message)
+
+    # Validate session ownership if user_id provided
+    if request.user_id and not validate_session_owner(
+            session_id, request.user_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized: Session belongs to another user.",
+        )
+
+    reply = get_chatbot_reply(session_id, request.message)
     _background_tasks.add_task(
         persist_session,
         session_id,
-        )
+    )
 
     return reply
 
@@ -226,6 +276,7 @@ async def chatbot_reply_with_files(
     session_id: str,
     message: str = Form(...),
     files: Optional[List[UploadFile]] = File(None),
+    user_id: Optional[str] = Form(None),
 ):
     """
     POST endpoint to handle chatbot replies with file uploads.
@@ -242,16 +293,25 @@ async def chatbot_reply_with_files(
         session_id (str): The ID of the session from the URL path.
         message (str): The user's message (form field).
         files (List[UploadFile]): Optional list of uploaded files.
+        user_id (Optional[str]): The Jenkins user ID (injected by gatekeeper).
 
     Returns:
         ChatResponse: The chatbot's generated reply.
 
     Raises:
-        HTTPException: 404 if session not found, 400 if file processing fails,
+        HTTPException: 404 if session not found, 403 if unauthorized,
+                      400 if file processing fails,
                       422 if message is empty and no files provided.
     """
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
+
+    # Validate session ownership if user_id provided
+    if user_id and not validate_session_owner(session_id, user_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized: Session belongs to another user.",
+        )
 
     # Validate that at least message or files are provided
     has_message = message and message.strip()
