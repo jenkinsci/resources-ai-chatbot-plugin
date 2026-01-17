@@ -71,9 +71,9 @@ jest.mock("../components/Input", () => ({
 }));
 
 jest.mock("../components/Messages", () => ({
-  Messages: ({ messages, loading }: MessagesProps) => (
+  Messages: ({ messages, loadingStatus }: MessagesProps) => (
     <div data-testid="messages">
-      {loading ? "Loading..." : messages.map((m) => m.text).join(",")}
+      {loadingStatus ? "Loading..." : messages.map((m) => m.text).join(",")}
     </div>
   ),
 }));
@@ -167,6 +167,7 @@ describe("Chatbot component", () => {
           messages: [],
           createdAt: "2024-01-01",
           isLoading: false,
+          loadingStatus: null,
         },
       ]),
     );

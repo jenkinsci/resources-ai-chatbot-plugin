@@ -499,4 +499,118 @@ export const chatbotStyles = {
       cursor: "pointer",
       transition: "background 0.2s, border-left 0.2s",
     }) as CSSProperties,
+
+  // Toast Notification
+  toastContainer: {
+    position: "fixed",
+    bottom: "7rem",
+    right: "2rem",
+    width: "300px",
+    backgroundColor: "var(--card-background)",
+    border: "1px solid var(--border-color)",
+    borderRadius: "8px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+    padding: "1rem",
+    zIndex: 1000,
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.5rem",
+    animation: "fadeIn 0.3s ease-in-out",
+  } as CSSProperties,
+
+  toastHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    fontWeight: "bold",
+    fontSize: "0.9rem",
+    color: "var(--text-color)",
+  } as CSSProperties,
+
+  toastContent: {
+    fontSize: "0.85rem",
+    color: "var(--text-color-secondary)",
+    marginBottom: "0.5rem",
+  } as CSSProperties,
+
+  toastActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "0.5rem",
+  } as CSSProperties,
+
+  toastConfirmButton: {
+    backgroundColor: "#0073e6",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
+    padding: "4px 12px",
+    fontSize: "0.85rem",
+    cursor: "pointer",
+  } as CSSProperties,
+
+  toastCancelButton: {
+    backgroundColor: "transparent",
+    color: "var(--text-color)",
+    border: "1px solid var(--border-color)",
+    borderRadius: "4px",
+    padding: "4px 12px",
+    fontSize: "0.85rem",
+    cursor: "pointer",
+  } as CSSProperties,
+
+  // Loading State
+  botMessage: {
+    display: "flex",
+    justifyContent: "flex-start",
+    marginBottom: "0.5rem",
+    paddingLeft: "0.5rem",
+  } as CSSProperties,
+
+  loadingContainer: {
+    display: "flex",
+    alignItems: "center",
+    padding: "0.75rem 1rem",
+    backgroundColor: "var(--item-background--hover)", // Matches standard bot bubble color
+    borderRadius: "0.75rem",
+    borderTopLeftRadius: "6px", // Matches bot message style
+    border: "var(--jenkins-border--subtle)",
+    color: "var(--text-color)",
+    width: "fit-content",
+    minHeight: "40px",
+  } as CSSProperties,
+
+  // Define explicit styles for each dot to avoid inline styling in the component
+  loadingDot1: {
+    width: "6px",
+    height: "6px",
+    backgroundColor: "var(--text-color)",
+    borderRadius: "50%",
+    animation: "bounce 1.4s infinite ease-in-out both",
+    animationDelay: "0s",
+  } as CSSProperties,
+
+  loadingDot2: {
+    width: "6px",
+    height: "6px",
+    backgroundColor: "var(--text-color)",
+    borderRadius: "50%",
+    animation: "bounce 1.4s infinite ease-in-out both",
+    animationDelay: "0.2s",
+  } as CSSProperties,
+
+  loadingDot3: {
+    width: "6px",
+    height: "6px",
+    backgroundColor: "var(--text-color)",
+    borderRadius: "50%",
+    animation: "bounce 1.4s infinite ease-in-out both",
+    animationDelay: "0.4s",
+  } as CSSProperties,
+
+  loadingText: {
+    marginLeft: "10px",
+    fontStyle: "italic",
+    opacity: 0.8,
+  } as CSSProperties,
 };
