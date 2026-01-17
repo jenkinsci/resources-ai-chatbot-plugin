@@ -2,6 +2,8 @@ export interface JenkinsConfig {
   baseUrl: string;
   crumbFieldName: string;
   crumbToken: string;
+  userId: string;
+  userName: string;
 }
 declare global {
   interface Window {

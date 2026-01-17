@@ -5,12 +5,13 @@ import { API_BASE_URL } from "../config";
  * This is crucial for POST/PUT/DELETE requests to pass Jenkins security.
  */
 const getHeaders = (existingHeaders?: HeadersInit): HeadersInit => {
+  const jenkinsConfig = window.jenkinsChatbotConfig;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "X-Jenkins-User-ID": jenkinsConfig?.userId || "anonymous",
+    "X-Jenkins-User-Name": jenkinsConfig?.userName || "User",
     ...(existingHeaders as Record<string, string>),
   };
-
-  const jenkinsConfig = window.jenkinsChatbotConfig;
 
   // If we are in Jenkins, add the Anti-Forgery Token (Crumb)
   if (

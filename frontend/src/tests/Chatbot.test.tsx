@@ -94,9 +94,25 @@ const waitForInitialLoad = async () => {
 };
 
 describe("Chatbot component", () => {
+  beforeAll(() => {
+    // Mock the global Jenkins config so the security logic works in tests
+    Object.defineProperty(window, "jenkinsChatbotConfig", {
+      value: {
+        baseUrl: "http://localhost:8080/jenkins/chatbot",
+        crumbFieldName: "Jenkins-Crumb",
+        crumbToken: "test-token",
+        userId: "test-user-id", // <--- Vital for your new logic
+        userName: "Test User", // <--- Vital for headers
+      },
+      writable: true,
+    });
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
+
+    sessionStorage.setItem("chatbot-owner", "test-user-id");
 
     const originalError = console.error;
     jest.spyOn(console, "error").mockImplementation((...args) => {

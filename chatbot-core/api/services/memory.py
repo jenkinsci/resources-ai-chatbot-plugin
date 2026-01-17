@@ -82,7 +82,7 @@ def init_session(user_id: str, user_name: str = "User") -> str:
         _sessions[session_id] = {
             "memory": ConversationBufferMemory(return_messages=True),
             "last_accessed": datetime.now(),
-            "user_id": user_id
+            "owner": user_id
         }
 
     return session_id
@@ -102,10 +102,15 @@ def validate_session_access(session_id: str, user_id: str) -> bool:
     with _lock:
         session_data = _sessions.get(session_id)
         if session_data:
-            return session_data.get("owner") == user_id
+            stored_owner = session_data.get("owner")
+            print(f"[DEBUG MEMORY] ID: {session_id} | Stored: '{stored_owner}' vs Request: '{user_id}'")
+            return stored_owner == user_id
 
-    owner = get_session_owner(session_id)
-    return owner == user_id
+    stored_owner = get_session_owner(session_id)
+    # DEBUG PRINT
+    print(f"[DEBUG DISK]   ID: {session_id} | Stored: '{stored_owner}' vs Request: '{user_id}'")
+
+    return stored_owner == user_id
 
 def get_session(session_id: str) -> ConversationBufferMemory | None:
     """
