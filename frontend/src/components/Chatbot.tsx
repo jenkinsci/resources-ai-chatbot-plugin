@@ -24,6 +24,10 @@ import {
 } from "../utils/chatbotStorage";
 import { v4 as uuidv4 } from "uuid";
 
+const getJenkinsUser = () => {
+  return window.jenkinsChatbotConfig?.userId || "anonymous";
+};
+
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
  */
@@ -31,11 +35,35 @@ import { v4 as uuidv4 } from "uuid";
 export const Chatbot = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const initializeSessions = (): ChatSession[] => {
+    const currentUser = getJenkinsUser();
+    const lastUser = sessionStorage.getItem("chatbot-owner");
+
+    if (currentUser !== lastUser) {
+      sessionStorage.removeItem("chatbot-sessions");
+      sessionStorage.removeItem("chatbot-last-session-id");
+      sessionStorage.setItem("chatbot-owner", currentUser);
+      return [];
+    }
+
+    // Otherwise, load existing data
+    return loadChatbotSessions();
+  };
+
+  const initializeCurrentSessionId = (): string | null => {
+    // Note: initializeSessions runs first, so 'chatbot-owner' might already be updated.
+    // But for safety, if we cleared sessions, we must clear the ID too.
+    const sessions = loadChatbotSessions();
+    if (sessions.length === 0) return null;
+
+    return loadChatbotLastSessionId();
+  };
+
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
+  const [sessions, setSessions] = useState<ChatSession[]>(initializeSessions);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(
-    loadChatbotLastSessionId,
+    initializeCurrentSessionId,
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
@@ -67,6 +95,7 @@ export const Chatbot = () => {
     const handleBeforeUnload = () => {
       sessionStorage.setItem("chatbot-sessions", JSON.stringify(sessions));
       sessionStorage.setItem("chatbot-last-session-id", currentSessionId || "");
+      sessionStorage.setItem("chatbot-owner", getJenkinsUser());
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);

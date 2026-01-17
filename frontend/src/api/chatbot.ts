@@ -100,6 +100,12 @@ export const fetchChatbotReplyWithFiles = async (
       `${API_BASE_URL}/api/chatbot/sessions/${sessionId}/message/upload`,
       {
         method: "POST",
+        headers: {
+          "X-Jenkins-User-ID":
+            window.jenkinsChatbotConfig?.userId || "anonymous",
+          "X-Jenkins-User-Name":
+            window.jenkinsChatbotConfig?.userName || "User",
+        },
         body: formData,
         signal: signal,
       },

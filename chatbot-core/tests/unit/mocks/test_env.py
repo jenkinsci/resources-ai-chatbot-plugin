@@ -81,7 +81,7 @@ def mock_model_encode(mocker):
 @pytest.fixture
 def mock_collect_all_chunks(mocker):
     """Mock collect_all_chunks function."""
-    return mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+    return mocker.patch("rag.embedding.embed_chunks.collect_all_chunks", create=True)
 
 @pytest.fixture
 def mock_load_embedding_model(mocker):
@@ -98,7 +98,8 @@ def patched_chunk_files(mocker):
     """Fixture to patch CHUNK_FILES."""
     return mocker.patch(
         "rag.embedding.embed_chunks.CHUNK_FILES",
-        ["file1.json", "file2.json", "file3.json"]
+        ["file1.json", "file2.json", "file3.json"],
+        create=True
     )
 
 @pytest.fixture
