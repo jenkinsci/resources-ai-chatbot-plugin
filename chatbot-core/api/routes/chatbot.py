@@ -26,7 +26,9 @@ from fastapi import (
     UploadFile,
     File,
     Form,
-    BackgroundTasks
+    BackgroundTasks,
+    Header,
+    Query
 )
 
 # =========================
@@ -50,6 +52,7 @@ from api.services.memory import (
     session_exists,
     persist_session,
     init_session,
+    validate_session_access
 )
 from api.services.file_service import (
     process_uploaded_file,
@@ -82,7 +85,7 @@ router = APIRouter()
 # WebSocket Endpoints
 # =========================
 @router.websocket("/sessions/{session_id}/stream")
-async def chatbot_stream(websocket: WebSocket, session_id: str):
+async def chatbot_stream(websocket: WebSocket, session_id: str,user_id: str = Query(...)):
     """
     WebSocket endpoint for real-time token streaming.
 
@@ -90,6 +93,13 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
     token-by-token for a more interactive user experience.
     """
     logger.info("WebSocket connection attempt for session: %s", session_id)
+    if not validate_session_access(session_id, user_id):
+        logger.warning("Unauthorized WebSocket attempt for session %s by user %s", session_id, user_id)
+        await websocket.accept()
+        await websocket.send_text(json.dumps({"error": "Unauthorized: You do not own this session"}))
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await websocket.accept()
     logger.info("WebSocket accepted for session: %s", session_id)
 
@@ -153,14 +163,18 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
     response_model=SessionResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def start_chat(request: CreateSessionRequest, response: Response):
+def start_chat(
+    response: Response,
+    x_jenkins_user_id: str = Header(..., alias="X-Jenkins-User-ID"),
+    x_jenkins_user_name: str = Header("User", alias="X-Jenkins-User-Name")
+):
     """
     Create a new chat session linked to the authenticated user.
 
     Returns a unique session ID that can be used for subsequent
     chatbot interactions.
     """
-    session_id = init_session(user_id=request.user_id)
+    session_id = init_session(user_id=x_jenkins_user_id, user_name=x_jenkins_user_name)
     response.headers["Location"] = (
         f"/sessions/{session_id}/message"
     )
@@ -170,13 +184,22 @@ def start_chat(request: CreateSessionRequest, response: Response):
     "/sessions/{session_id}",
     response_model=DeleteResponse,
 )
-def delete_chat(session_id: str):
+def delete_chat(
+    session_id: str,
+    x_jenkins_user_id: str = Header(..., alias="X-Jenkins-User-ID")
+):
     """
     Delete an existing chat session.
 
     Removes all conversation history and resources associated
     with the specified session.
     """
+    if not validate_session_access(session_id, x_jenkins_user_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: You do not own this session.",
+        )
+
     if not delete_session(session_id):
         raise HTTPException(
             status_code=404,
@@ -190,7 +213,12 @@ def delete_chat(session_id: str):
 
 # Chat Endpoint
 @router.post("/sessions/{session_id}/message", response_model=ChatResponse)
-def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: BackgroundTasks):
+def chatbot_reply(
+    session_id: str,
+    request: ChatRequest,
+    _background_tasks: BackgroundTasks,
+    x_jenkins_user_id: str = Header(..., alias="X-Jenkins-User-ID")
+):
 
     """
     POST endpoint to handle chatbot replies.
@@ -205,6 +233,12 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
     Returns:
         ChatResponse: The assistant's reply.
     """
+    if not validate_session_access(session_id, x_jenkins_user_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: You do not own this session.",
+        )
+
     if not session_exists(session_id):
         raise HTTPException(
             status_code=404,
@@ -227,6 +261,7 @@ async def chatbot_reply_with_files(
     session_id: str,
     message: str = Form(...),
     files: Optional[List[UploadFile]] = File(None),
+    x_jenkins_user_id: str = Header(..., alias="X-Jenkins-User-ID")
 ):
     """
     POST endpoint to handle chatbot replies with file uploads.
@@ -251,6 +286,12 @@ async def chatbot_reply_with_files(
         HTTPException: 404 if session not found, 400 if file processing fails,
                       422 if message is empty and no files provided.
     """
+    if not validate_session_access(session_id, x_jenkins_user_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: You do not own this session.",
+        )
+
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
 

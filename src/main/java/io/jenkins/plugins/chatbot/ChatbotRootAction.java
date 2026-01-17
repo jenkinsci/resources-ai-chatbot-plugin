@@ -6,9 +6,7 @@ import hudson.model.User;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
@@ -59,13 +57,16 @@ public class ChatbotRootAction implements RootAction {
 
         // 3. Routing Logic
         // STRICT CHECK: Only if path is EXACTLY "sessions" or "sessions/" do we create a new session.
-        if ((path.equals("sessions") || path.equals("sessions/")) && "POST".equalsIgnoreCase(req.getMethod())) {
-            handleCreateSession(req, rsp);
-            return;
+        StringBuilder targetUrlBuilder = new StringBuilder(PYTHON_BACKEND_URL);
+        targetUrlBuilder.append("/").append(path);
+
+        if (req.getQueryString() != null) {
+            targetUrlBuilder.append("?").append(req.getQueryString());
         }
 
         // EVERYTHING ELSE (messages, file uploads, etc.) -> Proxy directly to Python
-        String targetUrl = PYTHON_BACKEND_URL + "/" + path;
+        String targetUrl = targetUrlBuilder.toString();
+
 
         String method = req.getMethod();
         if ("POST".equalsIgnoreCase(method)) {
@@ -77,21 +78,6 @@ public class ChatbotRootAction implements RootAction {
         } else {
             rsp.sendError(405, "Method Not Allowed");
         }
-    }
-
-    /**
-     * Special Handler for Creating Sessions.
-     * Injects the Jenkins User ID into the request body.
-     */
-    private void handleCreateSession(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException {
-        User user = User.current();
-        String userId = (user != null) ? user.getId() : "anonymous";
-
-        JSONObject jsonPayload = new JSONObject();
-        jsonPayload.put("user_id", userId);
-
-        String targetUrl = PYTHON_BACKEND_URL + "/sessions";
-        proxyJsonRequest(rsp, targetUrl, jsonPayload.toString());
     }
 
     /**
@@ -122,23 +108,17 @@ public class ChatbotRootAction implements RootAction {
         Jenkins.get().checkPermission(Jenkins.READ);
     }
 
-    private void proxyJsonRequest(StaplerResponse2 rsp, String targetUrl, String jsonBody) throws IOException {
-        HttpURLConnection conn = null;
-        try {
-            java.net.URL url = java.net.URI.create(targetUrl).toURL();
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
-
-            try (OutputStream out = conn.getOutputStream()) {
-                out.write(jsonBody.getBytes(StandardCharsets.UTF_8));
-            }
-            copyBackendResponse(conn, rsp);
-        } catch (Exception e) {
-            handleProxyError(rsp, e);
-        } finally {
-            if (conn != null) conn.disconnect();
+    private void addAuthHeaders(HttpURLConnection conn) {
+        User user = User.current();
+        if (user != null) {
+            // Identity Injection
+            conn.setRequestProperty("X-Jenkins-User-ID", user.getId());
+            // Use URL encoder for names to handle special characters/spaces safely
+            String cleanName = user.getDisplayName().replaceAll("[^a-zA-Z0-9 ]", "");
+            conn.setRequestProperty("X-Jenkins-User-Name", cleanName);
+        } else {
+            conn.setRequestProperty("X-Jenkins-User-ID", "anonymous");
+            conn.setRequestProperty("X-Jenkins-User-Name", "Anonymous");
         }
     }
 
@@ -149,6 +129,7 @@ public class ChatbotRootAction implements RootAction {
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod(req.getMethod());
             conn.setRequestProperty("Content-Type", req.getContentType());
+            addAuthHeaders(conn);
             conn.setDoOutput(true);
 
             IOUtils.copy(req.getInputStream(), conn.getOutputStream());
@@ -166,6 +147,7 @@ public class ChatbotRootAction implements RootAction {
             java.net.URL url = java.net.URI.create(targetUrl).toURL();
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
+            addAuthHeaders(conn);
             copyBackendResponse(conn, rsp);
         } catch (Exception e) {
             handleProxyError(rsp, e);
@@ -180,6 +162,7 @@ public class ChatbotRootAction implements RootAction {
             java.net.URL url = java.net.URI.create(targetUrl).toURL();
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("DELETE");
+            addAuthHeaders(conn);
             copyBackendResponse(conn, rsp);
         } catch (Exception e) {
             handleProxyError(rsp, e);
