@@ -5,6 +5,10 @@ import pytest
 from api.models.schemas import ChatResponse
 from api.services import memory
 
+TEST_HEADERS = {
+    "X-Jenkins-User-ID": "integration-test-user",
+    "X-Jenkins-User-Name": "Integration Tester"
+}
 
 @pytest.fixture(autouse=True)
 def reset_memory_sessions():
@@ -13,7 +17,7 @@ def reset_memory_sessions():
 
 def test_create_session(client):
     """Should create a new chat session and return session ID and location header."""
-    response = client.post("/sessions", json={"user_id": "test-user"})
+    response = client.post("/sessions", headers=TEST_HEADERS)
     assert response.status_code == 201
     data = response.json()
     assert "session_id" in data
@@ -23,13 +27,13 @@ def test_create_session(client):
 
 def test_reply_to_existing_session(client, mock_llm_provider, mock_get_relevant_documents):
     """Should return a chatbot reply for a valid session and input message."""
-    create_resp = client.post("/sessions", json={"user_id": "test-user"})
+    create_resp = client.post("/sessions", headers=TEST_HEADERS)
     session_id = create_resp.json()["session_id"]
     mock_llm_provider.generate.return_value = "LLM answers to the query"
     mock_get_relevant_documents.return_value = get_relevant_documents_output()
 
     payload = {"message": "Hello"}
-    response = client.post(f"/sessions/{session_id}/message", json=payload)
+    response = client.post(f"/sessions/{session_id}/message", json=payload, headers=TEST_HEADERS)
 
     assert response.status_code == 200
     try:
@@ -39,59 +43,61 @@ def test_reply_to_existing_session(client, mock_llm_provider, mock_get_relevant_
     assert chat_response.reply == "LLM answers to the query"
 
 def test_reply_to_nonexistent_session(client):
-    """Should return 404 when replying to a non-existent session."""
+    """Should return 403 when replying to a non-existent session (user mismatch)."""
     payload = {"message": "Hello"}
-    response = client.post("/sessions/nonexistent-session/message", json=payload)
+    response = client.post(
+        "/sessions/nonexistent-session/message", json=payload, headers=TEST_HEADERS
+    )
 
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Session not found."}
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Access denied: You do not own this session."}
 
 
 def test_delete_existing_session(client):
     """Should delete an existing session and confirm deletion message."""
-    create_resp = client.post("/sessions", json={"user_id": "test-user"})
+    create_resp = client.post("/sessions", headers=TEST_HEADERS)
     session_id = create_resp.json()["session_id"]
 
-    response = client.delete(f"/sessions/{session_id}")
+    response = client.delete(f"/sessions/{session_id}", headers=TEST_HEADERS)
     assert response.status_code == 200
     assert response.json() == {"message": f"Session {session_id} deleted."}
 
     msg_resp = client.post(
         f"/sessions/{session_id}/message",
-        json={"message": "Hello"}
+        json={"message": "Hello"},
+        headers=TEST_HEADERS
     )
-    assert msg_resp.status_code == 404
+    assert msg_resp.status_code == 403
 
 
 def test_delete_nonexistent_session(client):
-    """Should return 404 when trying to delete a non-existent session."""
-    response = client.delete("/sessions/invalid-session")
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Session not found."}
+    """Should return 403 when trying to delete a non-existent session (user mismatch)."""
+    response = client.delete("/sessions/invalid-session", headers=TEST_HEADERS)
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Access denied: You do not own this session."}
 
 
 def test_reply_after_session_deleted(client):
-    """Should return 404 when replying to a session that was deleted."""
-    create_resp = client.post("/sessions", json={"user_id": "test-user"})
+    """Should return 403 when replying to a session that was deleted (user mismatch)."""
+    create_resp = client.post("/sessions", headers=TEST_HEADERS)
     session_id = create_resp.json()["session_id"]
 
-    client.delete(f"/sessions/{session_id}")
+    client.delete(f"/sessions/{session_id}", headers=TEST_HEADERS)
 
     payload = {"message": "Is anyone there?"}
-    response = client.post(f"/sessions/{session_id}/message", json=payload)
+    response = client.post(f"/sessions/{session_id}/message", json=payload, headers=TEST_HEADERS)
 
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Session not found."}
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Access denied: You do not own this session."}
 
 
 def test_reply_with_empty_message(client):
     """Should return 422 when sending an empty message."""
-    create_resp = client.post("/sessions", json={"user_id": "test-user"})
+    create_resp = client.post("/sessions", headers=TEST_HEADERS)
     session_id = create_resp.json()["session_id"]
 
     payload = {"message": "   "}
-    response = client.post(f"/sessions/{session_id}/message", json=payload)
-
+    response = client.post(f"/sessions/{session_id}/message", json=payload, headers=TEST_HEADERS)
     assert response.status_code == 422
     errors = response.json()["detail"]
     assert any("Message cannot be empty." in e["msg"] for e in errors)
@@ -102,24 +108,25 @@ def test_full_chat_lifecycle(client, mock_llm_provider, mock_get_relevant_docume
     mock_llm_provider.generate.return_value = "Hello from the bot!"
     mock_get_relevant_documents.return_value = get_relevant_documents_output()
 
-    create_resp = client.post("/sessions", json={"user_id": "test-user"})
+    create_resp = client.post("/sessions", headers=TEST_HEADERS)
     assert create_resp.status_code == 201
     session_id = create_resp.json()["session_id"]
 
     payload = {"message": "Hello"}
-    reply_resp = client.post(f"/sessions/{session_id}/message", json=payload)
+    reply_resp = client.post(f"/sessions/{session_id}/message", json=payload, headers=TEST_HEADERS)
     assert reply_resp.status_code == 200
     assert reply_resp.json()["reply"] == "Hello from the bot!"
 
-    delete_resp = client.delete(f"/sessions/{session_id}")
+    delete_resp = client.delete(f"/sessions/{session_id}", headers=TEST_HEADERS)
     assert delete_resp.status_code == 200
     assert delete_resp.json()["message"] == f"Session {session_id} deleted."
 
     fail_resp = client.post(
         f"/sessions/{session_id}/message",
-        json={"message": "Are you there?"}
+        json={"message": "Are you there?"},
+        headers=TEST_HEADERS
     )
-    assert fail_resp.status_code == 404
+    assert fail_resp.status_code == 403
 
 
 def test_multiple_messages_in_session(client, mock_llm_provider, mock_get_relevant_documents):
@@ -132,9 +139,13 @@ def test_multiple_messages_in_session(client, mock_llm_provider, mock_get_releva
         get_relevant_documents_output(),
         get_relevant_documents_output()
     ]
-    session_id = client.post("/sessions", json={"user_id": "test-user"}).json()["session_id"]
+    session_id = client.post("/sessions", headers=TEST_HEADERS).json()["session_id"]
     for i in range(3):
-        resp = client.post(f"/sessions/{session_id}/message", json={"message": f"Msg {i+1}"})
+        resp = client.post(
+            f"/sessions/{session_id}/message",
+            json={"message": f"Msg {i+1}"},
+            headers=TEST_HEADERS
+        )
         assert resp.status_code == 200
         assert resp.json()["reply"] == f"Reply {i+1}"
 
@@ -144,21 +155,29 @@ def test_multiple_sessions_are_isolated(client, mock_llm_provider, mock_get_rele
     mock_llm_provider.generate.return_value = "LLM response"
     mock_get_relevant_documents.return_value = get_relevant_documents_output()
 
-    active_session = client.post("/sessions", json={"user_id": "user-1"}).json()["session_id"]
-    deleted_session = client.post("/sessions", json={"user_id": "user-2"}).json()["session_id"]
+    active_session = client.post("/sessions", headers=TEST_HEADERS).json()["session_id"]
+    deleted_session = client.post("/sessions", headers=TEST_HEADERS).json()["session_id"]
 
-    client.post(f"/sessions/{active_session}/message", json={"message": "Hi A"})
-    client.post(f"/sessions/{deleted_session}/message", json={"message": "Hi B"})
-
-    client.delete(f"/sessions/{deleted_session}")
+    client.post(
+        f"/sessions/{active_session}/message",
+        json={"message": "Hi A"},
+        headers=TEST_HEADERS
+    )
+    client.post(
+        f"/sessions/{deleted_session}/message",
+        json={"message": "Hi B"},
+        headers=TEST_HEADERS
+    )
+    client.delete(f"/sessions/{deleted_session}", headers=TEST_HEADERS)
     response_active_session = client.post(f"/sessions/{active_session}/message",
-                                json={"message": "Message again"})
+                                json={"message": "Message again"}, headers=TEST_HEADERS)
     response_deleted_session = client.post(f"/sessions/{deleted_session}/message",
-                                json={"message": "Should be off"})
+                                json={"message": "Should be off"}, headers=TEST_HEADERS)
 
     assert response_active_session.status_code == 200
-    assert response_deleted_session.status_code == 404
-    assert response_deleted_session.json() == {"detail": "Session not found."}
+    assert response_deleted_session.status_code == 403
+    expected_detail = {"detail": "Access denied: You do not own this session."}
+    assert response_deleted_session.json() == expected_detail
 
 
 def get_relevant_documents_output():

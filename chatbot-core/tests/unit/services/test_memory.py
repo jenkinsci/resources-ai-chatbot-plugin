@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import pytest
 from langchain.memory import ConversationBufferMemory
 
-from api.services import memory
+from api.services import memory, sessionmanager
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +22,7 @@ def test_init_session_creates_new_session():
     assert isinstance(session_id, str)
     assert uuid.UUID(session_id)
     assert memory.session_exists(session_id)
-    user_sessions = memory.get_user_sessions("test-user")
+    user_sessions = sessionmanager.list_user_sessions("test-user")
     assert session_id in user_sessions
 
 def test_get_session_returns_existing_session():
@@ -95,18 +95,19 @@ def test_get_session_updates_timestamp():
 
 def test_cleanup_expired_sessions_removes_old_sessions():
     """Test that cleanup_expired_sessions removes sessions older than timeout."""
+    memory.reset_sessions()
     # Create test sessions
     session1 = memory.init_session(user_id="user1")
     session2 = memory.init_session(user_id="user1")
     session3 = memory.init_session(user_id="user2")
 
+    # VERIFY they exist before modifying them
+    assert memory.get_session_count() == 3, "Sessions were not created correctly in RAM"
+
     # Manually set session1 and session2 to be expired (>24 hours old)
     old_timestamp = datetime.now() - timedelta(hours=25)
     memory.set_last_accessed(session1, old_timestamp)
     memory.set_last_accessed(session2, old_timestamp)
-
-    # session3 remains fresh
-    assert memory.get_session_count() == 3
 
     # Run cleanup
     cleaned_count = memory.cleanup_expired_sessions()

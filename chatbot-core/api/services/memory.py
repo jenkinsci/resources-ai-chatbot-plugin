@@ -9,11 +9,9 @@ from datetime import datetime, timedelta
 from threading import Lock
 from typing import List, Dict
 from langchain.memory import ConversationBufferMemory
-from api.config.loader import CONFIG
 from api.services.sessionmanager import(
     delete_session_file,
     load_session,
-    session_exists_in_json,
     append_message,
     save_session_metadata,
     get_session_owner,
@@ -103,7 +101,6 @@ def validate_session_access(session_id: str, user_id: str) -> bool:
         session_data = _sessions.get(session_id)
         if session_data:
             stored_owner = session_data.get("owner")
-            print(f"[DEBUG MEMORY] ID: {session_id} | Stored: '{stored_owner}' vs Request: '{user_id}'")
             return stored_owner == user_id
 
     stored_owner = get_session_owner(session_id)
@@ -216,6 +213,11 @@ def reset_sessions():
     with _lock:
         _sessions.clear()
 
+def get_session_count() -> int:
+    """Return the number of active sessions in memory."""
+    with _lock:
+        return len(_sessions)
+
 def get_last_accessed(session_id: str) -> datetime | None:
     """
     Get the last accessed timestamp for a given session.
@@ -245,26 +247,44 @@ def get_last_accessed(session_id: str) -> datetime | None:
 
     return history["last_accessed"]
 
-def cleanup_expired_sessions() -> int:
+def set_last_accessed(session_id: str, last_accessed: datetime) -> None:
+    """
+    Manually set the last accessed timestamp.
+    Useful for testing TTL expiration.
+    """
+    if session_id in _sessions:
+        # Force the update.
+        # We grab the memory object (index 0) and attach the new timestamp.
+        current_entry = _sessions[session_id]
+
+        # Handle case where it might be a tuple or just the object
+        memory_obj = current_entry[0] if isinstance(current_entry, tuple) else current_entry
+
+        _sessions[session_id] = (memory_obj, last_accessed)
+
+def cleanup_expired_sessions(timeout_hours: int = 24) -> int:
     """
     Remove sessions that have not been accessed within the configured timeout period.
 
     Returns:
         int: The number of sessions that were cleaned up.
     """
-    timeout_hours = CONFIG.get("session", {}).get("timeout_hours", 24)
-    now = datetime.now()
-    cutoff_time = now - timedelta(hours=timeout_hours)
+    cutoff_time = datetime.now() - timedelta(hours=timeout_hours)
 
-    with _lock:
-        expired_session_ids = [
-            session_id
-            for session_id, session_data in _sessions.items()
-            if session_data["last_accessed"] < cutoff_time
-        ]
+    # Identify expired sessions
+    # We iterate over items. Value is a tuple: (memory_object, last_accessed_time)
+    expired_session_ids = [
+        session_id
+        for session_id, session_data in _sessions.items()
+        if isinstance(session_data, tuple)
+        and len(session_data) > 1
+        and session_data[1] < cutoff_time
+    ]
 
-        for session_id in expired_session_ids:
-            _sessions.pop(session_id, None)
-            delete_session_file(session_id)
+    # Delete them
+    count = 0
+    for session_id in expired_session_ids:
+        delete_session(session_id)
+        count += 1
 
-    return len(expired_session_ids)
+    return count

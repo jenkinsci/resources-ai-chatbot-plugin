@@ -67,7 +67,6 @@ public class ChatbotRootAction implements RootAction {
         // EVERYTHING ELSE (messages, file uploads, etc.) -> Proxy directly to Python
         String targetUrl = targetUrlBuilder.toString();
 
-
         String method = req.getMethod();
         if ("POST".equalsIgnoreCase(method)) {
             proxyStreamRequest(req, rsp, targetUrl);

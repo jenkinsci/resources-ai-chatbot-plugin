@@ -40,8 +40,7 @@ from api.models.schemas import (
     DeleteResponse,
     SessionResponse,
     FileAttachment,
-    SupportedExtensionsResponse,
-    CreateSessionRequest
+    SupportedExtensionsResponse
 )
 from api.services.chat_service import (
     get_chatbot_reply,
@@ -94,9 +93,13 @@ async def chatbot_stream(websocket: WebSocket, session_id: str,user_id: str = Qu
     """
     logger.info("WebSocket connection attempt for session: %s", session_id)
     if not validate_session_access(session_id, user_id):
-        logger.warning("Unauthorized WebSocket attempt for session %s by user %s", session_id, user_id)
+        logger.warning(
+            "Unauthorized WebSocket attempt for session %s by user %s",session_id, user_id
+        )
         await websocket.accept()
-        await websocket.send_text(json.dumps({"error": "Unauthorized: You do not own this session"}))
+        await websocket.send_text(
+            json.dumps({"error": "Unauthorized: You do not own this session"})
+        )
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
