@@ -68,7 +68,7 @@ const FileAttachmentDisplay: React.FC<{ file: FileAttachment }> = ({
  * message when the bot is generating a response and automatically scrolls
  * to the newest message on update.
  */
-export const Messages = ({ messages, loadingStatus }: MessagesProps) => {
+export const Messages = ({ messages, isLoading, loadingStatus }: MessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -110,7 +110,7 @@ export const Messages = ({ messages, loadingStatus }: MessagesProps) => {
       {messages.map((msg) =>
         renderMessage(msg.text, msg.sender, msg.id, msg.files),
       )}
-      {loadingStatus && (
+      {isLoading && (
         <div style={chatbotStyles.botMessage}>
           <div style={chatbotStyles.loadingContainer}>
             <LoadingDots />
