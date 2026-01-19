@@ -24,8 +24,18 @@ preprocessing_config = PIPELINE_CONFIG["preprocessing"]["docs"]
 general_config = PIPELINE_CONFIG["general"]
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_DOCS_PATH = os.path.join(SCRIPT_DIR, "..", general_config["raw_data_dir"].replace("data/", ""), preprocessing_config["input_file"])
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", general_config["processed_data_dir"].replace("data/", ""), preprocessing_config["output_file"])
+RAW_DIR = os.path.join(
+    SCRIPT_DIR,
+    "..",
+    general_config["raw_data_dir"].replace("data/", ""),
+)
+PROCESSED_DIR = os.path.join(
+    SCRIPT_DIR,
+    "..",
+    general_config["processed_data_dir"].replace("data/", ""),
+)
+INPUT_DOCS_PATH = os.path.join(RAW_DIR, preprocessing_config["input_file"])
+OUTPUT_PATH = os.path.join(PROCESSED_DIR, preprocessing_config["output_file"])
 
 def filter_content(urls, data, is_developer_content):
     """

@@ -5,8 +5,9 @@ and returns both embeddings and associated metadata.
 
 import os
 import json
-from .embedding_utils import load_embedding_model, embed_documents
+
 from config.pipeline_loader import load_pipeline_config
+from .embedding_utils import load_embedding_model, embed_documents
 
 # Load pipeline configuration
 PIPELINE_CONFIG = load_pipeline_config()
