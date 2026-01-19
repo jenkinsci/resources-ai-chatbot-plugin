@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
-from langchain.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
 
 from api.services import memory
 
@@ -28,7 +28,7 @@ def test_get_session_returns_existing_session():
     session_id = memory.init_session()
     session = memory.get_session(session_id)
 
-    assert isinstance(session, ConversationBufferMemory)
+    assert isinstance(session, ChatMessageHistory)
     assert session is memory.get_session(session_id)
 
 def test_get_session_returns_none_for_invalid_id():

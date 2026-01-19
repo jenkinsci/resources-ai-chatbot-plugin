@@ -1,5 +1,7 @@
 """Fixtures for unit tests."""
 
+import sys
+
 import pytest
 from fastapi import FastAPI
 from sentence_transformers import SentenceTransformer
@@ -81,30 +83,43 @@ def mock_model_encode(mocker):
 @pytest.fixture
 def mock_collect_all_chunks(mocker):
     """Mock collect_all_chunks function."""
-    return mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+    return mocker.patch.object(
+        sys.modules["rag.embedding.embed_chunks"],
+        "collect_all_chunks"
+    )
 
 @pytest.fixture
 def mock_load_embedding_model(mocker):
     """Mock load_embedding_model function."""
-    return mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+    return mocker.patch.object(
+        sys.modules["rag.embedding.embed_chunks"],
+        "load_embedding_model"
+    )
 
 @pytest.fixture
 def mock_embed_documents(mocker):
     """Mock embed_documents function."""
-    return mocker.patch("rag.embedding.embed_chunks.embed_documents")
+    return mocker.patch.object(
+        sys.modules["rag.embedding.embed_chunks"],
+        "embed_documents"
+    )
 
 @pytest.fixture
 def patched_chunk_files(mocker):
     """Fixture to patch CHUNK_FILES."""
-    return mocker.patch(
-        "rag.embedding.embed_chunks.CHUNK_FILES",
+    return mocker.patch.object(
+        sys.modules["rag.embedding.embed_chunks"],
+        "CHUNK_FILES",
         ["file1.json", "file2.json", "file3.json"]
     )
 
 @pytest.fixture
 def mock_load_chunks_from_file(mocker):
     """Mock load_chunks_from_file function."""
-    return mocker.patch("rag.embedding.embed_chunks.load_chunks_from_file")
+    return mocker.patch.object(
+        sys.modules["rag.embedding.embed_chunks"],
+        "load_chunks_from_file"
+    )
 
 @pytest.fixture
 def mock_save_faiss_index(mocker):

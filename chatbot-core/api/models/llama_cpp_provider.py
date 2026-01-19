@@ -84,7 +84,7 @@ class LlamaCppProvider(LLMProvider if LLAMA_CPP_AVAILABLE else object):
                 "Check the model path."
             ) from exc
 
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.error(
                 "Unexpected error during LLM generation: %s",
                 exc,
