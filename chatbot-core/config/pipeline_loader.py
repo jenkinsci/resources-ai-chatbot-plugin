@@ -43,10 +43,11 @@ def load_pipeline_config(config_path=None):
         config_path = os.path.join(file_dir, "data-pipeline.yml")
     
     if not os.path.exists(config_path):
-        raise FileNotFoundError(
-            "Data pipeline config not found at: %s. Please ensure "
-            "data-pipeline.yml exists or set DATA_PIPELINE_CONFIG environment variable." % config_path
+        message = (
+            f"Data pipeline config not found at: {config_path}. Please ensure "
+            "data-pipeline.yml exists or set DATA_PIPELINE_CONFIG environment variable."
         )
+        raise FileNotFoundError(message)
     
     logger.info("Loading data pipeline configuration from: %s", config_path)
     
@@ -141,5 +142,5 @@ def get_phase_config(config, phase):
 try:
     PIPELINE_CONFIG = load_pipeline_config()
 except FileNotFoundError as e:
-    logger.warning(f"Could not load default pipeline config: {e}")
+    logger.warning("Could not load default pipeline config: %s", e)
     PIPELINE_CONFIG = None

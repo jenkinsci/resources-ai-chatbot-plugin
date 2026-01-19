@@ -37,7 +37,7 @@ class TestPipelineConfigLoader:
             "chunking": {
                 "chunk_size": 500,
                 "chunk_overlap": 100,
-                "code_block_placeholder_pattern": "\\[\\[CODE_BLOCK_(\\d+)\\]\\]",
+                "code_block_placeholder_pattern": r"\[\[CODE_BLOCK_(\d+)\]\]",
                 "placeholder_template": "[[CODE_BLOCK_{}]]",
                 "docs": {
                     "input_file": "filtered_jenkins_docs.json",
@@ -146,7 +146,14 @@ class TestPipelineConfigLoader:
     def test_config_structure_completeness(self, temp_config_file):
         """Test that loaded config contains all expected top-level sections."""
         config = load_pipeline_config(config_path=temp_config_file)
-        expected_sections = ["general", "collection", "preprocessing", "chunking", "embedding", "storage"]
+        expected_sections = [
+            "general",
+            "collection",
+            "preprocessing",
+            "chunking",
+            "embedding",
+            "storage",
+        ]
         for section in expected_sections:
             assert section in config, f"Missing config section: {section}"
 
@@ -162,9 +169,9 @@ class TestPipelineConfigLoader:
         monkeypatch.setenv("CHUNK_SIZE", "800")
         monkeypatch.setenv("CHUNK_OVERLAP", "160")
         monkeypatch.setenv("FAISS_N_LIST", "1024")
-        
+
         config = _apply_env_overrides(sample_config)
-        
+
         assert config["chunking"]["chunk_size"] == 800
         assert config["chunking"]["chunk_overlap"] == 160
         assert config["storage"]["n_list"] == 1024
@@ -199,7 +206,7 @@ class TestConfigIntegration:
         monkeypatch.delenv("FAISS_N_PROBE", raising=False)
 
         config = load_pipeline_config()
-        
+
         # Verify defaults match previous hard-coded values
         assert config["chunking"]["chunk_size"] == 500
         assert config["chunking"]["chunk_overlap"] == 100

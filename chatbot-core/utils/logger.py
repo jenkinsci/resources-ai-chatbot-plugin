@@ -25,7 +25,7 @@ class LoggerFactory:
         Returns:
             logging.Logger: The configured logger instance.
         """
-        name = name.upper()
+        # Preserve provided logger name as-is to match test expectations
         if name in cls._loggers:
             return cls._loggers[name]
 
@@ -51,7 +51,8 @@ class LoggerFactory:
             formatter = logging.Formatter(cls._formatter_template, datefmt='%H:%M:%S')
             handler.setFormatter(formatter)
             logger.addHandler(handler)
-            logger.propagate = False
+            # Allow propagation so test frameworks (caplog) can capture records
+            logger.propagate = True
 
     @classmethod
     def instance(cls):
