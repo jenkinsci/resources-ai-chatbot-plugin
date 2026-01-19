@@ -6,6 +6,12 @@ pytest-cov==6.2.1
 pytest-mock==3.14.1
 
 # =========================
+# Evaluation Framework
+# =========================
+ragas==0.2.14
+datasets==3.2.0
+
+# =========================
 # Core API Dependencies
 # =========================
 fastapi==0.115.12

@@ -59,6 +59,25 @@ The tutorial shows how to fork the repo, set up the backend, download the LLM mo
 
 
 
+## Evaluation & Testing
+
+This project includes an automated LLM-as-a-Judge evaluation pipeline to ensure chatbot quality:
+
+```bash
+# Quick start (recommended)
+cd chatbot-core
+./run_evaluation_tests.sh          # Linux/Mac
+.\run_evaluation_tests.bat         # Windows
+
+# Or run pytest directly
+pytest tests/evaluation/ -v
+
+# Run full evaluation (requires OPENAI_API_KEY)
+RUN_EVALUATION=true pytest tests/evaluation/test_llm_evaluation.py::test_chatbot_evaluation_metrics -v
+```
+
+See [chatbot-core/docs/evaluation/README.md](chatbot-core/docs/evaluation/README.md) for detailed documentation.
+
 ## Troubleshooting
 
 **llama-cpp-python installation fails**: Ensure build tools are installed and use Python 3.11+

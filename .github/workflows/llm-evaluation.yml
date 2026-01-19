@@ -1,0 +1,159 @@
+name: LLM-as-a-Judge Evaluation
+
+# This workflow runs the automated evaluation pipeline
+# Trigger: manually via workflow_dispatch or on PR with 'evaluate' label
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_full_evaluation:
+        description: 'Run full evaluation (requires LLM API key)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  
+  pull_request:
+    types: [labeled, opened, synchronize]
+
+jobs:
+  validate-dataset:
+    name: Validate Golden Dataset
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd chatbot-core
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+      
+      - name: Validate dataset structure
+        run: |
+          cd chatbot-core
+          pytest tests/evaluation/test_llm_evaluation.py::test_golden_dataset_structure -v
+          pytest tests/evaluation/test_llm_evaluation.py::test_dataset_coverage -v
+
+  run-evaluation:
+    name: Run LLM Evaluation
+    runs-on: ubuntu-latest
+    # Only run if PR has 'evaluate' label or manually triggered with run_full_evaluation=true
+    if: |
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'evaluate')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_full_evaluation == 'true')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make cmake gcc g++ python3.11-dev
+      
+      - name: Install Python dependencies
+        run: |
+          cd chatbot-core
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run evaluation tests
+        env:
+          RUN_EVALUATION: 'true'
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cd chatbot-core
+          pytest tests/evaluation/test_llm_evaluation.py::test_chatbot_evaluation_metrics -v --tb=short
+      
+      - name: Upload evaluation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-results
+          path: chatbot-core/data/evaluation/results/
+          retention-days: 30
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const resultsPath = 'chatbot-core/data/evaluation/results/latest_evaluation.json';
+            
+            if (fs.existsSync(resultsPath)) {
+              const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+              const scores = results.scores;
+              
+              const comment = `## 🤖 LLM-as-a-Judge Evaluation Results
+              
+              | Metric | Score | Threshold | Status |
+              |--------|-------|-----------|--------|
+              | Faithfulness | ${scores.faithfulness.toFixed(4)} | 0.85 | ${scores.faithfulness >= 0.85 ? '✅' : '❌'} |
+              | Answer Relevancy | ${scores.answer_relevancy.toFixed(4)} | 0.75 | ${scores.answer_relevancy >= 0.75 ? '✅' : '❌'} |
+              | Context Recall | ${scores.context_recall.toFixed(4)} | 0.80 | ${scores.context_recall >= 0.80 ? '✅' : '❌'} |
+              | Context Precision | ${scores.context_precision.toFixed(4)} | 0.75 | ${scores.context_precision >= 0.75 ? '✅' : '❌'} |
+              
+              **Dataset Size:** ${results.dataset_size} questions
+              
+              ${Object.values(scores).every((s, i) => s >= [0.85, 0.75, 0.80, 0.75][i]) ? '✅ All metrics passed!' : '⚠️ Some metrics below threshold'}
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } else {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '⚠️ Evaluation results not found. Check the workflow logs for details.'
+              });
+            }
+
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make cmake gcc g++ python3.11-dev
+      
+      - name: Install Python dependencies
+        run: |
+          cd chatbot-core
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run integration tests
+        run: |
+          cd chatbot-core
+          pytest tests/integration/ -v --tb=short

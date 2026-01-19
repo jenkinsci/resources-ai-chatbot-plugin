@@ -1,0 +1,72 @@
+[
+  {
+    "id": "jenkins_core_001",
+    "category": "Jenkins Core",
+    "question": "How do I install Jenkins on Ubuntu?",
+    "ground_truth_answer": "To install Jenkins on Ubuntu, you need to add the Jenkins repository, import the GPG key, update your package list, and install Jenkins using apt. The commands are: wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo apt-key add -, sudo sh -c 'echo deb https://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list', sudo apt update, and sudo apt install jenkins.",
+    "expected_context_keywords": ["install", "ubuntu", "apt", "repository", "debian"]
+  },
+  {
+    "id": "jenkins_core_002",
+    "category": "Jenkins Core",
+    "question": "What is a Jenkins pipeline?",
+    "ground_truth_answer": "A Jenkins pipeline is a suite of plugins that supports implementing and integrating continuous delivery pipelines into Jenkins. It provides an extensible set of tools for modeling simple-to-complex delivery pipelines as code via the Pipeline DSL (Domain-Specific Language).",
+    "expected_context_keywords": ["pipeline", "continuous delivery", "DSL", "code"]
+  },
+  {
+    "id": "jenkins_core_003",
+    "category": "Jenkins Core",
+    "question": "How do I create a new job in Jenkins?",
+    "ground_truth_answer": "To create a new job in Jenkins, click on 'New Item' from the Jenkins dashboard, enter a name for your job, select the job type (like Freestyle project or Pipeline), and click OK. Then configure the job settings including source code management, build triggers, and build steps.",
+    "expected_context_keywords": ["new item", "job", "freestyle", "pipeline", "configure"]
+  },
+  {
+    "id": "plugins_001",
+    "category": "Plugins",
+    "question": "How do I install a plugin in Jenkins?",
+    "ground_truth_answer": "To install a plugin in Jenkins, go to 'Manage Jenkins' > 'Manage Plugins', click on the 'Available' tab, search for the plugin you want, check the box next to it, and click 'Install without restart' or 'Download now and install after restart'.",
+    "expected_context_keywords": ["plugin", "manage jenkins", "install", "available"]
+  },
+  {
+    "id": "plugins_002",
+    "category": "Plugins",
+    "question": "What is the Blue Ocean plugin?",
+    "ground_truth_answer": "Blue Ocean is a modern user interface for Jenkins that provides a visual pipeline editor and a redesigned user experience. It makes it easier to create, visualize, and diagnose continuous delivery pipelines with a more intuitive interface.",
+    "expected_context_keywords": ["blue ocean", "UI", "visual", "pipeline editor"]
+  },
+  {
+    "id": "plugins_003",
+    "category": "Plugins",
+    "question": "How do I update Jenkins plugins?",
+    "ground_truth_answer": "To update Jenkins plugins, go to 'Manage Jenkins' > 'Manage Plugins', click on the 'Updates' tab to see available updates, select the plugins you want to update, and click 'Download now and install after restart'.",
+    "expected_context_keywords": ["update", "plugin", "manage jenkins", "updates tab"]
+  },
+  {
+    "id": "errors_001",
+    "category": "Error Scenarios",
+    "question": "What does 'java.lang.OutOfMemoryError: Java heap space' mean in Jenkins?",
+    "ground_truth_answer": "This error means Jenkins has run out of memory allocated to the Java heap. To fix it, you need to increase the heap size by modifying the JAVA_OPTS or JENKINS_JAVA_OPTIONS environment variable, typically by adding -Xmx parameter (e.g., -Xmx2g for 2GB).",
+    "expected_context_keywords": ["OutOfMemoryError", "heap", "memory", "JAVA_OPTS", "Xmx"]
+  },
+  {
+    "id": "errors_002",
+    "category": "Error Scenarios",
+    "question": "How do I fix 'Permission denied' errors in Jenkins builds?",
+    "ground_truth_answer": "Permission denied errors typically occur when Jenkins doesn't have the necessary file system permissions. Solutions include: ensuring the Jenkins user has proper permissions on the workspace directory, checking file ownership, verifying execute permissions on scripts, and potentially running Jenkins with appropriate user privileges.",
+    "expected_context_keywords": ["permission denied", "permissions", "user", "workspace", "ownership"]
+  },
+  {
+    "id": "errors_003",
+    "category": "Error Scenarios",
+    "question": "What causes 'Unable to find valid certification path to requested target' error?",
+    "ground_truth_answer": "This SSL/TLS error occurs when Jenkins cannot verify the SSL certificate of a remote server. It's usually caused by missing or untrusted certificates in the Java keystore. Fix it by importing the certificate into the Java keystore using keytool or configuring Jenkins to trust the certificate.",
+    "expected_context_keywords": ["SSL", "certificate", "keystore", "trust", "keytool"]
+  },
+  {
+    "id": "jenkins_core_004",
+    "category": "Jenkins Core",
+    "question": "How do I configure Jenkins to use a proxy?",
+    "ground_truth_answer": "To configure a proxy in Jenkins, go to 'Manage Jenkins' > 'Manage Plugins' > 'Advanced' tab. Enter your proxy server details including hostname, port, and optionally username/password. You can also specify hosts to exclude from proxy.",
+    "expected_context_keywords": ["proxy", "manage jenkins", "advanced", "hostname", "port"]
+  }
+]
