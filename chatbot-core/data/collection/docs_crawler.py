@@ -8,15 +8,21 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from utils import LoggerFactory
+from config.pipeline_loader import load_pipeline_config
 
 logger_factory = LoggerFactory.instance()
 logger = logger_factory.get_logger("collection")
 
+# Load pipeline configuration
+PIPELINE_CONFIG = load_pipeline_config()
+collection_config = PIPELINE_CONFIG["collection"]["docs"]
+general_config = PIPELINE_CONFIG["general"]
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "../raw/jenkins_docs.json")
+OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", general_config["raw_data_dir"].replace("data/", ""), collection_config["output_file"])
 
 # Home URL of jenkins doc
-BASE_URL = "https://www.jenkins.io/doc/"
+BASE_URL = collection_config["base_url"]
 
 # Set to check for duplicates
 visited_urls = set()
@@ -31,8 +37,8 @@ def create_session_with_retries():
     """
     session = requests.Session()
     retry_strategy = Retry(
-        total=3,
-        backoff_factor=1,  # 1s, 2s, 4s between retries
+        total=collection_config["max_retries"],
+        backoff_factor=collection_config["backoff_factor"],
         status_forcelist=[429, 500, 502, 503, 504],
         respect_retry_after_header=True,
     )

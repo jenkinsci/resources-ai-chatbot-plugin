@@ -2,6 +2,9 @@
 
 BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate
 
+# Data pipeline config path (can be overridden)
+CONFIG_PATH ?= chatbot-core/config/data-pipeline.yml
+
 ifeq ($(IS_CPU_REQ),1)
 	REQUIREMENTS=requirements-cpu.txt
 else
@@ -63,25 +66,25 @@ run-test: run-frontend-tests run-backend-tests
 run-data-collection-docs: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### COLLECTING JENKINS DOCS ###" && \
-	python3 data/collection/docs_crawler.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/collection/docs_crawler.py
 
 run-data-collection-plugins: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### COLLECTING JENKINS PLUGIN DOCS ###" && \
 	echo "### 1. FETCHING PLUGIN NAMES LIST ###" && \
-	python3 data/collection/fetch_list_plugins.py && \
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/collection/fetch_list_plugins.py && \
 	echo "### 2. FETCHING PLUGIN DOCS ###" && \
-	python3 data/collection/jenkins_plugins_fetch.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/collection/jenkins_plugins_fetch.py
 
 run-data-collection-discourse: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### COLLECTING DISCOURSE THREADS ###" && \
 	echo "### 1. FETCHING DISCOURSE TOPICS ###" && \
-	python3 data/collection/discourse_topics_retriever.py && \
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/collection/discourse_topics_retriever.py && \
 	echo "### 2. FILTERING DISCOURSE TOPICS ###" && \
-	python3 data/collection/collection_utils/filter_discourse_threads.py && \
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/collection/collection_utils/filter_discourse_threads.py && \
 	echo "### 3. FETCHING DISCOURSE POSTS FOR FILTERED TOPICS ###" && \
-	python3 data/collection/discourse_fetch_posts.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/collection/discourse_fetch_posts.py
 
 run-data-collection: run-data-collection-docs run-data-collection-plugins run-data-collection-discourse
 
@@ -91,14 +94,14 @@ run-data-preprocessing-docs: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### PREPROCESSING JENKINS DOCS ###" && \
 	echo "### 1. PROCESSING JENKINS DOCS ###" && \
-	python3 data/preprocessing/preprocess_docs.py && \
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/preprocessing/preprocess_docs.py && \
 	echo "### 2. FILTERING PROCESSED JENKINS DOCS ###" && \
-	python3 data/preprocessing/filter_processed_docs.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/preprocessing/filter_processed_docs.py
 
 run-data-preprocessing-plugins: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### PREPROCESSING JENKINS PLUGIN DOCS ###" && \
-	python3 data/preprocessing/preprocess_plugin_docs.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/preprocessing/preprocess_plugin_docs.py
 
 run-data-preprocessing: run-data-preprocessing-docs run-data-preprocessing-plugins
 
@@ -107,22 +110,22 @@ run-data-preprocessing: run-data-preprocessing-docs run-data-preprocessing-plugi
 run-data-chunking-docs: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### CHUNKING JENKINS DOCS ###" && \
-	python3 data/chunking/extract_chunk_docs.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/chunking/extract_chunk_docs.py
 
 run-data-chunking-plugins: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### CHUNKING JENKINS PLUGIN DOCS ###" && \
-	python3 data/chunking/extract_chunk_plugins.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/chunking/extract_chunk_plugins.py
 
 run-data-chunking-discourse: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### CHUNKING DISCOURSE THREADS ###" && \
-	python3 data/chunking/extract_chunk_discourse.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/chunking/extract_chunk_discourse.py
 
 run-data-chunking-stack: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### CHUNKING STACKOVERFLOW THREADS ###" && \
-	python3 data/chunking/extract_chunk_stack.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 data/chunking/extract_chunk_stack.py
 
 run-data-chunking: run-data-chunking-docs run-data-chunking-plugins run-data-chunking-discourse run-data-chunking-stack
 
@@ -131,7 +134,7 @@ run-data-chunking: run-data-chunking-docs run-data-chunking-plugins run-data-chu
 run-data-storage: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### EMBEDDING AND STORING THE CHUNKS ###" && \
-	python3 data/rag/vectorstore/store_embeddings.py
+	DATA_PIPELINE_CONFIG=$(CONFIG_PATH) python3 rag/vectorstore/store_embeddings.py
 
 
 run-pipeline-core: run-data-collection run-data-preprocessing run-data-chunking run-data-storage
