@@ -16,7 +16,12 @@ PIPELINE_CONFIG = load_pipeline_config()
 storage_config = PIPELINE_CONFIG["storage"]
 general_config = PIPELINE_CONFIG["general"]
 
-VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", general_config["embeddings_dir"])
+VECTOR_STORE_DIR = os.path.join(
+    os.path.dirname(__file__),
+    "..",
+    "..",
+    general_config["embeddings_dir"],
+)
 INDEX_PATH = os.path.join(VECTOR_STORE_DIR, storage_config["index_file"])
 METADATA_PATH = os.path.join(VECTOR_STORE_DIR, storage_config["metadata_file"])
 

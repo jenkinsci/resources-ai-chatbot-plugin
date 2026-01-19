@@ -19,7 +19,12 @@ collection_config = PIPELINE_CONFIG["collection"]["docs"]
 general_config = PIPELINE_CONFIG["general"]
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", general_config["raw_data_dir"].replace("data/", ""), collection_config["output_file"])
+RAW_DIR = os.path.join(
+    SCRIPT_DIR,
+    "..",
+    general_config["raw_data_dir"].replace("data/", ""),
+)
+OUTPUT_PATH = os.path.join(RAW_DIR, collection_config["output_file"])
 
 # Home URL of jenkins doc
 BASE_URL = collection_config["base_url"]

@@ -136,11 +136,12 @@ class TestPipelineConfigLoader:
 
     def test_env_override_invalid_value(self, sample_config, monkeypatch, caplog):
         """Test that invalid environment variable values are handled gracefully."""
+        caplog.set_level("WARNING", logger="data-pipeline")
         monkeypatch.setenv("CHUNK_SIZE", "not_a_number")
         config = _apply_env_overrides(sample_config)
         # Should keep original value and log warning
         assert config["chunking"]["chunk_size"] == 500
-        assert "Invalid CHUNK_SIZE" in caplog.text
+        assert any("Invalid CHUNK_SIZE" in rec.message for rec in caplog.records)
 
     def test_config_structure_completeness(self, temp_config_file):
         """Test that loaded config contains all expected top-level sections."""
@@ -168,19 +169,15 @@ class TestPipelineConfigLoader:
         assert config["chunking"]["chunk_overlap"] == 160
         assert config["storage"]["n_list"] == 1024
 
-    def test_config_immutability_of_original(self, sample_config):
+    def test_config_immutability_of_original(self, sample_config, monkeypatch):
         """Test that applying env overrides doesn't modify original config."""
         original_chunk_size = sample_config["chunking"]["chunk_size"]
-        
-        import os
-        os.environ["CHUNK_SIZE"] = "999"
+
+        monkeypatch.setenv("CHUNK_SIZE", "999")
         _apply_env_overrides(sample_config.copy())
-        
+
         # Original should remain unchanged if we pass a copy
         assert sample_config["chunking"]["chunk_size"] == original_chunk_size
-        
-        # Cleanup
-        del os.environ["CHUNK_SIZE"]
 
 
 class TestConfigIntegration:
@@ -192,8 +189,15 @@ class TestConfigIntegration:
         # Skipped in CI if chatbot-core structure not available
         pytest.skip("Requires full project structure")
 
-    def test_config_backward_compatibility(self):
+    def test_config_backward_compatibility(self, monkeypatch):
         """Test that old hard-coded defaults match new config defaults."""
+        # Ensure env vars do not affect defaults
+        monkeypatch.delenv("CHUNK_SIZE", raising=False)
+        monkeypatch.delenv("CHUNK_OVERLAP", raising=False)
+        monkeypatch.delenv("EMBEDDING_MODEL", raising=False)
+        monkeypatch.delenv("FAISS_N_LIST", raising=False)
+        monkeypatch.delenv("FAISS_N_PROBE", raising=False)
+
         config = load_pipeline_config()
         
         # Verify defaults match previous hard-coded values

@@ -22,8 +22,18 @@ chunking_config = PIPELINE_CONFIG["chunking"]["discourse"]
 general_config = PIPELINE_CONFIG["general"]
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_PATH = os.path.join(SCRIPT_DIR, "..", general_config["raw_data_dir"].replace("data/", ""), chunking_config["input_file"])
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", general_config["processed_data_dir"].replace("data/", ""), chunking_config["output_file"])
+RAW_DIR = os.path.join(
+    SCRIPT_DIR,
+    "..",
+    general_config["raw_data_dir"].replace("data/", ""),
+)
+PROCESSED_DIR = os.path.join(
+    SCRIPT_DIR,
+    "..",
+    general_config["processed_data_dir"].replace("data/", ""),
+)
+INPUT_PATH = os.path.join(RAW_DIR, chunking_config["input_file"])
+OUTPUT_PATH = os.path.join(PROCESSED_DIR, chunking_config["output_file"])
 
 CHUNK_SIZE = chunking_config["chunk_size"]
 CHUNK_OVERLAP = chunking_config["chunk_overlap"]

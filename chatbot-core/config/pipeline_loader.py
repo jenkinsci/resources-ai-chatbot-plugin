@@ -6,6 +6,8 @@ Supports environment variable overrides and custom config paths.
 """
 
 import os
+from copy import deepcopy
+
 import yaml
 from utils import LoggerFactory
 
@@ -42,20 +44,20 @@ def load_pipeline_config(config_path=None):
     
     if not os.path.exists(config_path):
         raise FileNotFoundError(
-            f"Data pipeline config not found at: {config_path}. "
-            f"Please ensure data-pipeline.yml exists or set DATA_PIPELINE_CONFIG environment variable."
+            "Data pipeline config not found at: %s. Please ensure "
+            "data-pipeline.yml exists or set DATA_PIPELINE_CONFIG environment variable." % config_path
         )
     
-    logger.info(f"Loading data pipeline configuration from: {config_path}")
+    logger.info("Loading data pipeline configuration from: %s", config_path)
     
     with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
     
     # Apply environment variable overrides for critical parameters
-    config = _apply_env_overrides(config)
-    
+    config_overridden = _apply_env_overrides(config)
+
     logger.info("Data pipeline configuration loaded successfully")
-    return config
+    return config_overridden
 
 
 def _apply_env_overrides(config):
@@ -75,42 +77,44 @@ def _apply_env_overrides(config):
     Returns:
         dict: Configuration with environment overrides applied.
     """
+    cfg = deepcopy(config)
+
     # Chunking overrides
     if os.environ.get("CHUNK_SIZE"):
         try:
-            config["chunking"]["chunk_size"] = int(os.environ["CHUNK_SIZE"])
-            logger.info(f"Override chunk_size from env: {config['chunking']['chunk_size']}")
+            cfg["chunking"]["chunk_size"] = int(os.environ["CHUNK_SIZE"])
+            logger.info("Override chunk_size from env: %s", cfg["chunking"]["chunk_size"])
         except ValueError:
-            logger.warning(f"Invalid CHUNK_SIZE env var: {os.environ['CHUNK_SIZE']}")
-    
+            logger.warning("Invalid CHUNK_SIZE env var: %s", os.environ["CHUNK_SIZE"])
+
     if os.environ.get("CHUNK_OVERLAP"):
         try:
-            config["chunking"]["chunk_overlap"] = int(os.environ["CHUNK_OVERLAP"])
-            logger.info(f"Override chunk_overlap from env: {config['chunking']['chunk_overlap']}")
+            cfg["chunking"]["chunk_overlap"] = int(os.environ["CHUNK_OVERLAP"])
+            logger.info("Override chunk_overlap from env: %s", cfg["chunking"]["chunk_overlap"])
         except ValueError:
-            logger.warning(f"Invalid CHUNK_OVERLAP env var: {os.environ['CHUNK_OVERLAP']}")
-    
+            logger.warning("Invalid CHUNK_OVERLAP env var: %s", os.environ["CHUNK_OVERLAP"])
+
     # Embedding overrides
     if os.environ.get("EMBEDDING_MODEL"):
-        config["embedding"]["model_name"] = os.environ["EMBEDDING_MODEL"]
-        logger.info(f"Override embedding model from env: {config['embedding']['model_name']}")
-    
+        cfg["embedding"]["model_name"] = os.environ["EMBEDDING_MODEL"]
+        logger.info("Override embedding model from env: %s", cfg["embedding"]["model_name"])
+
     # Storage/FAISS overrides
     if os.environ.get("FAISS_N_LIST"):
         try:
-            config["storage"]["n_list"] = int(os.environ["FAISS_N_LIST"])
-            logger.info(f"Override n_list from env: {config['storage']['n_list']}")
+            cfg["storage"]["n_list"] = int(os.environ["FAISS_N_LIST"])
+            logger.info("Override n_list from env: %s", cfg["storage"]["n_list"])
         except ValueError:
-            logger.warning(f"Invalid FAISS_N_LIST env var: {os.environ['FAISS_N_LIST']}")
-    
+            logger.warning("Invalid FAISS_N_LIST env var: %s", os.environ["FAISS_N_LIST"])
+
     if os.environ.get("FAISS_N_PROBE"):
         try:
-            config["storage"]["n_probe"] = int(os.environ["FAISS_N_PROBE"])
-            logger.info(f"Override n_probe from env: {config['storage']['n_probe']}")
+            cfg["storage"]["n_probe"] = int(os.environ["FAISS_N_PROBE"])
+            logger.info("Override n_probe from env: %s", cfg["storage"]["n_probe"])
         except ValueError:
-            logger.warning(f"Invalid FAISS_N_PROBE env var: {os.environ['FAISS_N_PROBE']}")
-    
-    return config
+            logger.warning("Invalid FAISS_N_PROBE env var: %s", os.environ["FAISS_N_PROBE"])
+
+    return cfg
 
 
 def get_phase_config(config, phase):
