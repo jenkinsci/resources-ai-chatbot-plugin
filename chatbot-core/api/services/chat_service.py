@@ -16,7 +16,8 @@ from api.prompts.prompts import (
     RETRIEVER_AGENT_PROMPT,
     SPLIT_QUERY_PROMPT,
 )
-from api.services.memory import get_session
+
+from api.services.memory import get_session, get_session_async
 from api.services.file_service import format_file_context
 from api.tools.tools import TOOL_REGISTRY
 from api.tools.utils import (
@@ -462,7 +463,8 @@ async def get_chatbot_reply_stream(
     logger.info("Streaming message from session '%s'", session_id)
     logger.info("Handling user query: %s", user_input)
 
-    memory = get_session(session_id)
+    memory = await get_session_async(session_id)
+
     if memory is None:
         raise RuntimeError(
             f"Session '{session_id}' not found in memory store.")
