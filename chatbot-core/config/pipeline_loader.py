@@ -36,24 +36,24 @@ def load_pipeline_config(config_path=None):
     # Determine config path with priority
     if config_path is None:
         config_path = os.environ.get("DATA_PIPELINE_CONFIG")
-    
+
     if config_path is None:
         # Default to data-pipeline.yml in the config directory
         file_dir = os.path.dirname(__file__)
         config_path = os.path.join(file_dir, "data-pipeline.yml")
-    
+
     if not os.path.exists(config_path):
         message = (
             f"Data pipeline config not found at: {config_path}. Please ensure "
             "data-pipeline.yml exists or set DATA_PIPELINE_CONFIG environment variable."
         )
         raise FileNotFoundError(message)
-    
+
     logger.info("Loading data pipeline configuration from: %s", config_path)
-    
+
     with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
-    
+
     # Apply environment variable overrides for critical parameters
     config_overridden = _apply_env_overrides(config)
 
