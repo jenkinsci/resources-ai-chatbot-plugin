@@ -84,8 +84,8 @@ def get_chatbot_reply(
         file_names = [f.filename for f in files]
         user_message = f"{user_input}\n[Attached files: {', '.join(file_names)}]"
 
-    memory.chat_memory.add_user_message(user_message)
-    memory.chat_memory.add_ai_message(reply)
+    memory.add_user_message(user_message)
+    memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)
 
@@ -118,8 +118,8 @@ def get_chatbot_reply_new_architecture(
 
     reply = _handle_query_type(user_input, query_type, memory)
 
-    memory.chat_memory.add_user_message(user_input)
-    memory.chat_memory.add_ai_message(reply)
+    memory.add_user_message(user_input)
+    memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)
 

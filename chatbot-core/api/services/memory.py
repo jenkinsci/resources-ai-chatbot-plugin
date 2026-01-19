@@ -6,7 +6,7 @@ Provides utility functions for session lifecycle.
 import uuid
 from datetime import datetime, timedelta
 from threading import Lock
-from langchain.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
 from api.config.loader import CONFIG
 from api.services.sessionmanager import(
     delete_session_file,
@@ -31,13 +31,13 @@ def init_session() -> str:
     session_id = str(uuid.uuid4())
     with _lock:
         _sessions[session_id] = {
-            "memory": ConversationBufferMemory(return_messages=True),
+            "memory": ChatMessageHistory(),
             "last_accessed": datetime.now()
         }
     return session_id
 
 
-def get_session(session_id: str) -> ConversationBufferMemory | None:
+def get_session(session_id: str) -> ChatMessageHistory | None:
     """
     Retrieve the chat session memory for the given session ID.
     Lazily restores from disk if missing in memory.
@@ -61,14 +61,12 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
         if not history:
             return None
 
-        memory = ConversationBufferMemory(return_messages=True)
+        memory = ChatMessageHistory()
         for msg in history:
-            memory.chat_memory.add_message(# pylint: disable=no-member
-                {
-                    "role": msg["role"],
-                    "content": msg["content"],
-                }
-            )
+            if msg["role"] == "user":
+                memory.add_user_message(msg["content"])
+            elif msg["role"] == "ai":
+                memory.add_ai_message(msg["content"])
 
         _sessions[session_id] = {
             "memory": memory,
@@ -87,7 +85,7 @@ def persist_session(session_id: str)-> None:
     """
     session_data = get_session(session_id)
     if session_data:
-        messages = list(session_data.chat_memory.messages)
+        messages = list(session_data.messages)
         append_message(session_id, messages)
 
 

@@ -3,10 +3,10 @@ Constructs the prompt used for querying the LLM, including system-level instruct
 chat history, context retrieved from the knowledge base, and the user's question.
 """
 
-from langchain.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
 from api.prompts.prompts import SYSTEM_INSTRUCTION
 
-def build_prompt(user_query: str, context: str, memory: ConversationBufferMemory) -> str:
+def build_prompt(user_query: str, context: str, memory: ChatMessageHistory) -> str:
     """
     Build the full prompt by combining system instructions, chat history, context,and user question.
 
@@ -21,8 +21,8 @@ def build_prompt(user_query: str, context: str, memory: ConversationBufferMemory
     if memory:
         history = "\n".join(
             f"{'User' if msg.type == 'human' else 'Jenkins Assistant'}: {msg.content or ''}"
-            for msg in memory.chat_memory.messages
-        ) if memory.chat_memory.messages  else ""
+            for msg in memory.messages
+        ) if memory.messages  else ""
     else:
         history = ""
 
