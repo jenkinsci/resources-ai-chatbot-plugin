@@ -9,13 +9,19 @@ import faiss
 from rag.embedding import embed_chunks
 from rag.vectorstore.vectorstore_utils import save_faiss_index, save_metadata
 from utils import LoggerFactory
+from config.pipeline_loader import load_pipeline_config
 
-VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
-INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "plugins_index.idx")
-METADATA_PATH = os.path.join(VECTOR_STORE_DIR, "plugins_metadata.pkl")
+# Load pipeline configuration
+PIPELINE_CONFIG = load_pipeline_config()
+storage_config = PIPELINE_CONFIG["storage"]
+general_config = PIPELINE_CONFIG["general"]
 
-N_LIST = 256
-N_PROBE = 20
+VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", general_config["embeddings_dir"])
+INDEX_PATH = os.path.join(VECTOR_STORE_DIR, storage_config["index_file"])
+METADATA_PATH = os.path.join(VECTOR_STORE_DIR, storage_config["metadata_file"])
+
+N_LIST = storage_config["n_list"]
+N_PROBE = storage_config["n_probe"]
 
 
 def build_faiss_ivf_index(vectors, nlist, nprobe, logger):

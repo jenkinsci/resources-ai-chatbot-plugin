@@ -13,13 +13,19 @@ from data.preprocessing.preprocessing_utils import (
     strip_html_body_wrappers
 )
 from utils import LoggerFactory
+from config.pipeline_loader import load_pipeline_config
 
 logger_factory = LoggerFactory.instance()
 logger = logger_factory.get_logger("preprocessing")
 
+# Load pipeline configuration
+PIPELINE_CONFIG = load_pipeline_config()
+preprocessing_config = PIPELINE_CONFIG["preprocessing"]["docs"]
+general_config = PIPELINE_CONFIG["general"]
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_DOCS_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "jenkins_docs.json")
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "processed", "processed_jenkins_docs.json")
+INPUT_DOCS_PATH = os.path.join(SCRIPT_DIR, "..", general_config["raw_data_dir"].replace("data/", ""), preprocessing_config["input_file"])
+OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", general_config["processed_data_dir"].replace("data/", ""), preprocessing_config["output_file"])
 
 def filter_content(urls, data, is_developer_content):
     """
