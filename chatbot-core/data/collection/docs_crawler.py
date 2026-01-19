@@ -8,6 +8,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 from utils import LoggerFactory
+from utils.path_utils import resolve_data_dir
 from config.pipeline_loader import load_pipeline_config
 
 logger_factory = LoggerFactory.instance()
@@ -18,12 +19,7 @@ PIPELINE_CONFIG = load_pipeline_config()
 collection_config = PIPELINE_CONFIG["collection"]["docs"]
 general_config = PIPELINE_CONFIG["general"]
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-RAW_DIR = os.path.join(
-    SCRIPT_DIR,
-    "..",
-    general_config["raw_data_dir"].replace("data/", ""),
-)
+RAW_DIR = resolve_data_dir(__file__, general_config["raw_data_dir"])
 OUTPUT_PATH = os.path.join(RAW_DIR, collection_config["output_file"])
 
 # Home URL of jenkins doc

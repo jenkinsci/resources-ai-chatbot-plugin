@@ -13,6 +13,7 @@ from data.preprocessing.preprocessing_utils import (
     strip_html_body_wrappers
 )
 from utils import LoggerFactory
+from utils.path_utils import resolve_data_dir
 from config.pipeline_loader import load_pipeline_config
 
 logger_factory = LoggerFactory.instance()
@@ -23,17 +24,8 @@ PIPELINE_CONFIG = load_pipeline_config()
 preprocessing_config = PIPELINE_CONFIG["preprocessing"]["docs"]
 general_config = PIPELINE_CONFIG["general"]
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-RAW_DIR = os.path.join(
-    SCRIPT_DIR,
-    "..",
-    general_config["raw_data_dir"].replace("data/", ""),
-)
-PROCESSED_DIR = os.path.join(
-    SCRIPT_DIR,
-    "..",
-    general_config["processed_data_dir"].replace("data/", ""),
-)
+RAW_DIR = resolve_data_dir(__file__, general_config["raw_data_dir"])
+PROCESSED_DIR = resolve_data_dir(__file__, general_config["processed_data_dir"])
 INPUT_DOCS_PATH = os.path.join(RAW_DIR, preprocessing_config["input_file"])
 OUTPUT_PATH = os.path.join(PROCESSED_DIR, preprocessing_config["output_file"])
 
