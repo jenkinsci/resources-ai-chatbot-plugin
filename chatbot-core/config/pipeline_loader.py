@@ -17,18 +17,18 @@ logger = LoggerFactory.instance().get_logger("data-pipeline")
 def load_pipeline_config(config_path=None):
     """
     Loads and parses the data-pipeline.yml file.
-    
+
     Priority order:
     1. Explicit config_path parameter
     2. DATA_PIPELINE_CONFIG environment variable
     3. Default: chatbot-core/config/data-pipeline.yml
-    
+
     Args:
         config_path (str, optional): Explicit path to config file.
-        
+
     Returns:
         dict: Parsed configuration values with all pipeline settings.
-        
+
     Raises:
         FileNotFoundError: If the config file doesn't exist.
         yaml.YAMLError: If the config file is malformed.
@@ -64,17 +64,17 @@ def load_pipeline_config(config_path=None):
 def _apply_env_overrides(config):
     """
     Apply environment variable overrides to config.
-    
+
     Supports overriding key parameters via environment variables:
     - CHUNK_SIZE: Override chunking.chunk_size
     - CHUNK_OVERLAP: Override chunking.chunk_overlap
     - EMBEDDING_MODEL: Override embedding.model_name
     - FAISS_N_LIST: Override storage.n_list
     - FAISS_N_PROBE: Override storage.n_probe
-    
+
     Args:
         config (dict): The base configuration dictionary.
-        
+
     Returns:
         dict: Configuration with environment overrides applied.
     """
@@ -121,14 +121,14 @@ def _apply_env_overrides(config):
 def get_phase_config(config, phase):
     """
     Extract configuration for a specific pipeline phase.
-    
+
     Args:
         config (dict): Full pipeline configuration.
         phase (str): Phase name ('collection', 'preprocessing', 'chunking', 'embedding', 'storage').
-        
+
     Returns:
         dict: Configuration for the specified phase.
-        
+
     Raises:
         KeyError: If the phase doesn't exist in config.
     """
