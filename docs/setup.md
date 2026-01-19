@@ -43,6 +43,15 @@ For the setup instructions have been provided for *Linux* and *Windows*. Moreove
     ```bash
     pip install -r requirements.txt
     ```
+
+    > **Note:** The backend requires `python-multipart` for multipart form handling.
+    > This dependency is included in the requirements file, but if you encounter
+    > runtime errors related to multipart requests, ensure it is installed:
+    >
+    > ```bash
+    > pip install python-multipart
+    > ```
+
 5. **Set the `PYTHONPATH` to the current directory(`chatbot-core/`)**
     ```bash
     export PYTHONPATH=$(pwd)
@@ -56,6 +65,14 @@ For the setup instructions have been provided for *Linux* and *Windows*. Moreove
         * Go to https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
         * Download the file named `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
         * Place the downloaded file in `api\models\mistral\`
+
+By default, the backend attempts to load the local GGUF model during
+startup. If the model file is missing, the server will fail to start.
+
+Contributors who do not need local inference can run the backend
+without a model by using test mode
+(see “Running without a local LLM model (test mode)” below).
+
 
 ## Installation Guide for Windows
 This guide provides step-by-step instructions for installing and running the Jenkins Chatbot on Windows systems.
@@ -103,6 +120,14 @@ This guide provides step-by-step instructions for installing and running the Jen
     ```bash
     pip install -r requirements-cpu.txt
     ```
+    > **Note:** The backend requires `python-multipart` for multipart form handling.
+    > This dependency is included in the requirements file, but if you encounter
+    > runtime errors related to multipart requests, ensure it is installed:
+    >
+    > ```powershell
+    > pip install python-multipart
+    > ```
+
     > **Note**: If you encounter any dependency issues, especially with NVIDIA packages, use the `requirements-cpu.txt` file which excludes GPU-specific dependencies.
 
 5. **Set the PYTHONPATH**
@@ -123,6 +148,13 @@ This guide provides step-by-step instructions for installing and running the Jen
         * Download the file named `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
         * Place the downloaded file in `api\models\mistral\`
 
+By default, the backend attempts to load the local GGUF model during
+startup. If the model file is missing, the server will fail to start.
+
+Contributors who do not need local inference can run the backend
+without a model by using test mode
+(see “Running without a local LLM model (test mode)” below).
+
 ## Automatic setup
 
 To avoid running all the steps each time, we have provided a target in the `Makefile` to automate the setup process.
@@ -140,6 +172,33 @@ make setup-backend IS_CPU_REQ=1
 > **Note:** The same logic holds for every other target that will be presented.
 
 > **Note:** The target **does not** include the installation of the LLM.
+
+### What does `setup-backend` do?
+
+The `setup-backend` Makefile target prepares the Python backend by:
+- Creating a virtual environment in `chatbot-core/venv`
+- Installing backend dependencies from `requirements.txt`
+  (or `requirements-cpu.txt` when `IS_CPU_REQ=1` is set)
+
+You usually do not need to run this manually.
+The `make api` target automatically runs `setup-backend`
+if the backend has not already been set up.
+
+## Running without a local LLM model (test mode)
+
+By default, the backend loads a local GGUF model on startup.
+For contributors who do not need local inference, a test configuration
+is available.
+
+The backend includes a `config-testing.yml` file that disables local
+LLM loading. This configuration is activated when the
+`PYTEST_VERSION` environment variable is set.
+
+Example:
+
+```bash
+PYTEST_VERSION=1 make api
+```
 
 ## Common Troubleshooting
 
