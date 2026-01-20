@@ -10,8 +10,7 @@ def test_get_chatbot_reply_success(
     mock_get_session,
     mock_retrieve_context,
     mock_prompt_builder,
-    mock_llm_provider,
-    mocker
+    mock_llm_provider
 ):
     """Test response of get_chatbot_reply for a valid chat session."""
     mock_session = mock_get_session.return_value
