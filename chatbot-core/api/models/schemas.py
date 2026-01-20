@@ -137,6 +137,43 @@ class DeleteResponse(BaseModel):
     """
     message: str
 
+
+class BuildAnalysisRequest(BaseModel):
+    """
+    Request model for build failure analysis.
+
+    Fields:
+        build_url (str): The Jenkins build URL to analyze.
+    """
+    build_url: str
+
+    @field_validator("build_url")
+    def build_url_must_not_be_empty(cls, v):  # pylint: disable=no-self-argument
+        """Validator that checks that build_url is not empty."""
+        if not v.strip():
+            raise ValueError("Build URL cannot be empty.")
+        return v
+
+
+class BuildAnalysisResponse(BaseModel):
+    """
+    Response model for build failure analysis.
+
+    Fields:
+        success (bool): Whether the analysis was successful.
+        build_url (str): The analyzed build URL.
+        error_type (Optional[str]): Identified error type if detected.
+        error_summary (str): Summary of the build failure analysis.
+        suggested_fix (Optional[str]): LLM-generated fix suggestion.
+        error (Optional[str]): Error message if analysis failed.
+    """
+    success: bool
+    build_url: str
+    error_type: Optional[str] = None
+    error_summary: str = ""
+    suggested_fix: Optional[str] = None
+    error: Optional[str] = None
+
 class QueryType(Enum):
     """
     Enum that represents the possible query types:

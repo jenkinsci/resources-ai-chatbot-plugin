@@ -129,9 +129,16 @@ def search_community_threads(query: str, keywords: str, logger) -> str:
         semantic_weight=0.7
     )
 
+
+# Import build log analyzer tool
+from api.tools.build_log_analyzer import analyze_build_failure_tool
+
+
 TOOL_REGISTRY = MappingProxyType({
     "search_plugin_docs": search_plugin_docs,
     "search_jenkins_docs": search_jenkins_docs,
     "search_stackoverflow_threads": search_stackoverflow_threads,
     "search_community_threads": search_community_threads,
+    "analyze_build_failure": analyze_build_failure_tool,
 })
+

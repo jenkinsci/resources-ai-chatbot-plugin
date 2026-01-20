@@ -39,6 +39,8 @@ from api.models.schemas import (
     SessionResponse,
     FileAttachment,
     SupportedExtensionsResponse,
+    BuildAnalysisRequest,
+    BuildAnalysisResponse,
 )
 from api.services.chat_service import (
     get_chatbot_reply,
@@ -55,6 +57,7 @@ from api.services.file_service import (
     get_supported_extensions,
     FileProcessingError,
 )
+from api.tools.build_log_analyzer import analyze_build_failure
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -315,3 +318,78 @@ def get_supported_file_extensions():
     """
     extensions = get_supported_extensions()
     return SupportedExtensionsResponse(**extensions)
+
+
+# =========================
+# Build Failure Analysis Endpoints
+# =========================
+@router.post(
+    "/sessions/{session_id}/analyze-build",
+    response_model=BuildAnalysisResponse,
+)
+async def analyze_build_failure_endpoint(
+    session_id: str,
+    request: BuildAnalysisRequest,
+    background_tasks: BackgroundTasks,
+):
+    """
+    POST endpoint to analyze a Jenkins build failure.
+
+    Fetches the build log, sanitizes PII, extracts error information,
+    and uses the LLM to provide diagnosis and fix suggestions.
+
+    Args:
+        session_id (str): The session identifier.
+        request (BuildAnalysisRequest): The request containing the build URL.
+
+    Returns:
+        BuildAnalysisResponse: Analysis results with error type and suggested fixes.
+    """
+    if not session_exists(session_id):
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found.",
+        )
+
+    logger.info("Analyzing build failure for session %s: %s",
+                session_id, request.build_url)
+
+    try:
+        # Analyze the build failure
+        result = analyze_build_failure(request.build_url)
+
+        if not result.get("success"):
+            return BuildAnalysisResponse(
+                success=False,
+                build_url=request.build_url,
+                error=result.get("error", "Unknown error during analysis"),
+            )
+
+        # Get LLM to provide fix suggestions if LLM is available
+        suggested_fix = None
+        if LLM_AVAILABLE and result.get("analysis_prompt"):
+            from api.services.chat_service import generate_answer  # pylint: disable=import-outside-toplevel
+            try:
+                suggested_fix = generate_answer(result["analysis_prompt"])
+            except Exception as llm_error:  # pylint: disable=broad-exception-caught
+                logger.warning("LLM generation failed: %s", llm_error)
+
+        # Persist session in background
+        background_tasks.add_task(persist_session, session_id)
+
+        return BuildAnalysisResponse(
+            success=True,
+            build_url=request.build_url,
+            error_type=result.get("error_type"),
+            error_summary=result.get("error_summary", ""),
+            suggested_fix=suggested_fix,
+        )
+
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.error("Build analysis failed: %s", exc, exc_info=True)
+        return BuildAnalysisResponse(
+            success=False,
+            build_url=request.build_url,
+            error=f"Analysis failed: {str(exc)}",
+        )
+

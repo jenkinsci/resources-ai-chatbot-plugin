@@ -6,7 +6,7 @@ import asyncio
 import uuid
 from datetime import datetime, timedelta
 from threading import Lock
-from langchain.memory import ConversationBufferMemory
+from langchain_classic.memory import ConversationBufferMemory
 from api.config.loader import CONFIG
 from api.services.sessionmanager import(
     delete_session_file,

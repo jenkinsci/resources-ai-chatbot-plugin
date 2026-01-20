@@ -1,6 +1,6 @@
 """Unit tests for prompt builder logic."""
 
-from langchain.memory import ConversationBufferMemory
+from langchain_classic.memory import ConversationBufferMemory
 from api.prompts.prompt_builder import build_prompt, SYSTEM_INSTRUCTION
 
 

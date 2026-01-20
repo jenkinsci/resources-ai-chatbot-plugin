@@ -36,6 +36,12 @@ tool_names:
   jenkins_docs: "docs"
   community_threads: "discourse"
 
+build_analysis:
+  max_log_lines: 100
+  context_window: 2000
+  jenkins_timeout: 30
+
 cors:
   allowed_origins:
     - "*"
+

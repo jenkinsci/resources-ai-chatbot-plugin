@@ -239,3 +239,81 @@ export const validateFile = (
 
   return { isValid: true };
 };
+
+/**
+ * Build analysis response from the backend.
+ */
+export interface BuildAnalysisResponse {
+  success: boolean;
+  build_url: string;
+  error_type?: string;
+  error_summary: string;
+  suggested_fix?: string;
+  error?: string;
+}
+
+/**
+ * Sends a request to analyze a Jenkins build failure.
+ *
+ * @param sessionId - The session id of the chat
+ * @param buildUrl - The Jenkins build URL to analyze
+ * @returns A Promise resolving to a bot-generated Message with the analysis
+ */
+export const analyzeBuildFailure = async (
+  sessionId: string,
+  buildUrl: string,
+  signal?: AbortSignal,
+): Promise<Message> => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/chatbot/sessions/${sessionId}/analyze-build`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ build_url: buildUrl }),
+        signal,
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.detail || `HTTP error: ${response.status}`;
+      console.error(`Build analysis error: ${response.status} - ${errorMessage}`);
+      return createBotMessage(`Failed to analyze build: ${errorMessage}`);
+    }
+
+    const data: BuildAnalysisResponse = await response.json();
+
+    if (!data.success) {
+      return createBotMessage(`Build analysis failed: ${data.error || "Unknown error"}`);
+    }
+
+    // Format the analysis response
+    let analysisText = `## Build Failure Analysis\n\n`;
+    analysisText += `**Build URL:** ${data.build_url}\n\n`;
+
+    if (data.error_type) {
+      analysisText += `**Error Type:** ${data.error_type}\n\n`;
+    }
+
+    if (data.error_summary) {
+      analysisText += `**Summary:** ${data.error_summary}\n\n`;
+    }
+
+    if (data.suggested_fix) {
+      analysisText += `**Suggested Fix:**\n${data.suggested_fix}\n`;
+    } else {
+      analysisText += `*LLM is not available for fix suggestions. Please check the error type and search for solutions.*\n`;
+    }
+
+    return createBotMessage(analysisText);
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      console.log("Build analysis request was cancelled");
+      throw error;
+    }
+    console.error("Build analysis error:", error);
+    return createBotMessage(getChatbotText("errorMessage"));
+  }
+};
+

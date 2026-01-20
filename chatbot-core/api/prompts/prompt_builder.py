@@ -3,7 +3,7 @@ Constructs the prompt used for querying the LLM, including system-level instruct
 chat history, context retrieved from the knowledge base, and the user's question.
 """
 
-from langchain.memory import ConversationBufferMemory
+from langchain_classic.memory import ConversationBufferMemory
 from api.prompts.prompts import SYSTEM_INSTRUCTION
 
 def build_prompt(user_query: str, context: str, memory: ConversationBufferMemory) -> str:

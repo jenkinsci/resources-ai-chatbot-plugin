@@ -10,6 +10,7 @@ import {
   fetchSupportedExtensions,
   validateFile,
   fileToAttachment,
+  analyzeBuildFailure,
   type SupportedExtensions,
 } from "../api/chatbot";
 import { Header } from "./Header";
@@ -45,6 +46,8 @@ export const Chatbot = () => {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [supportedExtensions, setSupportedExtensions] =
     useState<SupportedExtensions | null>(null);
+  const [showBuildAnalysisModal, setShowBuildAnalysisModal] = useState(false);
+  const [buildUrlInput, setBuildUrlInput] = useState("");
 
   /**
    * Fetch supported file extensions on component mount.
@@ -149,6 +152,56 @@ export const Chatbot = () => {
   };
 
   /**
+   * Handles the build failure analysis.
+   */
+  const handleAnalyzeBuildFailure = async () => {
+    if (!currentSessionId || !buildUrlInput.trim()) return;
+
+    const buildUrl = buildUrlInput.trim();
+    setBuildUrlInput("");
+    setShowBuildAnalysisModal(false);
+
+    // Add user message
+    const userMessage: Message = {
+      id: uuidv4(),
+      sender: "user",
+      text: `🔍 Analyze Build Failure: ${buildUrl}`,
+    };
+    appendMessageToCurrentSession(userMessage);
+
+    // Set loading
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === currentSessionId ? { ...s, isLoading: true } : s,
+      ),
+    );
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      const botReply = await analyzeBuildFailure(
+        currentSessionId,
+        buildUrl,
+        controller.signal,
+      );
+      appendMessageToCurrentSession(botReply);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      throw error;
+    } finally {
+      abortControllerRef.current = null;
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentSessionId ? { ...s, isLoading: false } : s,
+        ),
+      );
+    }
+  };
+
+  /**
    * Handles the send process in a chat session.
    */
 
@@ -186,17 +239,17 @@ export const Chatbot = () => {
       const botReply =
         filesToSend.length > 0
           ? await fetchChatbotReplyWithFiles(
-              currentSessionId,
-              trimmed || "Please analyze the attached file(s).",
-              filesToSend,
-              controller.signal,
-            )
+            currentSessionId,
+            trimmed || "Please analyze the attached file(s).",
+            filesToSend,
+            controller.signal,
+          )
           : controller.signal
             ? await fetchChatbotReply(
-                currentSessionId,
-                trimmed,
-                controller.signal,
-              )
+              currentSessionId,
+              trimmed,
+              controller.signal,
+            )
             : await fetchChatbotReply(currentSessionId, trimmed);
       appendMessageToCurrentSession(botReply);
     } catch (error) {
@@ -348,6 +401,117 @@ export const Chatbot = () => {
           />
           {currentSessionId !== null ? (
             <>
+              {/* Build Analysis Modal */}
+              {showBuildAnalysisModal && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                }}>
+                  <div style={{
+                    background: '#1e1e1e',
+                    padding: '24px',
+                    borderRadius: '12px',
+                    width: '400px',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                  }}>
+                    <h3 style={{ margin: '0 0 16px', color: '#fff' }}>
+                      🔍 Analyze Build Failure
+                    </h3>
+                    <p style={{ color: '#aaa', fontSize: '14px', marginBottom: '16px' }}>
+                      Enter the Jenkins build URL to analyze:
+                    </p>
+                    <input
+                      type="text"
+                      value={buildUrlInput}
+                      onChange={(e) => setBuildUrlInput(e.target.value)}
+                      placeholder="https://ci.jenkins.io/job/.../123/"
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '6px',
+                        border: '1px solid #444',
+                        background: '#2a2a2a',
+                        color: '#fff',
+                        marginBottom: '16px',
+                        boxSizing: 'border-box',
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && buildUrlInput.trim()) {
+                          handleAnalyzeBuildFailure();
+                        }
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => {
+                          setShowBuildAnalysisModal(false);
+                          setBuildUrlInput('');
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          border: '1px solid #444',
+                          background: 'transparent',
+                          color: '#aaa',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleAnalyzeBuildFailure}
+                        disabled={!buildUrlInput.trim()}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: buildUrlInput.trim() ? '#4CAF50' : '#333',
+                          color: buildUrlInput.trim() ? '#fff' : '#666',
+                          cursor: buildUrlInput.trim() ? 'pointer' : 'not-allowed',
+                        }}
+                      >
+                        Analyze
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Analyze Build Button */}
+              <div style={{
+                padding: '8px 16px',
+                borderBottom: '1px solid #333',
+                background: '#1a1a1a',
+              }}>
+                <button
+                  onClick={() => setShowBuildAnalysisModal(true)}
+                  disabled={getChatLoading()}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #4CAF50',
+                    background: 'transparent',
+                    color: '#4CAF50',
+                    cursor: getChatLoading() ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: getChatLoading() ? 0.5 : 1,
+                  }}
+                >
+                  🔍 Analyze Build Failure
+                </button>
+              </div>
+
               <Messages
                 messages={getSessionMessages(currentSessionId)}
                 loading={getChatLoading()}

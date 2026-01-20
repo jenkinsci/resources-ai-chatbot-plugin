@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
-from langchain.memory import ConversationBufferMemory
+from langchain_classic.memory import ConversationBufferMemory
 
 from api.services import memory
 
