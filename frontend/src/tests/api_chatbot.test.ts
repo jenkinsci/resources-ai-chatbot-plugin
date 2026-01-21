@@ -160,9 +160,7 @@ describe("chatbotApi", () => {
         json: async () => mockResponse,
       });
 
-      const files = [
-        new File(["content"], "test.txt", { type: "text/plain" }),
-      ];
+      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
 
       const result = await fetchChatbotReplyWithFiles(
@@ -194,13 +192,9 @@ describe("chatbotApi", () => {
         json: async () => ({ detail: "Internal server error" }),
       });
 
-      const files = [
-        new File(["content"], "test.txt", { type: "text/plain" }),
-      ];
+      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
-      const consoleErrorSpy = jest
-        .spyOn(console, "error")
-        .mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
       const result = await fetchChatbotReplyWithFiles(
         "session-xyz",
@@ -217,8 +211,8 @@ describe("chatbotApi", () => {
     it("aborts the request when timeout elapses", async () => {
       // Mock fetch to reject with AbortError when signal is aborted
       (global.fetch as jest.Mock).mockImplementationOnce(
-        (url: string, options?: RequestInit) => {
-          return new Promise((_, reject) => {
+        (url: string, options?: RequestInit) =>
+          new Promise((_, reject) => {
             // Reject with AbortError when signal is aborted
             if (options?.signal) {
               options.signal.addEventListener("abort", () => {
@@ -226,17 +220,12 @@ describe("chatbotApi", () => {
                 reject(error);
               });
             }
-          }) as unknown as Promise<Response>;
-        },
+          }) as unknown as Promise<Response>,
       );
 
-      const files = [
-        new File(["content"], "test.txt", { type: "text/plain" }),
-      ];
+      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
-      const consoleErrorSpy = jest
-        .spyOn(console, "error")
-        .mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
       const promise = fetchChatbotReplyWithFiles(
         "session-xyz",
@@ -267,13 +256,9 @@ describe("chatbotApi", () => {
           }) as unknown as Promise<Response>,
       );
 
-      const files = [
-        new File(["content"], "test.txt", { type: "text/plain" }),
-      ];
+      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
-      const consoleErrorSpy = jest
-        .spyOn(console, "error")
-        .mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
       const promise = fetchChatbotReplyWithFiles(
         "session-xyz",
@@ -295,15 +280,11 @@ describe("chatbotApi", () => {
     });
 
     it("handles already aborted external signal", async () => {
-      const files = [
-        new File(["content"], "test.txt", { type: "text/plain" }),
-      ];
+      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
       controller.abort(); // Abort before calling the function
 
-      const consoleErrorSpy = jest
-        .spyOn(console, "error")
-        .mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
       const result = await fetchChatbotReplyWithFiles(
         "session-xyz",
@@ -322,13 +303,9 @@ describe("chatbotApi", () => {
         new Error("Network error"),
       );
 
-      const files = [
-        new File(["content"], "test.txt", { type: "text/plain" }),
-      ];
+      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
-      const consoleErrorSpy = jest
-        .spyOn(console, "error")
-        .mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
       const result = await fetchChatbotReplyWithFiles(
         "session-xyz",

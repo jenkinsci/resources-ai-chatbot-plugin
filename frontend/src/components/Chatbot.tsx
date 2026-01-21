@@ -82,7 +82,7 @@ export const Chatbot = () => {
    * @returns The messages of the chat with id equals to sessionId
    */
   const getSessionMessages = (sessionId: string | null) => {
-    if (currentSessionId === null) {
+    if (sessionId === null || currentSessionId === null) {
       console.error("No current session");
       return [];
     }
@@ -340,12 +340,14 @@ export const Chatbot = () => {
             />
           )}
           {isPopupOpen && getDeletePopup()}
-          <Header
-            currentSessionId={currentSessionId}
-            openSideBar={openSideBar}
-            clearMessages={openConfirmDeleteChatPopup}
-            messages={getSessionMessages(currentSessionId)}
-          />
+          {currentSessionId !== null && (
+            <Header
+              currentSessionId={currentSessionId}
+              openSideBar={openSideBar}
+              clearMessages={openConfirmDeleteChatPopup}
+              messages={getSessionMessages(currentSessionId)}
+            />
+          )}
           {currentSessionId !== null ? (
             <>
               <Messages
