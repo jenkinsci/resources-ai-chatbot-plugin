@@ -83,20 +83,11 @@ export const fetchChatbotReplyWithFiles = async (
   files: File[],
   signal: AbortSignal,
 ): Promise<Message> => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(
-    () => controller.abort(),
+  // Combine external signal with timeout using AbortSignal.any()
+  const timeoutSignal = AbortSignal.timeout(
     CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
   );
-
-  if (signal.aborted) {
-    controller.abort();
-  }
-
-  const onExternalAbort = () => {
-    controller.abort();
-  };
-  signal.addEventListener("abort", onExternalAbort);
+  const combinedSignal = AbortSignal.any([signal, timeoutSignal]);
 
   try {
     const formData = new FormData();
@@ -111,7 +102,7 @@ export const fetchChatbotReplyWithFiles = async (
       {
         method: "POST",
         body: formData,
-        signal: controller.signal,
+        signal: combinedSignal,
       },
     );
 
@@ -138,9 +129,6 @@ export const fetchChatbotReplyWithFiles = async (
       console.error("API error uploading files:", error);
     }
     return createBotMessage(getChatbotText("errorMessage"));
-  } finally {
-    clearTimeout(timeoutId);
-    signal.removeEventListener("abort", onExternalAbort);
   }
 };
 
