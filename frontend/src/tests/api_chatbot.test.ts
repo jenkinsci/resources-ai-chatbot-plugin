@@ -248,11 +248,15 @@ describe("chatbotApi", () => {
     });
 
     it("cancels the request when external signal is aborted", async () => {
-      // Mock fetch to hang indefinitely
+      // Mock fetch to reject when signal is aborted
       (global.fetch as jest.Mock).mockImplementationOnce(
-        () =>
-          new Promise(() => {
-            // Never resolves
+        (url: string, options?: RequestInit) =>
+          new Promise((_, reject) => {
+            if (options?.signal) {
+              options.signal.addEventListener("abort", () => {
+                reject(new DOMException("Aborted", "AbortError"));
+              });
+            }
           }) as unknown as Promise<Response>,
       );
 
