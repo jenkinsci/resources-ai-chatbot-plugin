@@ -2,7 +2,7 @@
 Handles in-memory chat session state (conversation memory).
 Provides utility functions for session lifecycle.
 """
-
+import asyncio
 import uuid
 import logging
 from datetime import datetime, timedelta
@@ -151,6 +151,12 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
         }
 
         return memory
+
+async def get_session_async(session_id: str) -> ConversationBufferMemory | None:
+    """
+    Async wrapper for get_session to prevent event loop blocking.
+    """
+    return await asyncio.to_thread(get_session, session_id)
 
 
 def persist_session(session_id: str)-> None:
