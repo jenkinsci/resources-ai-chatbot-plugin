@@ -10,9 +10,31 @@ This plugin was developed as part of a Google Summer of Code 2025 project.
 
 ## Prerequisites
 
-- **Python**: 3.11+
-- **Build tools**: `make`, `cmake` (≥3.14), C/C++ compiler (`gcc`/`clang`/MSVC)
-- **Java**: JDK 11+ and Maven 3.6+ (for plugin development)
+Make sure the following tools are installed on your system:
+
+- Java JDK 17 or later  
+  Verify with:
+  ```bash
+  java -version
+
+Apache Maven 3.8+
+Verify with:
+
+mvn -version
+
+
+Git
+Verify with:
+
+git --version
+
+## Build the Project
+
+Clone the repository and run the following command from the project root
+(where `pom.xml` is located):
+
+```bash
+mvn clean install
 
 ### Example system package installation
 
