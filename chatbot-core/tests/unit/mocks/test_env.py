@@ -1,9 +1,20 @@
 """Fixtures for unit tests."""
 
+import sys
+import importlib
 import pytest
 from fastapi import FastAPI
 from sentence_transformers import SentenceTransformer
 from api.routes.chatbot import router
+
+def get_embed_chunks_module():
+    """
+    Helper to retrieve the actual embed_chunks MODULE object.
+    This bypasses the namespace collision where 'rag.embedding.embed_chunks'
+    resolves to the function instead of the module.
+    """
+    importlib.import_module("rag.embedding.embed_chunks")
+    return sys.modules["rag.embedding.embed_chunks"]
 
 @pytest.fixture
 def fastapi_app() -> FastAPI:
@@ -81,31 +92,36 @@ def mock_model_encode(mocker):
 @pytest.fixture
 def mock_collect_all_chunks(mocker):
     """Mock collect_all_chunks function."""
-    return mocker.patch("rag.embedding.embed_chunks.collect_all_chunks", create=True)
+    mod = get_embed_chunks_module()
+    return mocker.patch.object(mod, "collect_all_chunks", create=True)
 
 @pytest.fixture
 def mock_load_embedding_model(mocker):
     """Mock load_embedding_model function."""
-    return mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+    mod = get_embed_chunks_module()
+    return mocker.patch.object(mod, "load_embedding_model")
 
 @pytest.fixture
 def mock_embed_documents(mocker):
     """Mock embed_documents function."""
-    return mocker.patch("rag.embedding.embed_chunks.embed_documents")
+    mod = get_embed_chunks_module()
+    return mocker.patch.object(mod, "embed_documents")
 
 @pytest.fixture
 def patched_chunk_files(mocker):
     """Fixture to patch CHUNK_FILES."""
-    return mocker.patch(
-        "rag.embedding.embed_chunks.CHUNK_FILES",
-        ["file1.json", "file2.json", "file3.json"],
-        create=True
+    mod = get_embed_chunks_module()
+    return mocker.patch.object(
+        mod,
+        "CHUNK_FILES",
+        ["file1.json", "file2.json", "file3.json"]
     )
 
 @pytest.fixture
 def mock_load_chunks_from_file(mocker):
     """Mock load_chunks_from_file function."""
-    return mocker.patch("rag.embedding.embed_chunks.load_chunks_from_file")
+    mod = get_embed_chunks_module()
+    return mocker.patch.object(mod, "load_chunks_from_file")
 
 @pytest.fixture
 def mock_save_faiss_index(mocker):

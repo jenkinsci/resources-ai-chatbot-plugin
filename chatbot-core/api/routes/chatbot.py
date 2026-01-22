@@ -27,8 +27,8 @@ from fastapi import (
     File,
     Form,
     BackgroundTasks,
-    Header,
-    Query
+    Query,
+    Depends
 )
 
 # =========================
@@ -57,6 +57,10 @@ from api.services.file_service import (
     process_uploaded_file,
     get_supported_extensions,
     FileProcessingError,
+)
+from api.services.auth_service import (
+    get_current_jenkins_user,
+    JenkinsUser
 )
 
 logger = logging.getLogger(__name__)
@@ -168,8 +172,7 @@ async def chatbot_stream(websocket: WebSocket, session_id: str,user_id: str = Qu
 )
 def start_chat(
     response: Response,
-    x_jenkins_user_id: str = Header(..., alias="X-Jenkins-User-ID"),
-    x_jenkins_user_name: str = Header("User", alias="X-Jenkins-User-Name")
+    user: JenkinsUser = Depends(get_current_jenkins_user)
 ):
     """
     Create a new chat session linked to the authenticated user.
@@ -177,7 +180,7 @@ def start_chat(
     Returns a unique session ID that can be used for subsequent
     chatbot interactions.
     """
-    session_id = init_session(user_id=x_jenkins_user_id, user_name=x_jenkins_user_name)
+    session_id = init_session(user_id=user.user_id, user_name=user.full_name)
     response.headers["Location"] = (
         f"/sessions/{session_id}/message"
     )
@@ -189,7 +192,7 @@ def start_chat(
 )
 def delete_chat(
     session_id: str,
-    x_jenkins_user_id: str = Header(..., alias="X-Jenkins-User-ID")
+    user: JenkinsUser = Depends(get_current_jenkins_user)
 ):
     """
     Delete an existing chat session.
@@ -197,7 +200,7 @@ def delete_chat(
     Removes all conversation history and resources associated
     with the specified session.
     """
-    if not validate_session_access(session_id, x_jenkins_user_id):
+    if not validate_session_access(session_id, user.user_id):
         raise HTTPException(
             status_code=403,
             detail="Access denied: You do not own this session.",
@@ -220,7 +223,7 @@ def chatbot_reply(
     session_id: str,
     request: ChatRequest,
     _background_tasks: BackgroundTasks,
-    x_jenkins_user_id: str = Header(..., alias="X-Jenkins-User-ID")
+    user: JenkinsUser = Depends(get_current_jenkins_user)
 ):
 
     """
@@ -236,7 +239,7 @@ def chatbot_reply(
     Returns:
         ChatResponse: The assistant's reply.
     """
-    if not validate_session_access(session_id, x_jenkins_user_id):
+    if not validate_session_access(session_id, user.user_id):
         raise HTTPException(
             status_code=403,
             detail="Access denied: You do not own this session.",
@@ -264,7 +267,7 @@ async def chatbot_reply_with_files(
     session_id: str,
     message: str = Form(...),
     files: Optional[List[UploadFile]] = File(None),
-    x_jenkins_user_id: str = Header(..., alias="X-Jenkins-User-ID")
+    user: JenkinsUser = Depends(get_current_jenkins_user)
 ):
     """
     POST endpoint to handle chatbot replies with file uploads.
@@ -289,7 +292,7 @@ async def chatbot_reply_with_files(
         HTTPException: 404 if session not found, 400 if file processing fails,
                       422 if message is empty and no files provided.
     """
-    if not validate_session_access(session_id, x_jenkins_user_id):
+    if not validate_session_access(session_id, user.user_id):
         raise HTTPException(
             status_code=403,
             detail="Access denied: You do not own this session.",
