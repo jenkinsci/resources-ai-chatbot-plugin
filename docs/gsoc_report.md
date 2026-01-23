@@ -65,7 +65,7 @@ The report is organized into several key chapters, each highlighting a major sta
 ## Data Pipeline
 
 The data pipeline forms the backbone of the chatbot, collecting relevant Jenkins-related resources, cleaning and normalizing the content, transforming it into machine-readable form, and storing it for efficient semantic search.
-![alt text](images/data_pipeline.png)
+![Diagram of the data pipeline showing sources, processing, embeddings, and vector storage](images/data_pipeline.png)
 
 ### Source Identification
 
@@ -295,7 +295,15 @@ This design mirrors familiar chat interfaces, reducing the learning curve and ma
 
 ### Preview
 
-![Chatbot UI Preview](images/preview-1.png)![](images/preview-2.png)
+<figure>
+  <img src="images/preview-1.png" alt="Floating quick-access chat button in the bottom-right corner of the Jenkins UI">
+  <figcaption>Quick-access floating chat button shown on the Jenkins dashboard (bottom-right).</figcaption>
+</figure>
+
+<figure>
+  <img src="images/preview-2.png" alt="Chatbot UI preview with the assistant panel open over the Jenkins welcome page">
+  <figcaption>Chatbot panel open over the Jenkins welcome page, demonstrating in-context assistance.</figcaption>
+</figure>
 
 ---
 
@@ -557,3 +565,37 @@ All open issues can be found in the [project repository](https://github.com/jenk
 
 ---
 
+## Final Considerations
+
+Overall, the experience has been extremely rewarding. The support and guidance from mentors were invaluable throughout the project.
+
+### Key Lessons Learned
+
+#### Flexibility in Planning
+One of the most important lessons learned is that **plans inevitably change**. At the start, there was an expectation to define a path and follow it step by step, but in practice the project evolved continuously.
+
+#### Realistic Estimation
+- Some tasks took less time than anticipated
+- Others required much more time
+- Some ideas were not feasible and had to be rethought
+
+#### Adaptability
+This experience taught the importance of:
+- Being more flexible
+- Adjusting approaches as new information arises
+- Setting more realistic deadlines
+
+### Growth and Confidence
+
+Moving forward, there is much more confidence in:
+- Planning complex projects
+- Scheduling work effectively
+- Managing development tasks efficiently
+
+---
+
+## Acknowledgments
+
+Special thanks to the mentors and the Jenkins community for their support and guidance throughout this Google Summer of Code project.
+
+---
