@@ -82,8 +82,7 @@ export const Chatbot = () => {
    * @returns The messages of the chat with id equals to sessionId
    */
   const getSessionMessages = (sessionId: string | null) => {
-    if (currentSessionId === null) {
-      console.error("No current session");
+    if (sessionId === null) {
       return [];
     }
     const chatSession = sessions.find((item) => item.id === sessionId);
