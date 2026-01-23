@@ -51,6 +51,14 @@ curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 
 See [docs/README.md](docs/README.md) for detailed explanations.
 
+## 🎥 Setup Video Tutorial
+
+[![Local Setup Video Tutorial](https://img.youtube.com/vi/1DnMNA4aLyE/0.jpg)](https://youtu.be/1DnMNA4aLyE)
+
+The tutorial shows how to fork the repo, set up the backend, download the LLM model, run the frontend, and verify the chatbot works.
+
+
+
 ## Troubleshooting
 
 **llama-cpp-python installation fails**: Ensure build tools are installed and use Python 3.11+
