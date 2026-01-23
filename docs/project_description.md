@@ -1,15 +1,6 @@
 # AI-Powered Chatbot for Quick Access to Jenkins Resources
 
-**Google Summer of Code Program 2025 - Project Final Report**
-
----
-
-## Project Information
-
-- **Project Repository**: [jenkinsci/resources-ai-chatbot-plugin](https://github.com/jenkinsci/resources-ai-chatbot-plugin)
-- **Developer**: Giovanni Vaccarino
-- **Email**: giovannivaccarino03@gmail.com
-- **GitHub**: [@giovanni-vaccarino](https://github.com/giovanni-vaccarino)
+**Project Repository**: [jenkinsci/resources-ai-chatbot-plugin](https://github.com/jenkinsci/resources-ai-chatbot-plugin)
 
 ---
 
@@ -24,9 +15,8 @@
 7. [Agentic Approach](#agentic-approach)
 8. [Documentation](#documentation)
 9. [Release Process](#release-process)
-10. [Project Summary](#project-summary)
+10. [Current State](#current-state)
 11. [Future Work](#future-work)
-12. [Final Considerations](#final-considerations)
 
 ---
 
@@ -65,7 +55,6 @@ The report is organized into several key chapters, each highlighting a major sta
 ## Data Pipeline
 
 The data pipeline forms the backbone of the chatbot, collecting relevant Jenkins-related resources, cleaning and normalizing the content, transforming it into machine-readable form, and storing it for efficient semantic search.
-![Diagram of the data pipeline showing sources, processing, embeddings, and vector storage](images/data_pipeline.png)
 
 ### Source Identification
 
@@ -223,7 +212,7 @@ This design ensures users with limited compute resources can opt for hosted LLMs
 
 ### Available Endpoints
 
-The API exposes three main endpoints:
+The API exposes the following main endpoints:
 
 1. **`POST /api/chatbot/sessions`**
    Creates a new chat session and returns a `session_id`
@@ -231,18 +220,23 @@ The API exposes three main endpoints:
 2. **`POST /api/chatbot/sessions/{session_id}/message`**
    Sends a message to the chatbot and returns its reply
 
-3. **`DELETE /api/chatbot/sessions/{session_id}`**
+3. **`POST /api/chatbot/sessions/{session_id}/message/upload`**
+   Sends a message with file attachments to the chatbot
+
+4. **`DELETE /api/chatbot/sessions/{session_id}`**
    Deletes an existing session
 
-These endpoints provide a minimal but sufficient interface for managing conversations, with potential for expansion (e.g., session persistence, advanced configuration).
+5. **WebSocket endpoint** for real-time streaming responses
+
+These endpoints provide a comprehensive interface for managing conversations, with support for file uploads, real-time streaming, and session persistence.
 
 ### Session Memory Management
 
 Conversation context is maintained using **LangChain's ConversationBufferMemory**:
-- Stored in a dictionary keyed by `session_id`
-- Allows each session to preserve chat history
+- Stored per session with file-based persistence
+- Each session preserves chat history across server restarts
 - Ensures coherent and context-aware responses
-- Currently managed in-memory
+- Atomic writes prevent data corruption
 
 ---
 
@@ -287,23 +281,19 @@ The chatbot UI is designed to be simple and intuitive:
 
 - **Input Field**: Users can type or paste questions into a text box supporting both single-line and multi-line input
 
+- **File Attachments**: Users can attach files (logs, code, configs, images) to provide context for their queries
+
+- **Real-time Streaming**: Responses stream in real-time via WebSocket for immediate feedback
+
+- **Message Cancellation**: Users can cancel in-flight messages during generation
+
+- **Export Chat**: Conversations can be exported in multiple formats (TXT, MD, DOCX, PDF)
+
 - **Clear Chat Button**: Located in the header, resets the conversation
 
-- **Session Persistence**: Sessions persist during page refresh, maintaining continuity within the same browser tab
+- **Session Persistence**: Sessions persist across page refreshes and server restarts, maintaining continuity
 
 This design mirrors familiar chat interfaces, reducing the learning curve and making the chatbot feel natural to use.
-
-### Preview
-
-<figure>
-  <img src="images/preview-1.png" alt="Floating quick-access chat button in the bottom-right corner of the Jenkins UI">
-  <figcaption>Quick-access floating chat button shown on the Jenkins dashboard (bottom-right).</figcaption>
-</figure>
-
-<figure>
-  <img src="images/preview-2.png" alt="Chatbot UI preview with the assistant panel open over the Jenkins welcome page">
-  <figcaption>Chatbot panel open over the Jenkins welcome page, demonstrating in-context assistance.</figcaption>
-</figure>
 
 ---
 
@@ -324,6 +314,7 @@ Covered individual modules including:
 - Data preprocessing utilities
 - API services
 - Memory management
+- File processing and validation
 
 **Approach**: Extensive use of mocks to focus on specific function purposes
 
@@ -332,6 +323,7 @@ Ensured the full request-response cycle functioned correctly, validating interac
 - API
 - Retriever
 - Language model
+- File upload handling
 
 **Approach**: Only the generation function was mocked, allowing testing of real component interactions
 
@@ -344,6 +336,8 @@ Validated isolated components such as:
 - Buttons
 - Input fields
 - Chat messages
+- File attachment UI
+- Export functionality
 
 This approach ensured the user interface behaved as intended across different scenarios and that UI updates didn't disrupt existing features.
 
@@ -402,7 +396,7 @@ The combination of these methods ensures both semantic relevance and lexical pre
 
 ### Query Handling Flow
 
-The following diagram illustrates how queries are processed under this agentic approach:
+The following process illustrates how queries are processed under this agentic approach:
 
 #### Processing Steps
 
@@ -494,11 +488,11 @@ The plugin is now:
 
 ---
 
-## Project Summary
+## Current State
 
-### What Was Accomplished
+### Core Features
 
-Over the course of the project, the following was achieved:
+The plugin currently provides the following capabilities:
 
 1. **Data Pipeline**
    Built a comprehensive pipeline to collect, clean, chunk, and embed Jenkins-related resources
@@ -524,78 +518,73 @@ Over the course of the project, the following was achieved:
 7. **Release**
    Completed the release process for community distribution
 
-### Current State
+### Recent Community Enhancements
 
-The plugin is now:
-- **Fully functional** and available for use within Jenkins
-- **Tested** and documented
-- **Released** and available to the community
+The project has benefited significantly from community contributions that have added substantial new capabilities:
 
-While the core objectives have been achieved, further improvements and features are outlined in the Future Work section.
+| Feature | Description | PR | Status |
+|---------|-------------|-----|--------|
+| **File Upload Support** | Support for 30+ file types including logs, code, configs, and images with validation and security features | [#61](https://github.com/jenkinsci/resources-ai-chatbot-plugin/pull/61) | ✅ Merged |
+| **WebSocket Streaming** | Real-time streaming of chatbot responses for improved user experience | [#68](https://github.com/jenkinsci/resources-ai-chatbot-plugin/pull/68) | ✅ Merged |
+| **Session Persistence** | File-based persistence ensuring chat history survives server restarts | [#76](https://github.com/jenkinsci/resources-ai-chatbot-plugin/pull/76) | ✅ Merged |
+| **Export Chat** | Download conversations in multiple formats (TXT, MD, DOCX, PDF) | [#79](https://github.com/jenkinsci/resources-ai-chatbot-plugin/pull/79) | ✅ Merged |
+| **Cancel Messages** | Ability to abort in-flight message generation | [#81](https://github.com/jenkinsci/resources-ai-chatbot-plugin/pull/81) | ✅ Merged |
+
+### Availability
+
+The plugin is:
+- **Fully functional** and ready for production use
+- **Actively maintained** with regular community contributions
+- **Well-tested** with comprehensive test coverage
+- **Thoroughly documented** for both users and developers
+- **Officially released** and available through Jenkins plugin registry
 
 ---
 
 ## Future Work
 
-The 12 weeks of work resulted in a deployed plugin that delivers the core functionalities as expected. However, several items remain for future development:
+### Ongoing Development
 
-### Planned but Not Completed
+Several enhancements are planned or in progress:
 
-During the second half of the coding period, the following were planned but not completed:
+1. **Comprehensive Evaluation Framework**
+   Implement an LLM-as-a-judge approach to systematically evaluate chatbot response quality and system behavior
 
-1. **WebSocket Connection**
-   Implement a WebSocket connection to provide a more responsive, real-time user experience
+2. **Performance Optimizations**
+   - Caching strategies for frequently asked questions
+   - Improved embedding and retrieval performance
+   - Resource usage optimization
 
-2. **Comprehensive Evaluation**
-   Carry out evaluation of the chatbot using an LLM-as-a-judge approach to understand overall system behavior
+3. **Enhanced User Experience**
+   - Conversation history search and filtering
+   - Improved mobile responsiveness
+   - Customizable chatbot themes aligned with Jenkins UI themes
+   - Multi-language documentation support
 
-### Additional Enhancements
+4. **Extended Integration**
+   - Integration with additional data sources (GitHub repositories, JIRA, etc.)
+   - Enhanced analytics and usage tracking
+   - Advanced session management features
 
-Several issues were opened throughout the coding period, including:
+### Open Issues and Community Ideas
 
-- **Feature Proposals**:
-  - Allow users to attach images or PDFs to the chatbot
-  - Other capability extensions
+Additional feature proposals and improvements can be found in the [project repository issues](https://github.com/jenkinsci/resources-ai-chatbot-plugin/issues). Community contributions are welcome and encouraged.
 
-- **Smaller Improvements**:
-  - Various quality-of-life enhancements
-  - Performance optimizations
+### Contributing
 
-All open issues can be found in the [project repository](https://github.com/jenkinsci/resources-ai-chatbot-plugin/issues).
+The project welcomes contributions from the community. To contribute:
 
----
+1. Review [open issues](https://github.com/jenkinsci/resources-ai-chatbot-plugin/issues) or propose new features
+2. Fork the repository and create a feature branch
+3. Follow the existing code style and add appropriate tests
+4. Submit a pull request with a clear description of changes
 
-## Final Considerations
-
-Overall, the experience has been extremely rewarding. The support and guidance from mentors were invaluable throughout the project.
-
-### Key Lessons Learned
-
-#### Flexibility in Planning
-One of the most important lessons learned is that **plans inevitably change**. At the start, there was an expectation to define a path and follow it step by step, but in practice the project evolved continuously.
-
-#### Realistic Estimation
-- Some tasks took less time than anticipated
-- Others required much more time
-- Some ideas were not feasible and had to be rethought
-
-#### Adaptability
-This experience taught the importance of:
-- Being more flexible
-- Adjusting approaches as new information arises
-- Setting more realistic deadlines
-
-### Growth and Confidence
-
-Moving forward, there is much more confidence in:
-- Planning complex projects
-- Scheduling work effectively
-- Managing development tasks efficiently
+See the repository's contribution guidelines for more details.
 
 ---
 
 ## Acknowledgments
 
-Special thanks to the mentors and the Jenkins community for their support and guidance throughout this Google Summer of Code project.
+This project began as a Google Summer of Code 2024 initiative and has since evolved through contributions from the Jenkins community.
 
----
+*This documentation is actively maintained and updated as new features are added. For the latest information, please visit the [project repository](https://github.com/jenkinsci/resources-ai-chatbot-plugin).*
