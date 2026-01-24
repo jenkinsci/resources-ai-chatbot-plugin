@@ -24,8 +24,6 @@ sudo apt install -y make cmake gcc g++ python3.11 python3.11-venv python3.11-dev
 brew install cmake python@3.11 && xcode-select --install
 ```
 
-
-
 ## Getting Started
 
 There are two ways to run the API locally, depending on your use case:
@@ -39,6 +37,7 @@ make dev-lite
 ```
 
 This will:
+
 - Set up the Python environment automatically
 - Install dependencies (skips the 4GB model download)
 - Start the API server without loading the LLM
@@ -46,11 +45,12 @@ This will:
 The API will be available at `http://127.0.0.1:8000` within a few minutes.
 
 Verify it's working:
+
 ```bash
 curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 ```
 
-**What works:** All API endpoints, session management, context search, data pipeline  
+**What works:** All API endpoints, session management, context search, data pipeline
 **What doesn't work:** Actual chat completions (no model loaded)
 
 ### Option 2: Full Mode (For Testing Chat Functionality)
@@ -60,6 +60,7 @@ Use this if you need to test the chatbot with real LLM responses or work on mode
 First, complete the full setup in [docs/setup.md](docs/setup.md). This includes installing llama-cpp-python and downloading the 4GB model.
 
 Then run:
+
 ```bash
 make api
 ```
@@ -72,13 +73,15 @@ The API will be available at `http://127.0.0.1:8000`.
 
 See [docs/README.md](docs/README.md) for detailed explanations.
 
+### Centralized Data Pipeline Configuration
+
+All data pipeline parameters are managed via a centralized YAML configuration at `chatbot-core/config/data-pipeline.yml`. For schema, tuning tips, and usage examples, see `docs/chatbot-core/data/data-pipeline-config.md`.
+
 ## 🎥 Setup Video Tutorial
 
 [![Local Setup Video Tutorial](https://img.youtube.com/vi/1DnMNA4aLyE/0.jpg)](https://youtu.be/1DnMNA4aLyE)
 
 The tutorial shows how to fork the repo, set up the backend, download the LLM model, run the frontend, and verify the chatbot works.
-
-
 
 ## Troubleshooting
 
@@ -88,8 +91,9 @@ The tutorial shows how to fork the repo, set up the backend, download the LLM mo
 This may be caused by missing optional dependencies (e.g. `retriv`).
 
 Try installing missing packages:
+
 ```bash
-pip install llama-cpp-python retriv 
+pip install llama-cpp-python retriv
 ```
 
 **General issues**: Run `make clean && make <target>`, verify your virtual environment is activated, and ensure all dependencies from [docs/setup.md](docs/setup.md) are installed.
@@ -105,5 +109,3 @@ Refer to our [contribution guidelines](https://github.com/jenkinsci/.github/blob
 ## LICENSE
 
 Licensed under MIT, see [LICENSE](LICENSE.md)
-
-
