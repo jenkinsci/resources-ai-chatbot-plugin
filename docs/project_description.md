@@ -56,6 +56,8 @@ The report is organized into several key chapters, each highlighting a major sta
 
 The data pipeline forms the backbone of the chatbot, collecting relevant Jenkins-related resources, cleaning and normalizing the content, transforming it into machine-readable form, and storing it for efficient semantic search.
 
+![Diagram of the data pipeline showing sources, processing, embeddings, and vector storage](images/data_pipeline.png)
+
 ### Source Identification
 
 Four categories of resources were selected as the most valuable information sources:
@@ -294,6 +296,19 @@ The chatbot UI is designed to be simple and intuitive:
 - **Session Persistence**: Sessions persist across page refreshes and server restarts, maintaining continuity
 
 This design mirrors familiar chat interfaces, reducing the learning curve and making the chatbot feel natural to use.
+
+### Preview
+
+<figure>
+  <img src="images/preview-1.png" alt="Floating quick-access chat button in the bottom-right corner of the Jenkins UI">
+  <figcaption>Quick-access floating chat button shown on the Jenkins dashboard (bottom-right).</figcaption>
+</figure>
+
+<figure>
+  <img src="images/preview-2.png" alt="Chatbot UI preview with the assistant panel open over the Jenkins welcome page">
+  <figcaption>Chatbot panel open over the Jenkins welcome page, demonstrating in-context assistance.</figcaption>
+</figure>
+
 
 ---
 
