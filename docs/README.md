@@ -43,6 +43,7 @@ For the setup you can follow [Setup Guide](setup.md).
 ## Data Pipeline
 
 The first thing we want to be able to do is running the whole data pipeline. The data pipeline comprehends the following phases:
+
 - Data Collection
 - Preprocessing
 - Chunking
@@ -54,17 +55,32 @@ The first thing we want to be able to do is running the whole data pipeline. The
 So starting from the identificatiion of the data sources(e.g. Jenkins Official Documentation) the data pipeline will collect it, process it, and finally store it in a vector database(FAISS) to later perform semantic search.
 
 To run the following pipeline you can use the `run-data-pipeline` target:
+
 ```bash
 make run-data-pipeline
 ```
 
 > **Note:** for more details on the scripts and on the single processes you can visit the docs under `docs/chatbot-core/data/` and `docs/chatbot-core/rag/`.
 
+### Centralized Configuration
+
+All tunable parameters for collection, preprocessing, chunking, embedding, and storage are managed via a centralized YAML file: `chatbot-core/config/data-pipeline.yml`.
+
+- View the schema and guidance: `docs/chatbot-core/data/data-pipeline-config.md`
+- Override the config per run via Makefile:
+
+```bash
+make run-data-pipeline CONFIG_PATH=chatbot-core/config/data-pipeline.yml
+```
+
+You can also override critical parameters using environment variables (e.g., `CHUNK_SIZE`, `CHUNK_OVERLAP`, `EMBEDDING_MODEL`, `FAISS_N_LIST`, `FAISS_N_PROBE`). See the configuration guide for details.
+
 ## API
 
 Another key component in this repo is the backend, that allows to run the API that serves the chabot funcionalities. Also for the API there is a specific target in the `Makefile`, that does all the setup, installing the correct dependencies in the virtual environment, and runs the API.
 
 To run it you can use the `api` target:
+
 ```bash
 make api
 ```
@@ -76,6 +92,7 @@ make api
 For the UI the project relies on a React application, that is then built and injected into the Jenkins UI. A target in the `Makefile` allows to run the flow that builds the React app.
 
 You can do that by running:
+
 ```bash
 make build-frontend
 ```
@@ -89,6 +106,7 @@ After running this command you can run Jenkins (`mvn hpi:run`).
 For both the frontend and the backend we have a suite of unit and integration tests. Also in this case we have a specific target to run all the tests.
 
 To run the tests:
+
 ```bash
 make run-test
 ```

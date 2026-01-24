@@ -10,21 +10,29 @@ After collecting raw documentation from the different sources, a preprocessing s
 
 This script filters and extracts the main content from each raw Jenkins doc page.
 
-- **Input**: `jenkins_docs.json`  
+- **Input**: `jenkins_docs.json`
 - **Output**: `processed_jenkins_docs.json` (stored in `chatbot-core/data/processed`)
 
 It separates documentation into:
+
 - **Developer docs** (content in `col-8` containers)
 - **Non-developer docs** (content in `col-lg-9` containers)
 
 Each page is cleaned by:
+
 - Extracting only the main content container
 - Removing table of contents (`.toc`), `<script>`, `<img>`, and similar tags
 - Stripping navigation blocks (non-developer only)
 - Removing all HTML comments
 
 **To run:**
+
 ```bash
+# Via Makefile (recommended)
+make run-data-preprocessing-docs
+
+# Or directly (uses centralized config if DATA_PIPELINE_CONFIG is set)
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/preprocessing/preprocess_docs.py
 ```
 
@@ -55,7 +63,9 @@ Pages with `/extensions` in the URL are excluded from filtering and always retai
 **Output**: `filtered_jenkins_docs.json`: Final cleaned dictionary of relevant Jenkins documentation. (stored in `chatbot-core/data/processed`)
 
 #### To run:
+
 ```bash
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/preprocessing/filter_processed_docs.py
 ```
 
@@ -85,13 +95,18 @@ The plugin docs contain a wide range of formats and often include boilerplate or
 - Stripping out all HTML comments
 - Filtering out entries with fewer than 60 visible text characters
 
-
 **Input**: `plugin_docs.json`: Raw HTML content for each plugin page.
 
 **Output**: `processed_plugin_docs.json`: Cleaned and filtered plugin documentation. (stored in `chatbot-core/data/processed`)
 
 #### To run:
+
 ```bash
+# Via Makefile (recommended)
+make run-data-preprocessing-plugins
+
+# Or directly
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/preprocessing/preprocess_plugin_docs.py
 ```
 
@@ -104,3 +119,9 @@ Since the filtering and cleanup of threads happen during collection, no addition
 ## StackOverflow Threads
 
 At this stage, no additional preprocessing is needed. The content is already filtered for accepted answers, scored positively, and includes only Jenkins-related threads. Further processing will occur during the chunking phase.
+
+---
+
+## Configuration
+
+Preprocessing thresholds (e.g., `min_text_length`) and toggles (e.g., `remove_images`, `remove_scripts`, `remove_navigation`) are centralized in `chatbot-core/config/data-pipeline.yml` under the `preprocessing:` section. See `docs/chatbot-core/data/data-pipeline-config.md` for the full schema and guidance.
