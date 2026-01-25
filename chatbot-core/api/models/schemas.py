@@ -136,9 +136,10 @@ class CreateSessionRequest(BaseModel):
     Request model for creating a new chat session.
 
     Fields:
-        user_id (str): Jenkins user ID (injected by Java gatekeeper).
+        user_id (Optional[str]): Jenkins user ID (injected by Java gatekeeper).
+                                 None for anonymous access.
     """
-    user_id: str
+    user_id: Optional[str] = None
 
 
 class SessionResponse(BaseModel):

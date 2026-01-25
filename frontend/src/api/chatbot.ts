@@ -79,6 +79,7 @@ export const fetchChatbotReply = async (
  * @param sessionId - The session id of the chat
  * @param userMessage - The message input from the user
  * @param files - Array of File objects to upload
+ * @param signal - External abort signal for user-initiated cancellation
  * @returns A Promise resolving to a bot-generated Message
  */
 export const fetchChatbotReplyWithFiles = async (
@@ -87,11 +88,11 @@ export const fetchChatbotReplyWithFiles = async (
   files: File[],
   signal: AbortSignal,
 ): Promise<Message> => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(
-    () => controller.abort(),
+  // Combine external signal with timeout using AbortSignal.any()
+  const timeoutSignal = AbortSignal.timeout(
     CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
   );
+  const combinedSignal = AbortSignal.any([signal, timeoutSignal]);
 
   try {
     const formData = new FormData();
@@ -114,7 +115,7 @@ export const fetchChatbotReplyWithFiles = async (
         headers,
         body: formData,
         credentials: "same-origin", // Send cookies for authentication
-        signal: signal,
+        signal: combinedSignal,
       },
     );
 
@@ -130,15 +131,17 @@ export const fetchChatbotReplyWithFiles = async (
     return createBotMessage(botReply);
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      console.error(
-        `API request timed out after ${CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE}ms`,
-      );
+      if (signal.aborted) {
+        console.error("API request cancelled by user");
+      } else {
+        console.error(
+          `API request timed out after ${CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE}ms`,
+        );
+      }
     } else {
       console.error("API error uploading files:", error);
     }
     return createBotMessage(getChatbotText("errorMessage"));
-  } finally {
-    clearTimeout(timeoutId);
   }
 };
 

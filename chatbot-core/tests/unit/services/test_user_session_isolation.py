@@ -33,13 +33,36 @@ def test_init_session_with_user_id():
     assert validate_session_owner(session_id, user_id) is True
 
 
-def test_init_session_defaults_to_anonymous():
-    """Test session initialization defaults to anonymous when no user_id provided."""
+def test_init_session_defaults_to_anonymous_with_unique_id():
+    """Test session initialization defaults to unique anonymous ID when no user_id provided."""
     session_id = init_session()
 
     assert session_id is not None
     stored_user_id = get_session_user_id(session_id)
-    assert stored_user_id == "anonymous"
+    # Should be in format "anonymous:<session_id>"
+    assert stored_user_id.startswith("anonymous:")
+    # The anonymous ID should contain the session ID for uniqueness
+    assert session_id in stored_user_id
+
+
+def test_anonymous_sessions_are_isolated():
+    """Test that different anonymous sessions have unique IDs and are isolated."""
+    session1 = init_session()
+    session2 = init_session()
+
+    user_id_1 = get_session_user_id(session1)
+    user_id_2 = get_session_user_id(session2)
+
+    # Each anonymous session should have a unique ID
+    assert user_id_1 != user_id_2
+    assert user_id_1.startswith("anonymous:")
+    assert user_id_2.startswith("anonymous:")
+
+    # Session 1's anonymous ID should not be able to access session 2
+    assert validate_session_owner(session1, user_id_1) is True
+    assert validate_session_owner(session2, user_id_1) is False
+    assert validate_session_owner(session2, user_id_2) is True
+    assert validate_session_owner(session1, user_id_2) is False
 
 
 def test_get_user_sessions():

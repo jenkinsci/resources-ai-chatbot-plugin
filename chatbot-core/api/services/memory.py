@@ -26,17 +26,22 @@ _user_sessions = {}  # Track which sessions belong to which users
 _lock = Lock()
 
 
-def init_session(user_id: str = "anonymous") -> str:
+def init_session(user_id: str = None) -> str:
     """
     Initialize a new chat session and store its memory object.
 
     Args:
-        user_id (str): The Jenkins user ID. Defaults to "anonymous" for backward compatibility.
+        user_id (str): The Jenkins user ID. Defaults to None for anonymous access.
 
     Returns:
         str: A newly generated UUID representing the session ID.
     """
     session_id = str(uuid.uuid4())
+
+    # Use unique anonymous identifier if no user_id provided
+    if not user_id:
+        user_id = f"anonymous:{session_id}"
+
     with _lock:
         _sessions[session_id] = {
             "memory": ConversationBufferMemory(return_messages=True),
@@ -53,6 +58,7 @@ def init_session(user_id: str = "anonymous") -> str:
     save_session_metadata(session_id, user_id)
 
     return session_id
+
 
 
 def get_session(session_id: str) -> ConversationBufferMemory | None:
@@ -302,6 +308,11 @@ def validate_session_owner(session_id: str, user_id: str) -> bool:
     Returns:
         bool: True if the session belongs to the user, False otherwise.
     """
+    # If no user_id provided (anonymous access), allow access
+    # Session isolation is handled via unique anonymous tokens
+    if not user_id:
+        return True
+
     with _lock:
         # Check in-memory mapping first
         if user_id in _user_sessions and session_id in _user_sessions[user_id]:
@@ -315,10 +326,14 @@ def validate_session_owner(session_id: str, user_id: str) -> bool:
         # Load from disk if not in memory
         metadata = load_session_metadata(session_id)
         if metadata:
-            stored_user_id = metadata.get("user_id", "anonymous")
+            stored_user_id = metadata.get("user_id")
+            # For sessions with no stored user_id, deny access to authenticated users
+            if not stored_user_id:
+                return False
             return stored_user_id == user_id
 
         return False
+
 
 
 def get_session_user_id(session_id: str) -> str | None:

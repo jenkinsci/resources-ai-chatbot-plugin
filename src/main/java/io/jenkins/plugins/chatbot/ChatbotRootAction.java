@@ -78,23 +78,23 @@ public class ChatbotRootAction implements UnprotectedRootAction {
 
         LOGGER.log(Level.INFO, "ChatbotRootAction received request: {0} {1}", new Object[] {req.getMethod(), path});
 
-        // Authenticate user
+        // Authenticate user (optional - allow anonymous access)
         User user = User.current();
-        if (user == null) {
-            LOGGER.log(Level.WARNING, "Unauthenticated access attempt to chatbot API");
-            rsp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required");
-            return;
-        }
+        String userId = null;
 
-        String userId = user.getId();
-        LOGGER.log(Level.INFO, "Authenticated user: {0}", userId);
+        if (user != null) {
+            userId = user.getId();
+            LOGGER.log(Level.INFO, "Authenticated user: {0}", userId);
 
-        // Authorize user - check Jenkins READ permission
-        Jenkins jenkins = Jenkins.get();
-        if (!jenkins.hasPermission(Jenkins.READ)) {
-            LOGGER.log(Level.WARNING, "User {0} lacks Jenkins.READ permission", userId);
-            rsp.sendError(HttpServletResponse.SC_FORBIDDEN, "Insufficient permissions");
-            return;
+            // Authorize user - check Jenkins READ permission (only for authenticated users)
+            Jenkins jenkins = Jenkins.get();
+            if (!jenkins.hasPermission(Jenkins.READ)) {
+                LOGGER.log(Level.WARNING, "User {0} lacks Jenkins.READ permission", userId);
+                rsp.sendError(HttpServletResponse.SC_FORBIDDEN, "Insufficient permissions");
+                return;
+            }
+        } else {
+            LOGGER.log(Level.INFO, "Anonymous user accessing chatbot API");
         }
 
         // Proxy the request to Python backend
@@ -152,14 +152,17 @@ public class ChatbotRootAction implements UnprotectedRootAction {
                 String originalBody = bodyBuilder.toString();
                 JSONObject jsonBody;
 
-                // Parse and inject user_id
+                // Parse and inject user_id (only if authenticated)
                 if (originalBody.isEmpty()) {
                     jsonBody = new JSONObject();
                 } else {
                     jsonBody = new JSONObject(originalBody);
                 }
 
-                jsonBody.put("user_id", userId);
+                // Only inject user_id for authenticated users
+                if (userId != null) {
+                    jsonBody.put("user_id", userId);
+                }
 
                 String modifiedBody = jsonBody.toString();
                 LOGGER.log(Level.FINE, "Modified request body: {0}", modifiedBody);
