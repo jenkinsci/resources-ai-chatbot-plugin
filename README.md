@@ -28,7 +28,24 @@ brew install cmake python@3.11 && xcode-select --install
 
 ## Getting Started
 
-### Setup
+### Quick Start for Contributors
+
+If you want to explore the codebase or work on the backend/API without downloading the 4GB model, use:
+
+```bash
+make dev-lite
+```
+
+This starts the API server in lite mode (no LLM loaded) and skips the heavy model downloads. Perfect for working on data pipelines, API endpoints, or tests.
+
+The API will be available at `http://127.0.0.1:8000`.
+
+Verify it's working:
+```bash
+curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
+```
+
+### Full Setup
 
 Complete the full setup process in [docs/setup.md](docs/setup.md) before running any commands. This includes creating a virtual environment, installing Python dependencies (including llama-cpp-python), and configuring the data pipeline.
 
