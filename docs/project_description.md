@@ -600,6 +600,6 @@ See the repository's contribution guidelines for more details.
 
 ## Acknowledgments
 
-This project began as a Google Summer of Code 2024 initiative and has since evolved through contributions from the Jenkins community.
+This project began as a Google Summer of Code 2025 initiative and has since evolved through contributions from the Jenkins community.
 
 *This documentation is actively maintained and updated as new features are added. For the latest information, please visit the [project repository](https://github.com/jenkinsci/resources-ai-chatbot-plugin).*
