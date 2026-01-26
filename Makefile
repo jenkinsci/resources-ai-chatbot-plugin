@@ -32,6 +32,10 @@ run-api:
 
 api: setup-backend run-api
 
+dev-lite: setup-backend
+	@echo "Starting API in Lite Mode (no LLM loaded)..."
+	@$(BACKEND_SHELL) && PYTEST_VERSION=1 PYTHONPATH=$$(pwd) uvicorn api.main:app --reload
+
 # TESTS
 
 run-frontend-tests:

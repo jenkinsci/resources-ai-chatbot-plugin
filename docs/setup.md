@@ -2,6 +2,35 @@
 
 For the setup instructions have been provided for *Linux* and *Windows*. Moreover in the last section the automated setup using targets from the `Makefile` are discussed.
 
+## Quick Start for Contributors
+
+If you're a contributor who wants to get started quickly without downloading large model files:
+
+```bash
+make dev-lite
+```
+
+This command will:
+- Set up the Python virtual environment (if needed)
+- Install dependencies (skips heavy GPU packages)
+- Start the API server in lite mode (no LLM loaded)
+
+The API will be available at `http://127.0.0.1:8000` within a few minutes.
+
+**When to use this**:
+- Working on backend API logic
+- Developing data pipeline features
+- Running tests
+- Exploring the codebase
+
+**Note**: You won't be able to test full chat completions, but all API endpoints and session management will work.
+
+---
+
+## Full Installation Guide
+
+If you need the complete setup with local LLM inference, follow the platform-specific guides below.
+
 ## Installation Guide for Linux
 
 ### Prerequisites
