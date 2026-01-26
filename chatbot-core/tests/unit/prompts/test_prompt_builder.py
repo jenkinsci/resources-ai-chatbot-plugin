@@ -1,14 +1,14 @@
 """Unit tests for prompt builder logic."""
 
-from langchain.memory import ConversationBufferMemory
+from langchain_community.chat_message_histories import ChatMessageHistory
 from api.prompts.prompt_builder import build_prompt, SYSTEM_INSTRUCTION
 
 
 def test_build_prompt_with_full_history_and_context():
     """Test prompt formatting with user + assistant chat history and context."""
-    memory = ConversationBufferMemory(return_messages=True)
-    memory.chat_memory.add_user_message("How do I configure a Jenkins job?") # pylint: disable=no-member
-    memory.chat_memory.add_ai_message("You can use the freestyl option.") # pylint: disable=no-member
+    memory = ChatMessageHistory()
+    memory.add_user_message("How do I configure a Jenkins job?") # pylint: disable=no-member
+    memory.add_ai_message("You can use the freestyl option.")   # pylint: disable=no-member
     context = "You can configure Jenkins jobs using freestyle option or pipelines."
     user_query = "What about using pipelines?"
 
@@ -28,7 +28,7 @@ def test_build_prompt_with_full_history_and_context():
 
 def test_build_prompt_with_empty_history():
     """Test prompt formatting when no prior messages exist."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = ChatMessageHistory()
     context = "Relevant Jenkins documentation here."
     user_query = "How do I install plugins?"
 
@@ -46,7 +46,7 @@ def test_build_prompt_with_empty_history():
 
 def test_build_prompt_with_no_context_and_whitespace_query():
     """Test prompt formatting when context is missing and question has extra spaces."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = ChatMessageHistory()
     user_query = "   How can I trigger a build manually?   "
     context = ""
 

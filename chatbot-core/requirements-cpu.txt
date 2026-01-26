@@ -9,6 +9,7 @@ langchain==0.3.25
 langchain-core==0.3.61
 langchain-text-splitters==0.3.8
 langsmith==0.3.42
+langchain-community==0.3.16
 
 # ML & Transformers
 sentence-transformers==4.1.0
