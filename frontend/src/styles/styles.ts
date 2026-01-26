@@ -127,6 +127,60 @@ export const chatbotStyles = {
     border: 0,
   } as CSSProperties,
 
+  authParagraph: {
+    marginBottom: "20px",
+    color: "var(--text-color)",
+    lineHeight: "1.5",
+  } as CSSProperties,
+
+  authButtonsContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    width: "100%",
+    alignItems: "center",
+  } as CSSProperties,
+
+  authLoginButton: {
+    padding: "10px 20px",
+    backgroundColor: "#0073e6", // Matched to your theme
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    fontSize: "16px",
+    fontWeight: "bold",
+    transition: "background-color 0.2s",
+
+    // Auth-specific layout
+    textDecoration: "none",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "80%",
+    textAlign: "center",
+  } as CSSProperties,
+
+  authSignUpButton: {
+    padding: "10px 20px",
+    backgroundColor: "#ffffff",
+    color: "#0073e6", // Matched to your theme
+    border: "1px solid #0073e6",
+    borderRadius: "5px",
+    cursor: "pointer",
+    fontSize: "16px",
+    fontWeight: "bold",
+    transition: "background-color 0.2s",
+
+    // Auth-specific layout
+    textDecoration: "none",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "80%",
+    textAlign: "center",
+  } as CSSProperties,
+
   // Input
 
   inputWrapper: {
