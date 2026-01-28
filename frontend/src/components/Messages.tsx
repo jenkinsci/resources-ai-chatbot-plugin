@@ -5,14 +5,15 @@ import {
   type FileAttachment,
 } from "../model/Message";
 import { chatbotStyles } from "../styles/styles";
-import { getChatbotText } from "../data/chatbotTexts";
+import { LoadingDots } from "./LoadingDots";
 
 /**
  * Props for the Messages component.
  */
 export interface MessagesProps {
   messages: Message[];
-  loading: boolean;
+  isLoading: boolean;
+  loadingStatus: string | null;
 }
 
 /**
@@ -67,7 +68,11 @@ const FileAttachmentDisplay: React.FC<{ file: FileAttachment }> = ({
  * message when the bot is generating a response and automatically scrolls
  * to the newest message on update.
  */
-export const Messages = ({ messages, loading }: MessagesProps) => {
+export const Messages = ({
+  messages,
+  isLoading,
+  loadingStatus,
+}: MessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -109,12 +114,14 @@ export const Messages = ({ messages, loading }: MessagesProps) => {
       {messages.map((msg) =>
         renderMessage(msg.text, msg.sender, msg.id, msg.files),
       )}
-      {loading &&
-        renderMessage(
-          getChatbotText("generatingMessage"),
-          "jenkins-bot",
-          "loading",
-        )}
+      {isLoading && (
+        <div style={chatbotStyles.botMessage}>
+          <div style={chatbotStyles.loadingContainer}>
+            <LoadingDots />
+            <span style={chatbotStyles.loadingText}>{loadingStatus}</span>
+          </div>
+        </div>
+      )}
       <div ref={messagesEndRef} />
     </div>
   );

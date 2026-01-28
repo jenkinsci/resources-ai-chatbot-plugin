@@ -21,12 +21,24 @@ describe("Messages component", () => {
   });
 
   it("renders a single message", () => {
-    render(<Messages messages={[exampleMessages[0]]} loading={false} />);
+    render(
+      <Messages
+        messages={[exampleMessages[0]]}
+        isLoading={false}
+        loadingStatus={null}
+      />,
+    );
     expect(screen.getByText("Hello")).toBeInTheDocument();
   });
 
   it("renders multiple messages", () => {
-    render(<Messages messages={exampleMessages} loading={false} />);
+    render(
+      <Messages
+        messages={exampleMessages}
+        isLoading={false}
+        loadingStatus={null}
+      />,
+    );
     expect(screen.getByText("Hello")).toBeInTheDocument();
     expect(screen.getByText("Hi there!")).toBeInTheDocument();
   });
@@ -38,7 +50,13 @@ describe("Messages component", () => {
       text: "Line 1\nLine 2\nLine 3",
     };
 
-    render(<Messages messages={[multiLineMessage]} loading={false} />);
+    render(
+      <Messages
+        messages={[multiLineMessage]}
+        isLoading={false}
+        loadingStatus={null}
+      />,
+    );
 
     expect(
       screen.getByText((content) => content.includes("Line 1")),
@@ -52,14 +70,22 @@ describe("Messages component", () => {
   });
 
   it("renders loading message when loading is true", () => {
-    render(<Messages messages={[]} loading={true} />);
+    render(
+      <Messages
+        messages={[]}
+        isLoading={true}
+        loadingStatus={getChatbotText("generatingMessage")}
+      />,
+    );
     expect(
       screen.getByText(getChatbotText("generatingMessage")),
     ).toBeInTheDocument();
   });
 
   it("calls scrollIntoView when messages change", () => {
-    const { rerender } = render(<Messages messages={[]} loading={false} />);
+    const { rerender } = render(
+      <Messages messages={[]} isLoading={false} loadingStatus={null} />,
+    );
 
     const scrollMock = window.HTMLElement.prototype.scrollIntoView as jest.Mock;
     scrollMock.mockClear();
@@ -67,7 +93,8 @@ describe("Messages component", () => {
     rerender(
       <Messages
         messages={[{ id: "1", sender: "user", text: "Hello" }]}
-        loading={false}
+        isLoading={false}
+        loadingStatus={null}
       />,
     );
 
