@@ -13,17 +13,19 @@ def reset_memory_sessions():
 
 def test_create_session(client):
     """Should create a new chat session and return session ID and location header."""
-    response = client.post("/sessions")
+    response = client.post("/sessions", json={"user_id": "test-user"})
     assert response.status_code == 201
     data = response.json()
     assert "session_id" in data
+    assert "user_id" in data
+    assert data["user_id"] == "test-user"
     assert isinstance(data["session_id"], str)
     assert response.headers["Location"] == f"/sessions/{data['session_id']}/message"
 
 
 def test_reply_to_existing_session(client, mock_llm_provider, mock_get_relevant_documents):
     """Should return a chatbot reply for a valid session and input message."""
-    create_resp = client.post("/sessions")
+    create_resp = client.post("/sessions", json={"user_id": "test-user"})
     session_id = create_resp.json()["session_id"]
     mock_llm_provider.generate.return_value = "LLM answers to the query"
     mock_get_relevant_documents.return_value = get_relevant_documents_output()
@@ -49,7 +51,7 @@ def test_reply_to_nonexistent_session(client):
 
 def test_delete_existing_session(client):
     """Should delete an existing session and confirm deletion message."""
-    create_resp = client.post("/sessions")
+    create_resp = client.post("/sessions", json={"user_id": "test-user"})
     session_id = create_resp.json()["session_id"]
 
     response = client.delete(f"/sessions/{session_id}")
@@ -66,7 +68,7 @@ def test_delete_nonexistent_session(client):
 
 def test_reply_after_session_deleted(client):
     """Should return 404 when replying to a session that was deleted."""
-    create_resp = client.post("/sessions")
+    create_resp = client.post("/sessions", json={"user_id": "test-user"})
     session_id = create_resp.json()["session_id"]
 
     client.delete(f"/sessions/{session_id}")
@@ -80,7 +82,7 @@ def test_reply_after_session_deleted(client):
 
 def test_reply_with_empty_message(client):
     """Should return 422 when sending an empty message."""
-    create_resp = client.post("/sessions")
+    create_resp = client.post("/sessions", json={"user_id": "test-user"})
     session_id = create_resp.json()["session_id"]
 
     payload = {"message": "   "}
@@ -96,7 +98,7 @@ def test_full_chat_lifecycle(client, mock_llm_provider, mock_get_relevant_docume
     mock_llm_provider.generate.return_value = "Hello from the bot!"
     mock_get_relevant_documents.return_value = get_relevant_documents_output()
 
-    create_resp = client.post("/sessions")
+    create_resp = client.post("/sessions", json={"user_id": "test-user"})
     assert create_resp.status_code == 201
     session_id = create_resp.json()["session_id"]
 
@@ -120,7 +122,7 @@ def test_multiple_messages_in_session(client, mock_llm_provider, mock_get_releva
         get_relevant_documents_output(),
         get_relevant_documents_output()
     ]
-    session_id = client.post("/sessions").json()["session_id"]
+    session_id = client.post("/sessions", json={"user_id": "test-user"}).json()["session_id"]
     for i in range(3):
         resp = client.post(f"/sessions/{session_id}/message", json={"message": f"Msg {i+1}"})
         assert resp.status_code == 200
@@ -132,8 +134,8 @@ def test_multiple_sessions_are_isolated(client, mock_llm_provider, mock_get_rele
     mock_llm_provider.generate.return_value = "LLM response"
     mock_get_relevant_documents.return_value = get_relevant_documents_output()
 
-    active_session = client.post("/sessions").json()["session_id"]
-    deleted_session = client.post("/sessions").json()["session_id"]
+    active_session = client.post("/sessions", json={"user_id": "user-a"}).json()["session_id"]
+    deleted_session = client.post("/sessions", json={"user_id": "user-b"}).json()["session_id"]
 
     client.post(f"/sessions/{active_session}/message", json={"message": "Hi A"})
     client.post(f"/sessions/{deleted_session}/message", json={"message": "Hi B"})
