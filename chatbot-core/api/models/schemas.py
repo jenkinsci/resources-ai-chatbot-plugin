@@ -7,7 +7,7 @@ clients and the chatbot API endpoints.
 
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class FileType(str, Enum):
@@ -31,6 +31,14 @@ class FileAttachment(BaseModel):
     content: str
     mime_type: str
 
+class CreateSessionRequest(BaseModel):
+    """
+    Request model for creating a new chat session.
+
+    Fields:
+        user_id (str): The Jenkins User ID (or 'anonymous').
+    """
+    user_id: str = Field(..., description="The Jenkins User ID")
 
 class ChatRequest(BaseModel):
     """
@@ -185,7 +193,7 @@ def try_str_to_query_type(query_type: str, logger) -> QueryType:
     Args:
         query (str): The user query.
         logger: The logger param.
-    
+
     Returns:
         QueryType: the query type, either 'SIMPLE' or 'MULTI'
     """
