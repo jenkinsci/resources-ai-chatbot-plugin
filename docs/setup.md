@@ -1,35 +1,58 @@
 # Setup Instructions
 
-For the setup instructions have been provided for *Linux* and *Windows*. Moreover in the last section the automated setup using targets from the `Makefile` are discussed.
+This guide provides installation instructions for Linux and Windows, along with automated setup using the Makefile.
 
-## Quick Start for Contributors
+## Choose Your Setup Method
 
-If you're a contributor who wants to get started quickly without downloading large model files:
+### Quick Start (Lite Mode)
+
+**For:** Most contributors working on API, backend, or data pipeline features
 
 ```bash
 make dev-lite
 ```
 
-This command will:
-- Set up the Python virtual environment (if needed)
-- Install dependencies (skips heavy GPU packages)
-- Start the API server in lite mode (no LLM loaded)
+This will:
+- Set up the Python virtual environment
+- Install dependencies (skips the 4GB model and GPU packages)
+- Start the API server without loading the LLM
 
-The API will be available at `http://127.0.0.1:8000` within a few minutes.
+The API runs at `http://127.0.0.1:8000` within a few minutes.
 
-**When to use this**:
-- Working on backend API logic
+**Works:** All API endpoints, session management, context search, data pipeline  
+**Doesn't work:** Chat completions (no model loaded)
+
+**Use this when:**
+- Working on API endpoints or backend services
 - Developing data pipeline features
 - Running tests
-- Exploring the codebase
+- You don't need to test actual chatbot responses
 
-**Note**: You won't be able to test full chat completions, but all API endpoints and session management will work.
+### Full Installation (With LLM)
+
+**For:** Testing complete chat functionality or working on model-specific features
+
+Follow the platform-specific installation guide below to:
+- Install llama-cpp-python with GPU support
+- Download the 4GB Mistral model
+- Set up the complete environment
+
+Then run:
+```bash
+make api
+```
+
+**Works:** Everything, including real chat completions with the local LLM
+
+**Use this when:**
+- Testing the complete chatbot experience
+- Working on prompt engineering or model integration
+- Debugging inference issues
+- Preparing for production deployment
 
 ---
 
 ## Full Installation Guide
-
-If you need the complete setup with local LLM inference, follow the platform-specific guides below.
 
 ## Installation Guide for Linux
 

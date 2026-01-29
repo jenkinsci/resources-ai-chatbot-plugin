@@ -28,43 +28,47 @@ brew install cmake python@3.11 && xcode-select --install
 
 ## Getting Started
 
-### Quick Start for Contributors
+There are two ways to run the API locally, depending on your use case:
 
-If you want to explore the codebase or work on the backend/API without downloading the 4GB model, use:
+### Option 1: Lite Mode (Recommended for Most Contributors)
+
+Use this if you're working on the API, backend logic, data pipeline, or tests and don't need to test the actual chatbot responses.
 
 ```bash
 make dev-lite
 ```
 
-This starts the API server in lite mode (no LLM loaded) and skips the heavy model downloads. Perfect for working on data pipelines, API endpoints, or tests.
+This will:
+- Set up the Python environment automatically
+- Install dependencies (skips the 4GB model download)
+- Start the API server without loading the LLM
 
-The API will be available at `http://127.0.0.1:8000`.
+The API will be available at `http://127.0.0.1:8000` within a few minutes.
 
 Verify it's working:
 ```bash
 curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 ```
 
-### Full Setup
+**What works:** All API endpoints, session management, context search, data pipeline  
+**What doesn't work:** Actual chat completions (no model loaded)
 
-Complete the full setup process in [docs/setup.md](docs/setup.md) before running any commands. This includes creating a virtual environment, installing Python dependencies (including llama-cpp-python), and configuring the data pipeline.
+### Option 2: Full Mode (For Testing Chat Functionality)
 
-### Running the API
+Use this if you need to test the chatbot with real LLM responses or work on model-specific features.
 
+First, complete the full setup in [docs/setup.md](docs/setup.md). This includes installing llama-cpp-python and downloading the 4GB model.
 
-Once setup is complete, from the **project root directory** run:
+Then run:
 ```bash
 make api
 ```
 
 The API will be available at `http://127.0.0.1:8000`.
 
-Verify it's working:
-```bash
-curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
-```
+**What works:** Everything, including actual chat completions with the local LLM
 
-
+---
 
 See [docs/README.md](docs/README.md) for detailed explanations.
 
