@@ -12,18 +12,29 @@ from data.chunking.chunking_utils import(
     get_text_splitter
 )
 from utils import LoggerFactory
+from config.pipeline_loader import load_pipeline_config
 
 logger_factory = LoggerFactory.instance()
 logger = logger_factory.get_logger("chunking")
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_PATH = os.path.join(SCRIPT_DIR, "..", "processed", "processed_plugin_docs.json")
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "processed", "chunks_plugin_docs.json")
+# Load pipeline configuration
+PIPELINE_CONFIG = load_pipeline_config()
+chunking_config = PIPELINE_CONFIG["chunking"]["plugins"]
+general_config = PIPELINE_CONFIG["general"]
 
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 100
-CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[CODE_BLOCK_(\d+)\]\]"
-PLACEHOLDER_TEMPLATE = "[[CODE_BLOCK_{}]]"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROCESSED_DIR = os.path.join(
+    SCRIPT_DIR,
+    "..",
+    general_config["processed_data_dir"].replace("data/", ""),
+)
+INPUT_PATH = os.path.join(PROCESSED_DIR, chunking_config["input_file"])
+OUTPUT_PATH = os.path.join(PROCESSED_DIR, chunking_config["output_file"])
+
+CHUNK_SIZE = chunking_config["chunk_size"]
+CHUNK_OVERLAP = chunking_config["chunk_overlap"]
+CODE_BLOCK_PLACEHOLDER_PATTERN = PIPELINE_CONFIG["chunking"]["code_block_placeholder_pattern"]
+PLACEHOLDER_TEMPLATE = PIPELINE_CONFIG["chunking"]["placeholder_template"]
 
 def process_plugin(plugin_name, html, text_splitter):
     """

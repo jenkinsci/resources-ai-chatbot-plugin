@@ -24,8 +24,6 @@ sudo apt install -y make cmake gcc g++ python3.11 python3.11-venv python3.11-dev
 brew install cmake python@3.11 && xcode-select --install
 ```
 
-
-
 ## Getting Started
 
 ### Setup
@@ -34,8 +32,8 @@ Complete the full setup process in [docs/setup.md](docs/setup.md) before running
 
 ### Running the API
 
-
 Once setup is complete, from the **project root directory** run:
+
 ```bash
 make api
 ```
@@ -43,21 +41,22 @@ make api
 The API will be available at `http://127.0.0.1:8000`.
 
 Verify it's working:
+
 ```bash
 curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 ```
 
-
-
 See [docs/README.md](docs/README.md) for detailed explanations.
+
+### Centralized Data Pipeline Configuration
+
+All data pipeline parameters are managed via a centralized YAML configuration at `chatbot-core/config/data-pipeline.yml`. For schema, tuning tips, and usage examples, see `docs/chatbot-core/data/data-pipeline-config.md`.
 
 ## 🎥 Setup Video Tutorial
 
 [![Local Setup Video Tutorial](https://img.youtube.com/vi/1DnMNA4aLyE/0.jpg)](https://youtu.be/1DnMNA4aLyE)
 
 The tutorial shows how to fork the repo, set up the backend, download the LLM model, run the frontend, and verify the chatbot works.
-
-
 
 ## Troubleshooting
 
@@ -67,8 +66,9 @@ The tutorial shows how to fork the repo, set up the backend, download the LLM mo
 This may be caused by missing optional dependencies (e.g. `retriv`).
 
 Try installing missing packages:
+
 ```bash
-pip install llama-cpp-python retriv 
+pip install llama-cpp-python retriv
 ```
 
 **General issues**: Run `make clean && make <target>`, verify your virtual environment is activated, and ensure all dependencies from [docs/setup.md](docs/setup.md) are installed.
@@ -84,5 +84,3 @@ Refer to our [contribution guidelines](https://github.com/jenkinsci/.github/blob
 ## LICENSE
 
 Licensed under MIT, see [LICENSE](LICENSE.md)
-
-

@@ -7,6 +7,7 @@ chatbot-core/data/collection/
 ```
 
 These scripts gather information from four key sources:
+
 - **Jenkins official documentation**
 - **Discourse community topics**
 - **StackOverflow threads**
@@ -26,6 +27,11 @@ The script `docs_crawler.py` recursively crawls the [Jenkins official documentat
 **To run:**
 
 ```bash
+# Via Makefile (recommended)
+make run-data-collection-docs
+
+# Or directly (honors centralized config if DATA_PIPELINE_CONFIG is set)
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/collection/docs_crawler.py
 ```
 
@@ -45,7 +51,13 @@ Fetches all topics under the "Using Jenkins" category(including sub-category "As
 - **Output**: `discourse_topic_list.json` (stored in `chatbot-core/data/raw/`)
 
 **To run:**
+
 ```bash
+# Via Makefile (recommended)
+make run-data-collection-discourse
+
+# Or directly per step
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/collection/discourse_topics_retriever.py
 ```
 
@@ -59,7 +71,9 @@ Filters the previously collected topics, keeping only those with an accepted ans
 - **Output**: `filtered_discourse_topics.json` (stored in `chatbot-core/data/raw`)
 
 **To run:**
+
 ```bash
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/collection/collection_utils/filter_discourse_threads.py
 ```
 
@@ -69,11 +83,13 @@ python data/collection/collection_utils/filter_discourse_threads.py
 
 Fetches all post content for each filtered topic, including the question and all replies.
 
-- **Input**: `filtered_discourse_topics.json` 
+- **Input**: `filtered_discourse_topics.json`
 - **Output**: `topics_with_posts.json` (stored in `chatbot-core/data/raw`)
 
 **To run:**
+
 ```bash
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/collection/discourse_fetch_posts.py
 ```
 
@@ -105,7 +121,7 @@ WHERE
 ORDER BY q.Score DESC
 ```
 
-The result can be downloaded as aCSV file and have to be placed in the following path: ```chatbot-core/data/raw/QueryResults.csv```
+The result can be downloaded as aCSV file and have to be placed in the following path: `chatbot-core/data/raw/QueryResults.csv`
 
 ### 2. Convert CSV to JSON
 
@@ -113,13 +129,15 @@ The result can be downloaded as aCSV file and have to be placed in the following
 
 This script reads the exported CSV and converts it into a JSON format. The resulting JSON file will contain a list of question-answer pairs with metadata.
 
-- **Input**: `QueryResults.csv` 
+- **Input**: `QueryResults.csv`
 - **Output**: `stack_overflow_threads.json` (stored in `chatbot-core/data/raw`)
 
 **To run:**
+
 ```bash
 python data/collection/collection_utils/convert_stack_threads.py
 ```
+
 ## Jenkins Plugins
 
 This pipeline fetches the documentation content of the Jenkins plugins hosted on [https://plugins.jenkins.io/](https://plugins.jenkins.io/).
@@ -135,7 +153,13 @@ Fetches the list of all available plugins from the [Jenkins update site](https:/
 - **Output**: `plugin_names.json` (stored in `chatbot-core/data/raw`)
 
 **To run:**
+
 ```bash
+# Via Makefile (recommended)
+make run-data-collection-plugins
+
+# Or directly
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/collection/fetch_list_plugins.py
 ```
 
@@ -149,6 +173,20 @@ Uses the list of plugin names to fetch documentation content from each plugin's 
 - **Output**: `plugin_docs.json` (stored in `chatbot-core/data/raw`)
 
 **To run:**
+
 ```bash
-python data/collection/jenkins_plugin_fetch.py
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
+python data/collection/jenkins_plugins_fetch.py
+```
+
+---
+
+## Configuration
+
+All collection parameters (base URLs, output filenames, retry/backoff, timeouts, filtering thresholds) are centralized in `chatbot-core/config/data-pipeline.yml` under the `collection:` section. See `docs/chatbot-core/data/data-pipeline-config.md` for details.
+
+To run with a custom configuration:
+
+```bash
+make run-data-collection CONFIG_PATH=/path/to/my-config.yml
 ```

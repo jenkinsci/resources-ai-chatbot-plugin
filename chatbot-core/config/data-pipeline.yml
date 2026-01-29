@@ -1,0 +1,196 @@
+# Data Pipeline Configuration
+# This file centralizes all configurable parameters for the data collection,
+# preprocessing, chunking, embedding, and storage phases of the Jenkins AI Chatbot pipeline.
+
+# ============================================================================
+# GENERAL SETTINGS
+# ============================================================================
+general:
+  # Base directory paths (relative to chatbot-core/)
+  raw_data_dir: "data/raw"
+  processed_data_dir: "data/processed"
+  embeddings_dir: "data/embeddings"
+
+  # Logging configuration
+  log_level: "INFO" # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+# ============================================================================
+# COLLECTION PHASE
+# ============================================================================
+collection:
+  # Jenkins Documentation Crawler
+  docs:
+    base_url: "https://www.jenkins.io/doc/"
+    output_file: "jenkins_docs.json"
+    # HTTP retry configuration
+    max_retries: 3
+    backoff_factor: 1 # seconds between retries (exponential: 1s, 2s, 4s)
+    timeout: 30 # seconds per request
+
+  # Jenkins Plugins
+  plugins:
+    plugins_list_url: "https://plugins.jenkins.io/api/plugins"
+    plugins_list_file: "plugins_list.json"
+    plugins_docs_file: "plugins_docs.json"
+    max_retries: 3
+    backoff_factor: 1
+    timeout: 30
+    # Optional: limit number of plugins to fetch (null = all)
+    max_plugins: null
+
+  # Discourse Community Threads
+  discourse:
+    base_url: "https://community.jenkins.io"
+    topics_file: "discourse_topics.json"
+    filtered_topics_file: "filtered_discourse_topics.json"
+    posts_file: "topics_with_posts.json"
+    max_retries: 3
+    backoff_factor: 1
+    timeout: 30
+    # Filtering parameters
+    min_post_count: 2
+    min_like_count: 0
+    categories: null # null = all categories, or list like [1, 5, 10]
+
+# ============================================================================
+# PREPROCESSING PHASE
+# ============================================================================
+preprocessing:
+  # Jenkins Documentation Preprocessing
+  docs:
+    input_file: "jenkins_docs.json"
+    output_file: "processed_jenkins_docs.json"
+    filtered_output_file: "filtered_jenkins_docs.json"
+
+    # Content extraction settings
+    developer_content_class: "col-8"
+    user_content_class: "col-lg-9"
+    fallback_class: "container"
+
+    # Elements to remove
+    remove_toc: true
+    remove_images: true
+    remove_scripts: true
+    remove_navigation: true
+    remove_comments: true
+
+    # Filtering thresholds
+    min_text_length: 100 # minimum characters after cleaning
+
+  # Plugin Documentation Preprocessing
+  plugins:
+    input_file: "plugins_docs.json"
+    output_file: "processed_plugin_docs.json"
+
+    # Content cleaning
+    remove_images: true
+    remove_scripts: true
+    remove_navigation: true
+    min_text_length: 50
+
+# ============================================================================
+# CHUNKING PHASE
+# ============================================================================
+chunking:
+  # Global chunking parameters
+  chunk_size: 500 # characters per chunk
+  chunk_overlap: 100 # overlapping characters between chunks
+
+  # Code block handling
+  code_block_placeholder_pattern: "\\[\\[CODE_BLOCK_(\\d+)\\]\\]"
+  placeholder_template: "[[CODE_BLOCK_{}]]"
+
+  # Document-specific settings
+  docs:
+    input_file: "filtered_jenkins_docs.json"
+    output_file: "chunks_docs.json"
+    chunk_size: 500
+    chunk_overlap: 100
+    code_block_tag: "pre" # HTML tag for code blocks
+
+  plugins:
+    input_file: "processed_plugin_docs.json"
+    output_file: "chunks_plugin_docs.json"
+    chunk_size: 500
+    chunk_overlap: 100
+    code_block_tag: "pre"
+
+  discourse:
+    input_file: "topics_with_posts.json"
+    output_file: "chunks_discourse_docs.json"
+    chunk_size: 500
+    chunk_overlap: 100
+    # Discourse uses markdown code blocks
+    triple_backtick_pattern: "```(?:\\w+\\n)?(.*?)```"
+    inline_backtick_pattern: "`([^`\\n]+?)`"
+
+  stackoverflow:
+    input_file: "stackoverflow_threads.json"
+    output_file: "chunks_stackoverflow_threads.json"
+    chunk_size: 500
+    chunk_overlap: 100
+
+# ============================================================================
+# EMBEDDING PHASE
+# ============================================================================
+embedding:
+  # Embedding model configuration
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"
+  model_cache_dir: null # null = use default cache, or specify path
+
+  # Batch processing
+  batch_size: 32 # number of chunks to embed at once
+  show_progress: true
+
+  # Input chunk files to embed (order matters for multi-source indexing)
+  chunk_files:
+    - "chunks_plugin_docs.json"
+    # Uncomment below to include additional sources
+    # - "chunks_docs.json"
+    # - "chunks_discourse_docs.json"
+    # - "chunks_stackoverflow_threads.json"
+
+  # Device configuration
+  device: "cpu" # "cpu" or "cuda" for GPU acceleration
+
+# ============================================================================
+# STORAGE PHASE (FAISS Vector Store)
+# ============================================================================
+storage:
+  # FAISS index configuration
+  index_type: "IVFFlat" # IVFFlat or Flat (Flat for smaller datasets)
+  index_file: "plugins_index.idx"
+  metadata_file: "plugins_metadata.pkl"
+
+  # IVFFlat parameters
+  n_list: 256 # number of clusters/centroids
+  n_probe: 20 # number of clusters to search during query
+
+  # Index optimization
+  metric: "L2" # L2 (Euclidean) or IP (Inner Product)
+  normalize_vectors: false
+
+  # BM25 sparse retrieval index (optional)
+  bm25:
+    enabled: false
+    index_file: "bm25_index.pkl"
+    k1: 1.5 # term frequency saturation parameter
+    b: 0.75 # length normalization parameter
+
+# ============================================================================
+# VALIDATION & TESTING
+# ============================================================================
+validation:
+  # Enable validation checks after each phase
+  validate_after_collection: true
+  validate_after_preprocessing: true
+  validate_after_chunking: true
+  validate_after_embedding: true
+
+  # Validation thresholds
+  min_docs_collected: 10
+  min_chunks_generated: 100
+  max_chunk_size_deviation: 50 #允許的chunk大小偏差（字符）
+
+  # Sample checks
+  sample_size: 5 # number of items to log for inspection

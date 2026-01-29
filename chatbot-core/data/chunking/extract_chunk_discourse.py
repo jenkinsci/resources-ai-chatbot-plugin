@@ -11,19 +11,35 @@ from data.chunking.chunking_utils import(
     get_text_splitter
 )
 from utils import LoggerFactory
+from config.pipeline_loader import load_pipeline_config
 
 logger_factory = LoggerFactory.instance()
 logger = logger_factory.get_logger("chunking")
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "topics_with_posts.json")
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "processed", "chunks_discourse_docs.json")
+# Load pipeline configuration
+PIPELINE_CONFIG = load_pipeline_config()
+chunking_config = PIPELINE_CONFIG["chunking"]["discourse"]
+general_config = PIPELINE_CONFIG["general"]
 
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 100
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+RAW_DIR = os.path.join(
+    SCRIPT_DIR,
+    "..",
+    general_config["raw_data_dir"].replace("data/", ""),
+)
+PROCESSED_DIR = os.path.join(
+    SCRIPT_DIR,
+    "..",
+    general_config["processed_data_dir"].replace("data/", ""),
+)
+INPUT_PATH = os.path.join(RAW_DIR, chunking_config["input_file"])
+OUTPUT_PATH = os.path.join(PROCESSED_DIR, chunking_config["output_file"])
+
+CHUNK_SIZE = chunking_config["chunk_size"]
+CHUNK_OVERLAP = chunking_config["chunk_overlap"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
-TRIPLE_BACKTICK_CODE_PATTERN = r"```(?:\w+\n)?(.*?)```"
-INLINE_BACKTICK_CODE_PATTERN = r"`([^`\n]+?)`"
+TRIPLE_BACKTICK_CODE_PATTERN = chunking_config["triple_backtick_pattern"]
+INLINE_BACKTICK_CODE_PATTERN = chunking_config["inline_backtick_pattern"]
 
 def extract_code_blocks(text):
     """
