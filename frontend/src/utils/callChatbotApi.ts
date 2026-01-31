@@ -33,7 +33,7 @@ export const callChatbotApi = async <T>(
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name == "AbortError") {
       console.error(
-        `API request to ${endpoint} timed out aftr ${timeoutMs}ms.`,
+        `API request to ${endpoint} timed out after ${timeoutMs}ms.`,
       );
     } else {
       console.error(`API error calling ${endpoint}:`, error);
