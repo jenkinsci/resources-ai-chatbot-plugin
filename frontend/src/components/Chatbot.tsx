@@ -24,18 +24,60 @@ import {
 } from "../utils/chatbotStorage";
 import { v4 as uuidv4 } from "uuid";
 
+const getJenkinsBaseUrl = () => {
+  // Removes /chatbot from the end if present to get root
+  const configuredUrl = window.jenkinsChatbotConfig?.baseUrl || "";
+  return configuredUrl.replace(/\/chatbot\/?$/, "");
+};
+
+const getJenkinsUser = () => {
+  return window.jenkinsChatbotConfig?.userId || "anonymous";
+};
+
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
  */
 
 export const Chatbot = () => {
+  const currentUser = getJenkinsUser();
+  const isAnonymous = currentUser === "anonymous";
+
+  const jenkinsRoot = getJenkinsBaseUrl();
+  const currentUrl = encodeURIComponent(window.location.href);
+  const loginLink = `${jenkinsRoot}/login?from=${currentUrl}`;
+  const signUpLink = `${jenkinsRoot}/signup`;
+
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const initializeSessions = (): ChatSession[] => {
+    const currentUser = getJenkinsUser();
+    const lastUser = sessionStorage.getItem("chatbot-owner");
+
+    if (currentUser !== lastUser) {
+      sessionStorage.removeItem("chatbot-sessions");
+      sessionStorage.removeItem("chatbot-last-session-id");
+      sessionStorage.setItem("chatbot-owner", currentUser);
+      return [];
+    }
+
+    // Otherwise, load existing data
+    return loadChatbotSessions();
+  };
+
+  const initializeCurrentSessionId = (): string | null => {
+    // Note: initializeSessions runs first, so 'chatbot-owner' might already be updated.
+    // But for safety, if we cleared sessions, we must clear the ID too.
+    const sessions = loadChatbotSessions();
+    if (sessions.length === 0) return null;
+
+    return loadChatbotLastSessionId();
+  };
 
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
+  const [sessions, setSessions] = useState<ChatSession[]>(initializeSessions);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(
-    loadChatbotLastSessionId,
+    initializeCurrentSessionId,
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
@@ -67,6 +109,7 @@ export const Chatbot = () => {
     const handleBeforeUnload = () => {
       sessionStorage.setItem("chatbot-sessions", JSON.stringify(sessions));
       sessionStorage.setItem("chatbot-last-session-id", currentSessionId || "");
+      sessionStorage.setItem("chatbot-owner", getJenkinsUser());
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -312,6 +355,33 @@ export const Chatbot = () => {
     );
   };
 
+  const getAuthPage = () => {
+    return (
+      <div style={chatbotStyles.containerWelcomePage}>
+        <div style={chatbotStyles.boxWelcomePage}>
+          <h2 style={chatbotStyles.welcomePageH2}>Sign In Required</h2>
+
+          <p style={chatbotStyles.authParagraph}>
+            Please log in or create an account to start chatting with the
+            Jenkins AI Assistant.
+          </p>
+
+          <div style={chatbotStyles.authButtonsContainer}>
+            {/* Login Button */}
+            <a href={loginLink} style={chatbotStyles.authLoginButton}>
+              Log In
+            </a>
+
+            {/* Sign Up Button */}
+            <a href={signUpLink} style={chatbotStyles.authSignUpButton}>
+              Sign Up
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <button
@@ -328,44 +398,52 @@ export const Chatbot = () => {
             pointerEvents: isPopupOpen ? "none" : "auto",
           }}
         >
-          {isSidebarOpen && (
-            <Sidebar
-              onClose={() => setIsSidebarOpen(false)}
-              onCreateChat={handleNewChat}
-              onSwitchChat={onSwitchChat}
-              chatList={sessions}
-              activeChatId={currentSessionId}
-              openConfirmDeleteChatPopup={openConfirmDeleteChatPopup}
-            />
-          )}
-          {isPopupOpen && getDeletePopup()}
-          <Header
-            currentSessionId={currentSessionId}
-            openSideBar={openSideBar}
-            clearMessages={openConfirmDeleteChatPopup}
-            messages={getSessionMessages(currentSessionId)}
-          />
-          {currentSessionId !== null ? (
-            <>
-              <Messages
-                messages={getSessionMessages(currentSessionId)}
-                loading={getChatLoading()}
-              />
-              <Input
-                input={input}
-                setInput={setInput}
-                onSend={sendMessage}
-                onCancel={handleCancelMessage}
-                isLoading={getChatLoading()}
-                attachedFiles={attachedFiles}
-                onFilesAttached={handleFilesAttached}
-                onFileRemoved={handleFileRemoved}
-                enableFileUpload={true}
-                validateFile={handleValidateFile}
-              />
-            </>
+          {isAnonymous ? (
+            getAuthPage()
           ) : (
-            getWelcomePage()
+            /* Authenticated Content */
+            <>
+              {isSidebarOpen && (
+                <Sidebar
+                  // ... props
+                  onClose={() => setIsSidebarOpen(false)}
+                  onCreateChat={handleNewChat}
+                  onSwitchChat={onSwitchChat}
+                  chatList={sessions}
+                  activeChatId={currentSessionId}
+                  openConfirmDeleteChatPopup={openConfirmDeleteChatPopup}
+                />
+              )}
+              {isPopupOpen && getDeletePopup()}
+              <Header
+                currentSessionId={currentSessionId}
+                openSideBar={openSideBar}
+                clearMessages={openConfirmDeleteChatPopup}
+                messages={getSessionMessages(currentSessionId)}
+              />
+              {currentSessionId !== null ? (
+                <>
+                  <Messages
+                    messages={getSessionMessages(currentSessionId)}
+                    loading={getChatLoading()}
+                  />
+                  <Input
+                    input={input}
+                    setInput={setInput}
+                    onSend={sendMessage}
+                    onCancel={handleCancelMessage}
+                    isLoading={getChatLoading()}
+                    attachedFiles={attachedFiles}
+                    onFilesAttached={handleFilesAttached}
+                    onFileRemoved={handleFileRemoved}
+                    enableFileUpload={true}
+                    validateFile={handleValidateFile}
+                  />
+                </>
+              ) : (
+                getWelcomePage()
+              )}
+            </>
           )}
         </div>
       )}

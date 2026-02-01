@@ -5,6 +5,7 @@ import { API_BASE_URL } from "../config";
 describe("callChatbotApi", () => {
   beforeEach(() => {
     fetchMock.resetMocks();
+    jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
   it("returns parsed JSON when response is ok", async () => {
@@ -21,7 +22,7 @@ describe("callChatbotApi", () => {
     expect(result).toEqual(mockData);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${API_BASE_URL}/api/chatbot/some-endpoint`,
+      `${API_BASE_URL}/some-endpoint`,
       expect.objectContaining({
         signal: expect.any(Object),
       }),

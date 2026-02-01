@@ -2,11 +2,21 @@
 
 from io import BytesIO
 
+import pytest
 
-def test_get_supported_extensions(client, mock_session_exists):  # pylint: disable=unused-argument
+TEST_HEADERS = {
+    "X-Jenkins-User-ID": "test-user",
+    "X-Jenkins-User-Name": "Test User"
+}
+
+@pytest.fixture(autouse=True)
+def auto_mock_validate_session_access(mocker):
+    """Mock the ownership check to always say 'Yes, this session belongs to test-user'."""
+    return mocker.patch("api.routes.chatbot.validate_session_access", return_value="test-user")
+
+def test_get_supported_extensions(client):
     """Test GET /files/supported-extensions endpoint."""
-    response = client.get("/files/supported-extensions")
-
+    response = client.get("/files/supported-extensions", headers=TEST_HEADERS)
     assert response.status_code == 200
     data = response.json()
 
@@ -18,7 +28,9 @@ def test_get_supported_extensions(client, mock_session_exists):  # pylint: disab
     assert ".png" in data["image"]
 
 
-def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chatbot_reply):
+def test_chatbot_reply_with_text_file(
+    client, mock_session_exists, mock_get_chatbot_reply
+):
     """Test POST /sessions/{session_id}/message/upload with text file."""
     mock_session_exists.return_value = True
     mock_get_chatbot_reply.return_value = {"reply": "I analyzed the file."}
@@ -32,7 +44,7 @@ def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chat
     response = client.post(
         "/sessions/test-session-id/message/upload",
         data={"message": "What does this code do?"},
-        files=files
+        files=files, headers=TEST_HEADERS
     )
 
     assert response.status_code == 200
@@ -46,7 +58,9 @@ def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chat
     assert "print('Hello, World!')" in args[2][0].content
 
 
-def test_chatbot_reply_with_image_file(client, mock_session_exists, mock_get_chatbot_reply):
+def test_chatbot_reply_with_image_file(
+    client, mock_session_exists, mock_get_chatbot_reply
+):
     """Test POST /sessions/{session_id}/message/upload with image file."""
     mock_session_exists.return_value = True
     mock_get_chatbot_reply.return_value = {"reply": "I see an image."}
@@ -60,7 +74,7 @@ def test_chatbot_reply_with_image_file(client, mock_session_exists, mock_get_cha
     response = client.post(
         "/sessions/test-session-id/message/upload",
         data={"message": "What's in this image?"},
-        files=files
+        files=files, headers=TEST_HEADERS
     )
 
     assert response.status_code == 200
@@ -68,7 +82,9 @@ def test_chatbot_reply_with_image_file(client, mock_session_exists, mock_get_cha
     assert "reply" in data
 
 
-def test_chatbot_reply_with_multiple_files(client, mock_session_exists, mock_get_chatbot_reply):
+def test_chatbot_reply_with_multiple_files(
+    client, mock_session_exists, mock_get_chatbot_reply
+):
     """Test POST /sessions/{session_id}/message/upload with multiple files."""
     mock_session_exists.return_value = True
     mock_get_chatbot_reply.return_value = {"reply": "I analyzed the files."}
@@ -81,7 +97,7 @@ def test_chatbot_reply_with_multiple_files(client, mock_session_exists, mock_get
     response = client.post(
         "/sessions/test-session-id/message/upload",
         data={"message": "Analyze these logs."},
-        files=files
+        files=files, headers=TEST_HEADERS
     )
 
     assert response.status_code == 200
@@ -106,7 +122,7 @@ def test_chatbot_reply_upload_invalid_session(client, mock_session_exists):
     response = client.post(
         "/sessions/invalid-session/message/upload",
         data={"message": "Test message"},
-        files=files
+        files=files, headers=TEST_HEADERS
     )
 
     assert response.status_code == 404
@@ -124,7 +140,7 @@ def test_chatbot_reply_upload_unsupported_file_type(client, mock_session_exists)
     response = client.post(
         "/sessions/test-session-id/message/upload",
         data={"message": "Extract this archive."},
-        files=files
+        files=  files, headers=TEST_HEADERS
     )
 
     assert response.status_code == 400
@@ -145,7 +161,7 @@ def test_chatbot_reply_upload_empty_message_with_files(
     response = client.post(
         "/sessions/test-session-id/message/upload",
         data={"message": ""},
-        files=files
+        files=files, headers=TEST_HEADERS
     )
 
     assert response.status_code == 200
@@ -157,7 +173,7 @@ def test_chatbot_reply_upload_no_message_no_files(client, mock_session_exists):
 
     response = client.post(
         "/sessions/test-session-id/message/upload",
-        data={"message": ""}
+        data={"message": ""}, headers=TEST_HEADERS
     )
 
     assert response.status_code == 422
@@ -178,7 +194,7 @@ def test_chatbot_reply_upload_only_files_no_message(
     response = client.post(
         "/sessions/test-session-id/message/upload",
         data={"message": "   "},
-        files=files
+        files=files, headers=TEST_HEADERS
     )
 
     assert response.status_code == 200
@@ -197,7 +213,7 @@ def test_chatbot_reply_upload_file_too_large(client, mock_session_exists):
     response = client.post(
         "/sessions/test-session-id/message/upload",
         data={"message": "Process this file"},
-        files=files
+        files=files, headers=TEST_HEADERS
     )
 
     assert response.status_code == 400
@@ -220,7 +236,7 @@ def test_chatbot_reply_text_truncation(
     response = client.post(
         "/sessions/test-session-id/message/upload",
         data={"message": "Analyze this"},
-        files=files
+        files=files, headers=TEST_HEADERS
     )
 
     assert response.status_code == 200

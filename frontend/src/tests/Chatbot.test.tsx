@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { Chatbot } from "../components/Chatbot";
 import * as chatbotApi from "../api/chatbot";
 import { getChatbotText } from "../data/chatbotTexts";
@@ -78,24 +84,69 @@ jest.mock("../components/Messages", () => ({
   ),
 }));
 
+const waitForInitialLoad = async () => {
+  await waitFor(() => {
+    expect(chatbotApi.fetchSupportedExtensions).toHaveBeenCalled();
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+};
+
 describe("Chatbot component", () => {
+  beforeAll(() => {
+    // Mock the global Jenkins config so the security logic works in tests
+    Object.defineProperty(window, "jenkinsChatbotConfig", {
+      value: {
+        baseUrl: "http://localhost:8080/jenkins/chatbot",
+        crumbFieldName: "Jenkins-Crumb",
+        crumbToken: "test-token",
+        userId: "test-user-id", // <--- Vital for your new logic
+        userName: "Test User", // <--- Vital for headers
+      },
+      writable: true,
+    });
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
+
+    sessionStorage.setItem("chatbot-owner", "test-user-id");
+
+    const originalError = console.error;
+    jest.spyOn(console, "error").mockImplementation((...args) => {
+      const msg = args[0];
+      if (
+        typeof msg === "string" &&
+        (msg.includes("No current session") ||
+          msg.includes("No session found") ||
+          msg.includes("wrapped in act"))
+      ) {
+        return;
+      }
+      originalError(...args);
+    });
   });
 
-  it("renders toggle button", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("renders toggle button", async () => {
     render(<Chatbot />);
+    await waitForInitialLoad();
     expect(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     ).toBeInTheDocument();
   });
 
-  it("shows welcome page when no sessions exist", () => {
+  it("shows welcome page when no sessions exist", async () => {
     render(<Chatbot />);
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
+    await waitForInitialLoad();
     expect(
       screen.getByText(getChatbotText("welcomeMessage")),
     ).toBeInTheDocument();
@@ -106,13 +157,15 @@ describe("Chatbot component", () => {
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
+    await waitForInitialLoad();
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("createNewChat") }),
     );
 
-    await waitFor(() =>
-      expect(screen.getByTestId("messages")).toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(chatbotApi.createChatSession).toHaveBeenCalled();
+      expect(screen.getByTestId("messages")).toBeInTheDocument();
+    });
   });
 
   it("opens sidebar and switches chat", async () => {
@@ -120,12 +173,15 @@ describe("Chatbot component", () => {
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
+    await waitForInitialLoad();
 
     fireEvent.click(screen.getByText("Open Sidebar"));
     expect(screen.getByTestId("sidebar")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Switch Chat"));
-    expect(screen.getByTestId("messages")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("messages")).toBeInTheDocument();
+    });
   });
 
   it("creates new chat from sidebar", async () => {
@@ -133,12 +189,14 @@ describe("Chatbot component", () => {
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
+    await waitForInitialLoad();
     fireEvent.click(screen.getByText("Open Sidebar"));
     fireEvent.click(screen.getByText("New Chat"));
 
-    await waitFor(() =>
-      expect(screen.getByTestId("messages")).toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(chatbotApi.createChatSession).toHaveBeenCalled();
+      expect(screen.getByTestId("messages")).toBeInTheDocument();
+    });
   });
 
   it("deletes a chat", async () => {
@@ -173,8 +231,13 @@ describe("Chatbot component", () => {
     sessionStorage.setItem("chatbot-last-session-id", "session-1");
 
     render(<Chatbot />);
+    await waitForInitialLoad();
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("input")).toBeInTheDocument(),
     );
 
     fireEvent.click(screen.getByText("Set Input"));
@@ -189,8 +252,9 @@ describe("Chatbot component", () => {
     });
   });
 
-  it("persists sessions on unmount", () => {
+  it("persists sessions on unmount", async () => {
     render(<Chatbot />);
+    await waitForInitialLoad();
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
@@ -202,6 +266,7 @@ describe("Chatbot component", () => {
   });
 
   it("logs error when createChatSession returns empty id", async () => {
+    jest.restoreAllMocks();
     const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     (chatbotApi.createChatSession as jest.Mock).mockResolvedValueOnce("");
 
@@ -220,7 +285,7 @@ describe("Chatbot component", () => {
     errorSpy.mockRestore();
   });
 
-  it("closes delete popup and resets sessionIdToDelete when cancel button is clicked", () => {
+  it("closes delete popup and resets sessionIdToDelete when cancel button is clicked", async () => {
     render(<Chatbot />);
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
@@ -232,12 +297,14 @@ describe("Chatbot component", () => {
     expect(screen.getByText(getChatbotText("popupTitle"))).toBeInTheDocument();
 
     fireEvent.click(screen.getByText(getChatbotText("popupCancelButton")));
-    expect(
-      screen.queryByText(getChatbotText("popupTitle")),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByText(getChatbotText("popupTitle")),
+      ).not.toBeInTheDocument();
+    });
   });
 
-  it("closes the sidebar when onClose is called", () => {
+  it("closes the sidebar when onClose is called", async () => {
     render(<Chatbot />);
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
@@ -247,6 +314,8 @@ describe("Chatbot component", () => {
     expect(screen.getByTestId("sidebar")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Close Sidebar"));
-    expect(screen.queryByTestId("sidebar")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId("sidebar")).not.toBeInTheDocument();
+    });
   });
 });
