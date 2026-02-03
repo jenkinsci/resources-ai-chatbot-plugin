@@ -52,13 +52,25 @@ mkdir -p chatbot-core/api/models/mistral
 
 ### 3. Run API
 
+There are two ways to run the API locally, depending on your use case:
+
+### Option 1: Lite Mode (Recommended for Most Contributors)
+
+Use this if you're working on the API, backend logic, data pipeline, or tests and don't need to test the actual chatbot responses.
+
 ```bash
-make api
+make dev-lite
 ```
 
 API will be available at `http://127.0.0.1:8000`
 
 **Verify it's working:**
+This will:
+- Set up the Python environment automatically
+- Install dependencies (skips the 4GB model download)
+- Start the API server without loading the LLM
+
+The API will be available at `http://127.0.0.1:8000` within a few minutes.
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
@@ -103,6 +115,25 @@ make build-frontend
 ```bash
 docker-compose down
 ```
+**What works:** All API endpoints, session management, context search, data pipeline  
+**What doesn't work:** Actual chat completions (no model loaded)
+
+### Option 2: Full Mode (For Testing Chat Functionality)
+
+Use this if you need to test the chatbot with real LLM responses or work on model-specific features.
+
+First, complete the full setup in [docs/setup.md](docs/setup.md). This includes installing llama-cpp-python and downloading the 4GB model.
+
+Then run:
+```bash
+make api
+```
+
+The API will be available at `http://127.0.0.1:8000`.
+
+**What works:** Everything, including actual chat completions with the local LLM
+
+---
 
 **For GPU support:**
 
