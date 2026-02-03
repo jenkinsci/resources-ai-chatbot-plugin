@@ -62,9 +62,6 @@ Use this if you're working on the API, backend logic, data pipeline, or tests an
 make dev-lite
 ```
 
-API will be available at `http://127.0.0.1:8000`
-
-**Verify it's working:**
 This will:
 - Set up the Python environment automatically
 - Install dependencies (skips the 4GB model download)
@@ -72,9 +69,30 @@ This will:
 
 The API will be available at `http://127.0.0.1:8000` within a few minutes.
 
+**Verify it's working:**
+
 ```bash
 curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 ```
+
+**What works:** All API endpoints, session management, context search, data pipeline  
+**What doesn't work:** Actual chat completions (no model loaded)
+
+#### Option 2: Full Mode (For Testing Chat Functionality)
+
+Use this if you need to test the chatbot with real LLM responses or work on model-specific features.
+
+First, complete the full setup in [docs/setup.md](docs/setup.md). This includes installing llama-cpp-python and downloading the 4GB model.
+
+Then run:
+
+```bash
+make api
+```
+
+The API will be available at `http://127.0.0.1:8000`.
+
+**What works:** Everything, including actual chat completions with the local LLM
 
 ### 4. Build Frontend
 
@@ -115,25 +133,6 @@ make build-frontend
 ```bash
 docker-compose down
 ```
-**What works:** All API endpoints, session management, context search, data pipeline  
-**What doesn't work:** Actual chat completions (no model loaded)
-
-### Option 2: Full Mode (For Testing Chat Functionality)
-
-Use this if you need to test the chatbot with real LLM responses or work on model-specific features.
-
-First, complete the full setup in [docs/setup.md](docs/setup.md). This includes installing llama-cpp-python and downloading the 4GB model.
-
-Then run:
-```bash
-make api
-```
-
-The API will be available at `http://127.0.0.1:8000`.
-
-**What works:** Everything, including actual chat completions with the local LLM
-
----
 
 **For GPU support:**
 
