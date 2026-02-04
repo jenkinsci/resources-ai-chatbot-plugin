@@ -2,10 +2,12 @@
 
 import json
 import os
-import requests
 import sys
 from typing import List
+
+import requests
 from bs4 import BeautifulSoup
+
 from utils import LoggerFactory
 
 logger_factory = LoggerFactory.instance()
