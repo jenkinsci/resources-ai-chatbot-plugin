@@ -1,6 +1,6 @@
 .PHONY: all api setup-backend build-frontend test run-data-pipeline clean
 
-BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate
+BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate && export PYTHONPATH=$$(pwd)
 
 ifeq ($(IS_CPU_REQ),1)
 	REQUIREMENTS=requirements-cpu.txt
