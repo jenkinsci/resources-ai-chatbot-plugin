@@ -510,10 +510,11 @@ async def get_chatbot_reply_stream(
 def _extract_query_type(response: str) -> str:
     """
     Extracts 'SIMPLE' or 'MULTI' from the response if present, else returns an empty string.
+    The search is case-insensitive, and the result is returned in uppercase.
     """
-    match = re.search(r"\b(SIMPLE|MULTI)\b", response)
+    match = re.search(r"\b(SIMPLE|MULTI)\b", response, re.IGNORECASE)
     if match:
-        return match.group(1)
+        return match.group(1).upper()
 
     return ""
 
@@ -521,8 +522,9 @@ def _extract_query_type(response: str) -> str:
 def _extract_relevance_score(response: str) -> str:
     """
     Extracts relevance score (0 or 1) from a response labeled with 'Label: N'; defaults to 0.
+    The search is case-insensitive.
     """
-    match = re.search(r"Label:\s*([01])", response)
+    match = re.search(r"Label:\s*([01])", response, re.IGNORECASE)
     if match:
         relevance_score = int(match.group(1))
     else:
