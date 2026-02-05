@@ -35,8 +35,8 @@ def test_save_chunks_handles_error(mocker):
     def raise_oserror(*args, **kwargs):
         raise OSError("Disk full")
 
-    with mocker.patch("builtins.open", side_effect=raise_oserror):
-        save_chunks(fake_path, data, logger)
+    mocker.patch("builtins.open", side_effect=raise_oserror)
+    save_chunks(fake_path, data, logger)
 
     logger.error.assert_called_once()
     assert "File error while writing" in logger.error.call_args[0][0]
