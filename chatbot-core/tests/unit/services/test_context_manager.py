@@ -1,7 +1,7 @@
 """Unit tests for context size management."""
 
-from api.services.context_manager import estimate_token_count, enforce_context_limit
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
+from api.services.context_manager import estimate_token_count, enforce_context_limit
 
 
 def test_estimate_token_count():
@@ -47,7 +47,7 @@ def test_preserve_system_message():
         AIMessage(content="Second answer")
     ]
     result = enforce_context_limit(messages, max_tokens=20)
-    
+
     assert len(result) > 0
     assert isinstance(result[0], SystemMessage)
     assert result[0].content == "You are a helpful assistant."
@@ -59,6 +59,6 @@ def test_single_message_exceeds_budget():
         HumanMessage(content="Very long message " * 100)
     ]
     result = enforce_context_limit(messages, max_tokens=10)
-    
+
     assert len(result) == 1
     assert result[0].content == messages[0].content
