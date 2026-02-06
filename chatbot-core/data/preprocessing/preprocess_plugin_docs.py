@@ -32,15 +32,24 @@ def process_plugin_docs(plugin_docs):
     processed_plugin_docs = {}
 
     for plugin_name, html_content in plugin_docs.items():
+        # --- Start Cleaning Pipeline ---
+        # 1. Parse and serialize the HTML to normalize it (e.g., fix broken tags).
+        # This makes subsequent string-based cleaning more reliable.
         soup = BeautifulSoup(html_content, "lxml")
-        html_content = str(soup)
-        cleaned_html = remove_tags(html_content)
-        content_without_comments = remove_html_comments(cleaned_html)
-        content_without_wrappers = strip_html_body_wrappers(content_without_comments)
+        normalized_html = str(soup)
 
-        text_length = get_visible_text_length(content_without_wrappers)
+        # 2. Remove script and image tags.
+        cleaned_content = remove_tags(normalized_html)
+
+        # 3. Remove HTML comments.
+        cleaned_content = remove_html_comments(cleaned_content)
+
+        # 4. Strip any remaining outer html/body wrappers.
+        cleaned_content = strip_html_body_wrappers(cleaned_content)
+
+        text_length = get_visible_text_length(cleaned_content)
         if text_length > MIN_VISIBLE_TEXT_LENGTH:
-            processed_plugin_docs[plugin_name] = content_without_wrappers
+            processed_plugin_docs[plugin_name] = cleaned_content
         else:
             logger.info(
                 "Skipping plugin '%s' - visible text length: %d <= %d",
