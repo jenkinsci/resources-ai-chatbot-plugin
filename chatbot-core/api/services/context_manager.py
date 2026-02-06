@@ -3,6 +3,8 @@ Context size management for conversation history.
 Prevents LLM context overflow by trimming old messages.
 """
 
+from langchain.schema import SystemMessage
+
 def estimate_token_count(text: str) -> int:
     """
     Estimate token count using character-based heuristic.
@@ -20,28 +22,33 @@ def enforce_context_limit(messages: list, max_tokens: int) -> list:
     """
     Trim message history to fit within token budget.
     Removes oldest messages first until under the limit.
+    System messages are always preserved.
 
     Args:
         messages: List of LangChain message objects
         max_tokens: Maximum allowed tokens for history
 
     Returns:
-        Trimmed message list
+        Trimmed message list with system messages preserved
     """
     if not messages:
         return []
 
-    total_text = "".join(msg.content or "" for msg in messages)
-    estimated_tokens = estimate_token_count(total_text)
+    system_msgs = [msg for msg in messages if isinstance(msg, SystemMessage)]
+    conversation = [msg for msg in messages if not isinstance(msg, SystemMessage)]
 
-    if estimated_tokens <= max_tokens:
+    if not conversation:
+        return system_msgs
+
+    total_text = "".join(msg.content or "" for msg in conversation)
+    total_tokens = estimate_token_count(total_text)
+
+    if total_tokens <= max_tokens:
         return messages
 
-    trimmed = list(messages)
-    while trimmed:
-        current_text = "".join(msg.content or "" for msg in trimmed)
-        if estimate_token_count(current_text) <= max_tokens:
-            break
-        trimmed.pop(0)
+    trimmed = list(conversation)
+    while len(trimmed) > 1 and total_tokens > max_tokens:
+        removed = trimmed.pop(0)
+        total_tokens -= estimate_token_count(removed.content or "")
 
-    return trimmed
+    return system_msgs + trimmed
