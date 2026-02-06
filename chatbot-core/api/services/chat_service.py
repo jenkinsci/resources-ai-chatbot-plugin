@@ -15,6 +15,7 @@ from api.prompts.prompts import (
     QUERY_CLASSIFIER_PROMPT,
     RETRIEVER_AGENT_PROMPT,
     SPLIT_QUERY_PROMPT,
+    LOG_SUMMARY_PROMPT,
 )
 
 from api.services.memory import get_session, get_session_async
@@ -32,6 +33,11 @@ logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
 retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
+
+LOG_ANALYSIS_PATTERN = re.compile(
+    r"Here are the last \d+ characters of the log:\s*```\s*(.*?)\s*```\s*(.*)",
+    re.DOTALL
+)
 
 
 def get_chatbot_reply(
@@ -54,41 +60,58 @@ def get_chatbot_reply(
     logger.info("New message from session '%s'", session_id)
     logger.info("Handling the user query: %s", user_input)
 
-    if files:
-        logger.info("Processing %d uploaded file(s)", len(files))
-
     memory = get_session(session_id)
     if memory is None:
-        raise RuntimeError(
-            f"Session '{session_id}' not found in the memory store.")
+        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
 
-    # Add file context if files are provided
-    file_context = ""
-    if files:
-        file_dicts = [file.model_dump() for file in files]
-        file_context = format_file_context(file_dicts)
-        if file_context:
-            logger.info("File context added: %d characters", len(file_context))
-            context = f"{context}\n\n[User Uploaded Files]\n{file_context}"
+    # Process file context if files are provided
+    context = _process_file_context(context, files)
 
     prompt = build_prompt(user_input, context, memory)
 
     logger.info("Generating answer with prompt: %s", prompt)
     reply = generate_answer(prompt)
 
-    # Include file info in memory message
-    user_message = user_input
-    if files:
-        file_names = [f.filename for f in files]
-        user_message = f"{user_input}\n[Attached files: {', '.join(file_names)}]"
+    # Format user message with file info for memory
+    user_message = _format_user_message_for_memory(user_input, files)
 
     memory.chat_memory.add_user_message(user_message)
     memory.chat_memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)
+
+
+def _process_file_context(context: str, files: Optional[List[FileAttachment]]) -> str:
+    """
+    Helper function to process uploaded files and append them to the context.
+    """
+    if not files:
+        return context
+
+    logger.info("Processing %d uploaded file(s)", len(files))
+    file_dicts = [file.model_dump() for file in files]
+    file_context = format_file_context(file_dicts)
+
+    if file_context:
+        logger.info("File context added: %d characters", len(file_context))
+        return f"{context}\n\n[User Uploaded Files]\n{file_context}"
+
+    return context
+
+
+def _format_user_message_for_memory(user_input: str, files: Optional[List[FileAttachment]]) -> str:
+    """
+    Helper function to format the user message for memory storage,
+    appending the names of attached files.
+    """
+    if not files:
+        return user_input
+
+    file_names = [f.filename for f in files]
+    return f"{user_input}\n[Attached files: {', '.join(file_names)}]"
 
 
 def get_chatbot_reply_new_architecture(
@@ -487,10 +510,11 @@ async def get_chatbot_reply_stream(
 def _extract_query_type(response: str) -> str:
     """
     Extracts 'SIMPLE' or 'MULTI' from the response if present, else returns an empty string.
+    The search is case-insensitive, and the result is returned in uppercase.
     """
-    match = re.search(r"\b(SIMPLE|MULTI)\b", response)
+    match = re.search(r"\b(SIMPLE|MULTI)\b", response, re.IGNORECASE)
     if match:
-        return match.group(1)
+        return match.group(1).upper()
 
     return ""
 
@@ -498,11 +522,25 @@ def _extract_query_type(response: str) -> str:
 def _extract_relevance_score(response: str) -> str:
     """
     Extracts relevance score (0 or 1) from a response labeled with 'Label: N'; defaults to 0.
+    The search is case-insensitive.
     """
-    match = re.search(r"Label:\s*([01])", response)
+    match = re.search(r"Label:\s*([01])", response, re.IGNORECASE)
     if match:
         relevance_score = int(match.group(1))
     else:
         relevance_score = 0
 
     return relevance_score
+
+def _generate_search_query_from_logs(log_text: str) -> str:
+    """
+    Uses the LLM to extract a concise error signature from the logs
+    to use as a search query for the vector database.
+    """
+    # Use .format() directly since we are using generate_answer
+    prompt = LOG_SUMMARY_PROMPT.format(log_data=log_text)
+
+    # Generate response using the existing function in this file
+    search_query = generate_answer(prompt)
+
+    return search_query.strip()

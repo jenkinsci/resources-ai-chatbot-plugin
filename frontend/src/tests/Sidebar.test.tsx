@@ -21,12 +21,14 @@ const exampleChats: ChatSession[] = [
     messages: [],
     createdAt: "2024-01-01T00:00:00Z",
     isLoading: false,
+    loadingStatus: null,
   },
   {
     id: "chat-2",
     messages: [{ id: "msg-1", sender: "user", text: "Hello world" }],
     createdAt: "2024-01-02T00:00:00Z",
     isLoading: false,
+    loadingStatus: null,
   },
 ];
 
@@ -99,6 +101,7 @@ describe("Sidebar component", () => {
       messages: [{ id: "msg-1", sender: "user", text: "Short message" }],
       createdAt: "2024-01-01T00:00:00Z",
       isLoading: false,
+      loadingStatus: null,
     };
 
     render(<Sidebar {...baseProps} chatList={[shortMessageChat]} />);
@@ -117,6 +120,7 @@ describe("Sidebar component", () => {
       ],
       createdAt: "2024-01-03T00:00:00Z",
       isLoading: false,
+      loadingStatus: null,
     };
 
     render(
