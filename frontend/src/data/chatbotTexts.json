@@ -5,6 +5,7 @@
   "placeholder": "Type your message...",
   "noInputWarningMessage": "Please enter a message before sending.",
   "generatingMessage": "Generating...",
+  "analyzingLogs": "Analyzing stack trace patterns...",
   "exportChat": "Export chat",
   "clearChat": "Clear chat",
   "popupTitle": "Delete this chat?",
