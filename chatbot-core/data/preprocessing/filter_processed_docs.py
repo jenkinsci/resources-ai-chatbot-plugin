@@ -93,7 +93,8 @@ def main():
     cleaned_docs = {}
     urls_removed_count = 0
     for url, content in docs.items():
-        # Special rule: always keep pages from '/extensions/' as they are considered important index pages that might otherwise be filtered out.
+        # Special rule: always keep pages from '/extensions/', as they are
+        # considered important index pages that might otherwise be filtered out.
         if 'extensions' in url:
             cleaned_docs[url] = content
             continue
