@@ -56,4 +56,32 @@ describe("callChatbotApi", () => {
 
     expect(result).toBe(fallback);
   });
+
+  it("aborts when caller signal is aborted", async () => {
+    const controller = new AbortController();
+    fetchMock.mockImplementationOnce(
+      (_url: string, init?: RequestInit) =>
+        new Promise((_, reject) => {
+          const signal = init?.signal as AbortSignal;
+          if (signal) {
+            signal.addEventListener("abort", () => {
+              reject(new DOMException("Aborted", "AbortError"));
+            });
+          }
+        }) as Promise<Response>,
+    );
+
+    const fallback = { error: "cancelled" };
+    const promise = callChatbotApi(
+      "cancel-endpoint",
+      { signal: controller.signal },
+      fallback,
+      10000,
+    );
+
+    controller.abort();
+
+    const result = await promise;
+    expect(result).toEqual(fallback);
+  });
 });
