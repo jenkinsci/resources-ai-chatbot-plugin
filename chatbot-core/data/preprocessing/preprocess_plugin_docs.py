@@ -37,21 +37,15 @@ def process_plugin_docs(plugin_docs):
         soup = BeautifulSoup(html_content, "lxml")
         normalized_html = str(soup)
 
-        # 2. Sequentially clean the HTML.
-        content_no_tags = remove_tags(normalized_html)
-        content_no_comments = remove_html_comments(content_no_tags)
-        final_content = strip_html_body_wrappers(content_no_comments)
+        # 2. Sequentially clean the HTML
+        content_without_tags = remove_tags(normalized_html)
+        content_without_comments = remove_html_comments(content_without_tags)
+        content_without_body_wrappers = strip_html_body_wrappers(content_without_comments)
 
-        # 3. Remove HTML comments.
-        cleaned_content = remove_html_comments(cleaned_content)
-
-        # 4. Strip any remaining outer html/body wrappers.
-        cleaned_content = strip_html_body_wrappers(cleaned_content)
-
-        text_length = get_visible_text_length(cleaned_content)
-        text_length = get_visible_text_length(final_content)
+        # 3. Calculate length on the final cleaned version and filter.
+        text_length = get_visible_text_length(content_without_body_wrappers)
         if text_length > MIN_VISIBLE_TEXT_LENGTH:
-            processed_plugin_docs[plugin_name] = final_content
+            processed_plugin_docs[plugin_name] = content_without_body_wrappers
         else:
             logger.info(
                 "Skipping plugin '%s' - visible text length: %d <= %d",

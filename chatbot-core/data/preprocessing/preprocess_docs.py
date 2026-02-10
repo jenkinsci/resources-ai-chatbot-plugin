@@ -54,19 +54,19 @@ def filter_content(urls, data, is_developer_content):
             )
             continue
 
-        # Sequentially clean the extracted HTML. Each variable represents the content after a transformation step.
-        content_no_toc = remove_container_by_class(content_extracted, "toc")
-        content_no_tags = remove_tags(content_no_toc)
+        # Sequentially clean the extracted HTML
+        content_without_toc = remove_container_by_class(content_extracted, "toc")
+        content_without_tags = remove_tags(content_without_toc)
 
         # For non-developer docs, also remove edge navigation blocks.
         if not is_developer_content:
-            content_no_nav = remove_edge_navigation_blocks(content_no_tags)
+            content_without_navigation = remove_edge_navigation_blocks(content_without_tags)
         else:
-            content_no_nav = content_no_tags
+            content_without_navigation = content_without_tags
 
-        content_no_comments = remove_html_comments(content_no_nav)
-        final_content = strip_html_body_wrappers(content_no_comments)
-        filtered_contents[url] = final_content
+        content_without_comments = remove_html_comments(content_without_navigation)
+        content_without_body_wrappers = strip_html_body_wrappers(content_without_comments)
+        filtered_contents[url] = content_without_body_wrappers
 
     return filtered_contents
 
