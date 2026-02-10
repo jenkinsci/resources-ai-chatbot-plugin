@@ -11,6 +11,7 @@ to the chat service logic.
 # =========================
 import json
 import logging
+import asyncio
 
 # =========================
 # Third-party imports
@@ -291,10 +292,11 @@ async def chatbot_reply_with_files(
         else "Please analyze the attached file(s)."
     )
 
-    return get_chatbot_reply(
+    return await asyncio.to_thread(
+        get_chatbot_reply,
         session_id,
         final_message,
-        processed_files if processed_files else None,
+        processed_files if processed_files else None
     )
 
 
