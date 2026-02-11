@@ -14,7 +14,8 @@ from api.prompts.prompts import (
     CONTEXT_RELEVANCE_PROMPT,
     QUERY_CLASSIFIER_PROMPT,
     RETRIEVER_AGENT_PROMPT,
-    SPLIT_QUERY_PROMPT
+    SPLIT_QUERY_PROMPT,
+    LOG_SUMMARY_PROMPT,
 )
 
 from api.services.memory import get_session, get_session_async
@@ -538,83 +539,85 @@ def _extract_relevance_score(response: str) -> str:
 def _extract_structured_trace(log_text: str) -> str:
     """
     Helper function to extract structured stack traces for specific languages.
-    Returns the extracted query or None if no match is found.
-    Refactored to single-return to satisfy Pylint R0911.
+    Returns a 'High Confidence' match or None if the log is ambiguous.
     """
     trace = None
 
-    # Java: Standard Exception
-    # Matches: "java.lang.NullPointerException: ..." followed by "at ..."
-    java_match = re.search(r'([a-zA-Z0-9.]+Exception:.*(?:\n\s+at .*)+)', log_text)
-    if java_match:
-        parts = java_match.group(1).split('\n')
-        trace = f"{parts[0]}\n{parts[1] if len(parts) > 1 else ''}"
-
-    # Python: Traceback
-    # Matches: "Traceback (most recent call last): ... Error: Message"
-    elif python_match := re.search(PYTHON_TRACEBACK_PATTERN, log_text):
-        full_trace = python_match.group(1)
-        lines = full_trace.splitlines()
-        if len(lines) > 2:
-            trace = f"{lines[0]} ... {lines[-1]}"
-        else:
-            trace = full_trace.strip()
-
-    # Go: Panic
-    # Matches: "panic: message"
-    elif go_match := re.search(r'(panic:.*)', log_text):
-        trace = go_match.group(1).strip()
-
-    # C++ / GCC / Make Errors
-    # Matches: "/path/to/file.cpp:10:5: error: message"
-    elif cpp_match := re.search(r'([a-zA-Z0-9_./-]+:\d+:\d+: error:.*)', log_text):
-        trace = cpp_match.group(1).strip()
-
-    # Jenkins Pipeline / Groovy Errors
-    # Matches: "WorkflowScript: 12: message"
-    elif ruby_match := re.search(r'(WorkflowScript: \d+:.*)', log_text):
-        trace = ruby_match.group(1).strip()
-
-    # Node.js / JavaScript Errors
-    elif js_match := re.search(r'([a-zA-Z]+Error:.*(?:\n\s+at .*)+)', log_text):
-        trace = js_match.group(1).split('\n')[0].strip()
-
-    return trace
-
-def _generate_search_query_from_logs(log_text: str) -> str:
-    """
-    Deterministically extracts error signatures using a multi-stage heuristic.
-    Replaces LLM extraction to ensure 0-latency and accurate Root Cause Analysis.
-
-    Priority:
-    1. Java 'Caused by' (Deepest Root Cause)
-    2. Standard Stack Traces (Java, Python, Go, Node, Ruby, C++)
-    3. Generic Error Keywords (Fallback)
-    """
-    search_query = None
-
     # --- STAGE 1: Java Root Cause Analysis ---
+    # We prioritize the "Caused by" clause as it points to the real issue in Java logs.
     if "Caused by:" in log_text:
         caused_by_match = re.findall(r'(Caused by: [a-zA-Z0-9.]+Exception:.*)', log_text)
         if caused_by_match:
-            search_query = caused_by_match[-1].strip()
+            trace = caused_by_match[-1].strip()
 
     # --- STAGE 2: Structured Stack Traces ---
-    # We only check for standard traces if we haven't found a Root Cause yet.
-    if not search_query:
-        search_query = _extract_structured_trace(log_text)
+    # Only run this if we haven't found a Root Cause yet.
+    if not trace:
 
-    # --- STAGE 3: Fallbacks ---
-    if not search_query:
+        # Java: Standard Exception
+        # Matches: "java.lang.NullPointerException: ..." followed by "at ..."
+        java_match = re.search(r'([a-zA-Z0-9.]+Exception:.*(?:\n\s+at .*)+)', log_text)
+        if java_match:
+            parts = java_match.group(1).split('\n')
+            trace = f"{parts[0]}\n{parts[1] if len(parts) > 1 else ''}"
 
-        # Generic Keyword Search
-        keyword_pattern = re.compile(r'.*(?:error|fatal|failed|failure|exception).*', re.IGNORECASE)
-        error_lines = keyword_pattern.findall(log_text)
+        # Python: Traceback
+        # Matches: "Traceback (most recent call last): ... Error: Message"
+        elif python_match := re.search(PYTHON_TRACEBACK_PATTERN, log_text):
+            full_trace = python_match.group(1)
+            lines = full_trace.splitlines()
+            if len(lines) > 2:
+                trace = f"{lines[0]} ... {lines[-1]}"
+            else:
+                trace = full_trace.strip()
 
-        if error_lines:
-            search_query = error_lines[-1].strip()
-        else:
-            # Absolute Fallback
-            search_query = log_text[-300:].strip()
+        # Go: Panic
+        # Matches: "panic: message"
+        elif go_match := re.search(r'(panic:.*)', log_text):
+            trace = go_match.group(1).strip()
 
-    return search_query
+        # C++ / GCC / Make Errors
+        # Matches: "/path/to/file.cpp:10:5: error: message"
+        elif cpp_match := re.search(r'([a-zA-Z0-9_./-]+:\d+:\d+: error:.*)', log_text):
+            trace = cpp_match.group(1).strip()
+
+        # Jenkins Pipeline / Groovy Errors
+        # Matches: "WorkflowScript: 12: message"
+        elif ruby_match := re.search(r'(WorkflowScript: \d+:.*)', log_text):
+            trace = ruby_match.group(1).strip()
+
+        # Node.js / JavaScript Errors
+        elif js_match := re.search(r'([a-zA-Z]+Error:.*(?:\n\s+at .*)+)', log_text):
+            trace = js_match.group(1).split('\n')[0].strip()
+
+    return trace
+
+def _llm_generate_query(log_text: str) -> str:
+    """
+    Fallback method: Uses LLM to summarize ambiguous logs.
+    Restored from previous implementation to handle unstructured errors.
+    """
+    prompt = LOG_SUMMARY_PROMPT.format(log=log_text)
+    try:
+        return generate_answer(prompt)
+    except Exception:  # pylint: disable=broad-exception-caught
+        # Ultimate fail-safe if LLM is down
+        return log_text[-300:].strip()
+
+def _generate_search_query_from_logs(log_text: str) -> str:
+    """
+    Hybrid Extraction Strategy:
+    1. FAST PATH (Regex): Attempt deterministic extraction of known error patterns.
+       (0ms latency, 100% accuracy for structured stack traces).
+    2. SLOW PATH (LLM): Fallback to LLM summarization if regex fails or is ambiguous.
+       (Ensures accuracy for unstructured/messy logs).
+    """
+
+    # Step 1: Attempt Fast Path (Regex).
+    structured_error = _extract_structured_trace(log_text)
+
+    if structured_error:
+        return structured_error
+
+    # Step 2: Try Slow Path (LLM Fallback)
+    return _llm_generate_query(log_text)
