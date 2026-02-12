@@ -152,3 +152,30 @@ def get_mock_documents(doc_type: str):
             }
         ]
     return []
+    
+    
+def test_retrieve_context_with_logs(mock_get_relevant_documents, mocker):
+    """Test retrieve_context detects logs and generates a search query."""
+    # Mock the embedding model and logging
+    mock_llm_generate = mocker.patch("api.services.chat_service.generate_answer")
+    mock_llm_generate.return_value = "NullPointerException" # Simulate LLM extracting error
+
+    # Mock retrieval to return something (irrelevant what, just to pass)
+    mock_get_relevant_documents.return_value = ([], None)
+    
+    # Construct a log message that matches the pattern
+    log_message = "Here are the last 100 characters of the log: ```\nException in thread main java.lang.NullPointerException\n```"
+    
+    retrieve_context(log_message)
+    
+    # Verify generate_answer was called (proving _generate_search_query_from_logs was invoked)
+    mock_llm_generate.assert_called()
+    
+    # Verify retrieval was called with the EXTRACTED query, not the full log
+    mock_get_relevant_documents.assert_called_with(
+        "NullPointerException", # The extracted query
+        mocker.ANY,
+        logger=mocker.ANY,
+        source_name="plugins",
+        top_k=mocker.ANY
+    )
