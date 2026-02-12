@@ -205,16 +205,26 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
     Returns:
         ChatResponse: The assistant's reply.
     """
+    if not request.message or not request.message.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Message cannot be empty or whitespace only.",
+        )
+
     if not session_exists(session_id):
         raise HTTPException(
             status_code=404,
             detail="Session not found.",
         )
     reply =  get_chatbot_reply(session_id, request.message)
-    _background_tasks.add_task(
-        persist_session,
-        session_id,
-        )
+
+    def safe_persist_session(sid):
+        try:
+            persist_session(sid)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error("Failed to persist session %s: %s", sid, e)
+
+    _background_tasks.add_task(safe_persist_session, session_id)
 
     return reply
 

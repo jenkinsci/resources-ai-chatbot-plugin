@@ -378,8 +378,19 @@ def retrieve_context(user_input: str) -> str:
             "Dev mode enabled - skipping RAG retrieval. Build indices to enable full RAG.")
         return "Dev mode: RAG indices not built. This is a placeholder context for testing."
 
+    search_query = user_input
+    # Check for log patterns
+    if LOG_ANALYSIS_PATTERN.search(user_input):
+        logger.info("Log pattern detected in user input.")
+        try:
+            search_query = _generate_search_query_from_logs(user_input)
+            logger.info("Generated search query from logs: %s", search_query)
+        except Exception as e: # pylint: disable=broad-except
+            logger.error("Failed to generate search query from logs: %s", e)
+            # Fallback to original input if extraction fails
+
     data_retrieved, _ = get_relevant_documents(
-        user_input,
+        search_query,
         EMBEDDING_MODEL,
         logger=logger,
         source_name="plugins",
