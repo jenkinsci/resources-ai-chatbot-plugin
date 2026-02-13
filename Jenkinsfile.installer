@@ -1,0 +1,51 @@
+pipeline{
+    agent any
+        
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    tools{
+        nodejs 'NodeJS 20'
+    }
+
+    stages {
+        stage('Clone'){
+          steps {
+              echo 'Cloning repository...'
+              sh "
+                git clone --branch main --single-branch https://github.com/your-repo/resources-chatbot-ai-plugin.git"
+          }
+        }
+
+        stage('Install') {
+            steps {
+
+                echo 'Running installation steps...'
+                dir('resources-ai-chatbot-plugin') {
+                    sh '''
+                     set -e
+                     
+                     make setup-backend
+                     cp -r initgroovy/ChatbotWatch.groovy $JENKINS_HOME/init.groovy.d
+                     cp -r initgroovy/ChatbotStart.groovy $JENKINS_HOME/init.groovy.d
+                     
+
+                '''
+                }
+
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Installation completed successfully.'
+        }
+        failure {
+            echo 'Installation failed.'
+        }
+    }
+}

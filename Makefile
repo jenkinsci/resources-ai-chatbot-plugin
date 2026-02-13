@@ -1,5 +1,6 @@
 .PHONY: all api setup-backend build-frontend test run-data-pipeline clean
 
+
 BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate
 
 ifeq ($(IS_CPU_REQ),1)
@@ -8,7 +9,7 @@ else
 	REQUIREMENTS=requirements.txt
 endif
 
-all: build-frontend setup-backend run-api
+all: build-frontend run-api
 
 setup-backend:
 	@if [ ! -d chatbot-core/venv ]; then \
@@ -16,19 +17,29 @@ setup-backend:
 		python3 -m venv venv && \
 		. venv/bin/activate && \
 		pip install -r $(REQUIREMENTS); \
+		pip install python-multipart;\
 	else \
 		echo "Backend already set up. Skipping virtualenv creation and dependencies installation."; \
 	fi
 
 build-frontend:
 	@cd frontend && \
-	npm install && \
+	 npm install && \
+	 npm run build
+
+install-frontend:
+	@cd frontend && \
+	npm install
+
+run-frontend:
+	@cd frontend && \
 	npm run build
+
 
 # API
 
 run-api:
-	@$(BACKEND_SHELL) && PYTHONPATH=$$(pwd) uvicorn api.main:app --reload
+	@$(BACKEND_SHELL) && PYTHONPATH=$(pwd) uvicorn api.main:app --reload
 
 api: setup-backend run-api
 
@@ -146,3 +157,10 @@ run-data-pipeline:
 
 clean:
 	@rm -rf chatbot-core/venv frontend/node_modules
+
+uninstall:
+	@rm -rf chatbot-core/venv
+	@rm -rf frontend/node_modules
+	@rm -rf frontend/build
+	@rm -rf logs
+	@rm -rf initgroovy/chatbot-start.groovy

@@ -1,0 +1,16 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Start') {
+            steps {
+                dir('resources-ai-chatbot-plugin') {
+                    sh '''
+                    echo 'Starting chatbot...'
+                    make run-api
+                    '''
+                }
+            }
+        }
+    }
+}

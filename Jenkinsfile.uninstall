@@ -1,0 +1,31 @@
+pipeline{
+    agent any
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+        
+    stages{
+        stage('Uninstall'){
+            steps{
+
+                dir('resources-ai-chatbot-plugin') {
+                    sh '''
+                    echo 'Removing chatbot...'
+                    set -e
+                    make uninstall'''
+                }
+                
+            }
+        }
+        
+    }
+    post {
+        success {
+            echo 'Chatbot uninstalled successfully.'
+        }
+        failure {
+            echo 'Chatbot uninstallation failed.'
+        }
+    }
+}
