@@ -546,7 +546,8 @@ def _extract_structured_trace(log_text: str) -> str:
     # --- STAGE 1: Java Root Cause Analysis ---
     # We prioritize the "Caused by" clause as it points to the real issue in Java logs.
     if "Caused by:" in log_text:
-        caused_by_match = re.findall(r'(Caused by: [a-zA-Z0-9.]+Exception:.*)', log_text)
+        caused_by_match = re.findall(r'(Caused by: [a-zA-Z0-9.$_]+(?:Exception|Error):.*)',
+                                     log_text)
         if caused_by_match:
             trace = caused_by_match[-1].strip()
 
@@ -556,7 +557,7 @@ def _extract_structured_trace(log_text: str) -> str:
 
         # Java: Standard Exception
         # Matches: "java.lang.NullPointerException: ..." followed by "at ..."
-        java_match = re.search(r'([a-zA-Z0-9.]+Exception:.*(?:\n\s+at .*)+)', log_text)
+        java_match = re.search(r'([a-zA-Z0-9.$_]+(?:Exception|Error):.*(?:\n\s+at .*)+)', log_text)
         if java_match:
             parts = java_match.group(1).split('\n')
             trace = f"{parts[0]}\n{parts[1] if len(parts) > 1 else ''}"
@@ -583,8 +584,8 @@ def _extract_structured_trace(log_text: str) -> str:
 
         # Jenkins Pipeline / Groovy Errors
         # Matches: "WorkflowScript: 12: message"
-        elif ruby_match := re.search(r'(WorkflowScript: \d+:.*)', log_text):
-            trace = ruby_match.group(1).strip()
+        elif groovy_match := re.search(r'(WorkflowScript: \d+:.*)', log_text):
+            trace = groovy_match.group(1).strip()
 
         # Node.js / JavaScript Errors
         elif js_match := re.search(r'([a-zA-Z]+Error:.*(?:\n\s+at .*)+)', log_text):
@@ -619,5 +620,9 @@ def _generate_search_query_from_logs(log_text: str) -> str:
     if structured_error:
         return structured_error
 
-    # Step 2: Try Slow Path (LLM Fallback)
-    return _llm_generate_query(log_text)
+    # Step 2: Try Slow Path (LLM Fallback)- GATED BY CONFIG
+    if CONFIG["retrieval"].get("enable_llm_fallback", False):
+        return _llm_generate_query(log_text)
+
+    # Step 3: Absolute Fallback (Log Tail)
+    return log_text[-300:].strip()
