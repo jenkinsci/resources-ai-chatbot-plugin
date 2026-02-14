@@ -20,8 +20,6 @@ class DocsChunker(BaseChunker):
             input_file="processed/filtered_jenkins_docs.json",
             output_file="chunks_docs.json"
         )
-        self.placeholder_template = "[[CODE_BLOCK_{}]]"
-        self.code_block_placeholder_pattern = r"\[\[CODE_BLOCK_(\d+)\]\]"
 
     def extract_chunks(self, items):
         """
@@ -50,12 +48,12 @@ class DocsChunker(BaseChunker):
         Returns:
             list[dict]: A list of chunk dictionaries for the page.
         """
-        soup = BeautifulSoup(html, "lxml")
+        soup = BeautifulSoup(html, "html.parser")
         title = extract_title(soup)
-        code_blocks = extract_code_blocks(soup, "pre", self.placeholder_template)
+        code_blocks = extract_code_blocks(soup, "pre", self.PLACEHOLDER_TEMPLATE)
 
         text = soup.get_text(separator="\n", strip=True)
-        if code_blocks and self.placeholder_template.format(0) not in text:
+        if code_blocks and self.PLACEHOLDER_TEMPLATE.format(0) not in text:
             self.logger.warning(
                 "Extracted %d code blocks for %s but no placeholders found in text.",
                 len(code_blocks),
@@ -66,7 +64,7 @@ class DocsChunker(BaseChunker):
         processed_chunks = assign_code_blocks_to_chunks(
             chunks,
             code_blocks,
-            self.code_block_placeholder_pattern,
+            self.CODE_BLOCK_PLACEHOLDER_PATTERN,
             self.logger
         )
 

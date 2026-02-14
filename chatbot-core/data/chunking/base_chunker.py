@@ -10,6 +10,8 @@ class BaseChunker(ABC):
 
     CHUNK_SIZE = 500
     CHUNK_OVERLAP = 100
+    PLACEHOLDER_TEMPLATE = "[[CODE_BLOCK_{}]]"
+    CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[CODE_BLOCK_(\d+)\]\]"
 
     def __init__(self, source_name, input_file, output_file):
         """Initializes the BaseChunker."""

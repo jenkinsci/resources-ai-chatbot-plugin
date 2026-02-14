@@ -19,8 +19,6 @@ class StackOverflowChunker(BaseChunker):
             input_file="raw/stack_overflow_threads.json",
             output_file="chunks_stackoverflow_threads.json"
         )
-        self.placeholder_template = "[[CODE_BLOCK_{}]]"
-        self.code_block_placeholder_pattern = r"\[\[CODE_BLOCK_(\d+)\]\]"
 
     def extract_chunks(self, items):
         """
@@ -60,9 +58,9 @@ class StackOverflowChunker(BaseChunker):
             return []
 
         question_and_answer = f"<div>{question_body}</div><div>{answer_body}</div>"
-        soup = BeautifulSoup(question_and_answer, "lxml")
+        soup = BeautifulSoup(question_and_answer, "html.parser")
 
-        code_blocks = extract_code_blocks(soup, "code", self.placeholder_template)
+        code_blocks = extract_code_blocks(soup, "code", self.PLACEHOLDER_TEMPLATE)
 
         full_text = soup.get_text(separator="\n", strip=True)
 
@@ -70,7 +68,7 @@ class StackOverflowChunker(BaseChunker):
         processed_chunks = assign_code_blocks_to_chunks(
             chunks,
             code_blocks,
-            self.code_block_placeholder_pattern,
+            self.CODE_BLOCK_PLACEHOLDER_PATTERN,
             self.logger
         )
 

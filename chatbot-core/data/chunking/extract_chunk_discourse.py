@@ -11,6 +11,12 @@ from data.chunking.chunking_utils import(
 class DiscourseChunker(BaseChunker):
     """Chunks Discourse threads."""
 
+    # Define patterns and templates specific to Discourse as class attributes
+    SNIPPET_TEMPLATE = "[[CODE_SNIPPET_{}]]"
+    COMBINED_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
+    TRIPLE_BACKTICK_CODE_PATTERN = r"```(?:\w+\n)?(.*?)```"
+    INLINE_BACKTICK_CODE_PATTERN = r"`([^`\n]+?)`"
+
     def __init__(self):
         """Initializes the DiscourseChunker."""
         super().__init__(
@@ -18,9 +24,7 @@ class DiscourseChunker(BaseChunker):
             input_file="raw/topics_with_posts.json",
             output_file="chunks_discourse_docs.json"
         )
-        self.code_block_placeholder_pattern = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
-        self.triple_backtick_code_pattern = r"```(?:\w+\n)?(.*?)```"
-        self.inline_backtick_code_pattern = r"`([^`\n]+?)`"
+        self.code_block_placeholder_pattern = self.COMBINED_PLACEHOLDER_PATTERN
 
     def extract_code_blocks(self, text):
         """
@@ -39,22 +43,22 @@ class DiscourseChunker(BaseChunker):
         def replace_triple(match):
             nonlocal placeholder_counter
             code = match.group(1).strip()
-            placeholder = f"[[CODE_BLOCK_{placeholder_counter}]]"
+            placeholder = self.PLACEHOLDER_TEMPLATE.format(placeholder_counter)
             code_blocks.append(code)
             placeholder_counter += 1
             return placeholder
 
-        text = re.sub(self.triple_backtick_code_pattern, replace_triple, text, flags=re.DOTALL)
+        text = re.sub(self.TRIPLE_BACKTICK_CODE_PATTERN, replace_triple, text, flags=re.DOTALL)
 
         def replace_inline(match):
             nonlocal placeholder_counter
             code = match.group(1).strip()
-            placeholder = f"[[CODE_SNIPPET_{placeholder_counter}]]"
+            placeholder = self.SNIPPET_TEMPLATE.format(placeholder_counter)
             code_blocks.append(code)
             placeholder_counter += 1
             return placeholder
 
-        text = re.sub(self.inline_backtick_code_pattern, replace_inline, text)
+        text = re.sub(self.INLINE_BACKTICK_CODE_PATTERN, replace_inline, text)
 
         return code_blocks, text
 
