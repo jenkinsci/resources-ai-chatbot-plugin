@@ -1,6 +1,6 @@
 .PHONY: all api setup-backend build-frontend test run-data-pipeline clean
 
-BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate
+BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate && export PYTHONPATH=$$(pwd)
 
 # Data pipeline config path (can be overridden)
 CONFIG_PATH ?= chatbot-core/config/data-pipeline.yml
@@ -31,7 +31,7 @@ build-frontend:
 # API
 
 run-api:
-	@$(BACKEND_SHELL) && PYTHONPATH=$$(pwd) uvicorn api.main:app --reload
+	@$(BACKEND_SHELL) && uvicorn api.main:app --reload
 
 api: setup-backend run-api
 
@@ -40,7 +40,7 @@ dev-lite: setup-backend
 	# Lite mode uses PYTEST_VERSION=1 to load the testing configuration,
 	# which disables local LLM loading. This is useful for API development
 	# when you don't need to test actual chat completions.
-	@$(BACKEND_SHELL) && PYTEST_VERSION=1 PYTHONPATH=$$(pwd) uvicorn api.main:app --reload
+	@$(BACKEND_SHELL) && PYTEST_VERSION=1 uvicorn api.main:app --reload
 
 # TESTS
 
@@ -53,9 +53,9 @@ run-frontend-tests:
 run-backend-tests: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### RUNNING BACKEND UNIT TESTS ###" && \
-	PYTHONPATH=$$(pwd) pytest tests/unit && \
+	pytest tests/unit && \
 	echo "### RUNNING BACKEND INTEGRATION TESTS ###" && \
-	PYTHONPATH=$$(pwd) pytest tests/integration
+	pytest tests/integration
 
 run-test: run-frontend-tests run-backend-tests
 
