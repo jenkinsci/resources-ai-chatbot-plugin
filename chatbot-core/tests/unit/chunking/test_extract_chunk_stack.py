@@ -59,7 +59,8 @@ def test_process_thread_missing_content_returns_empty(stack_overflow_chunker):
 
     assert result == []
     stack_overflow_chunker.logger.warning.assert_called_once()
-    assert "missing question/answer content" in stack_overflow_chunker.logger.warning.call_args[0][0]
+    warning_message = stack_overflow_chunker.logger.warning.call_args[0][0]
+    assert "missing question/answer content" in warning_message
 
 
 @patch("data.chunking.extract_chunk_stack.StackOverflowChunker.process_thread")
