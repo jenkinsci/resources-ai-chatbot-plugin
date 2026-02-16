@@ -1,15 +1,15 @@
 """Unit Tests for health check endpoint."""
 
-import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+import pytest
 
 
 # Create a simple fixture that doesn't require the full test_env
-@pytest.fixture
-def simple_client():
+# pylint: disable=redefined-outer-name
+@pytest.fixture(name="simple_client")
+def simple_client_fixture():
     """Fixture to provide a minimal TestClient for health check tests."""
-    from fastapi import FastAPI
+    # pylint: disable=import-outside-toplevel
     from api.main import app
     return TestClient(app)
 
