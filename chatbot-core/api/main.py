@@ -87,6 +87,7 @@ async def health_check():
     """
     llm_available = False
     try:
+        # pylint: disable=import-outside-toplevel
         from api.models.llama_cpp_provider import llm_provider
         llm_available = llm_provider is not None
     except Exception:  # pylint: disable=broad-except
