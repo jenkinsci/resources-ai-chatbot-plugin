@@ -5,7 +5,4 @@ import hudson.model.PageDecorator;
 
 @Extension
 public class ChatbotGlobalDecorator extends PageDecorator {
-    public ChatbotGlobalDecorator() {
-        super(ChatbotGlobalDecorator.class);
-    }
 }
