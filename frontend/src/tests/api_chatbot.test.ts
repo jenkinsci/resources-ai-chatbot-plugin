@@ -29,7 +29,6 @@ import fetchMock from "jest-fetch-mock";
 // Mock global fetch for file upload tests
 fetchMock.enableMocks();
 
-
 describe("chatbotApi", () => {
   describe("createBotMessage", () => {
     it("creates a bot message with text", () => {
@@ -373,9 +372,12 @@ describe("chatbotApi", () => {
     });
 
     it("returns fallback message when API response is not ok", async () => {
-      fetchMock.mockResponseOnce(JSON.stringify({ detail: "Internal server error" }), {
-        status: 500,
-      });
+      fetchMock.mockResponseOnce(
+        JSON.stringify({ detail: "Internal server error" }),
+        {
+          status: 500,
+        },
+      );
 
       const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
@@ -488,9 +490,7 @@ describe("chatbotApi", () => {
     });
 
     it("handles network errors gracefully", async () => {
-      fetchMock.mockRejectedValueOnce(
-        new Error("Network error"),
-      );
+      fetchMock.mockRejectedValueOnce(new Error("Network error"));
 
       const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();

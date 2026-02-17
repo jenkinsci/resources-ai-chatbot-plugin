@@ -229,7 +229,7 @@ describe("Chatbot component", () => {
   });
 
   it("logs error when createChatSession returns empty id", async () => {
-    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => { });
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     (chatbotApi.createChatSession as jest.Mock).mockResolvedValueOnce("");
 
     render(<Chatbot />);
