@@ -59,6 +59,14 @@ export const Input = ({
     const errors: string[] = [];
 
     Array.from(files).forEach((file: File) => {
+      const isDuplicate = attachedFiles.some(
+        (existing) =>
+          existing.name === file.name && existing.size === file.size,
+      );
+
+      if (isDuplicate) {
+        return;
+      }
       if (validateFile) {
         const validation = validateFile(file);
         if (validation.isValid) {
