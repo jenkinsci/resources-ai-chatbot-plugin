@@ -24,8 +24,11 @@ jest.mock("../data/chatbotTexts", () => ({
   getChatbotText: jest.fn().mockReturnValue("Fallback error message"),
 }));
 
+import fetchMock from "jest-fetch-mock";
+
 // Mock global fetch for file upload tests
-global.fetch = jest.fn();
+fetchMock.enableMocks();
+
 
 describe("chatbotApi", () => {
   describe("createBotMessage", () => {
@@ -330,7 +333,7 @@ describe("chatbotApi", () => {
   describe("fetchChatbotReplyWithFiles", () => {
     beforeEach(() => {
       jest.clearAllMocks();
-      (global.fetch as jest.Mock).mockClear();
+      fetchMock.mockClear();
       jest.useFakeTimers();
     });
 
@@ -342,10 +345,7 @@ describe("chatbotApi", () => {
       const mockResponse = {
         reply: "File analyzed successfully!",
       };
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
 
       const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
@@ -363,7 +363,7 @@ describe("chatbotApi", () => {
         text: "File analyzed successfully!",
       });
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         `${API_BASE_URL}/api/chatbot/sessions/session-xyz/message/upload`,
         expect.objectContaining({
           method: "POST",
@@ -373,10 +373,8 @@ describe("chatbotApi", () => {
     });
 
     it("returns fallback message when API response is not ok", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
+      fetchMock.mockResponseOnce(JSON.stringify({ detail: "Internal server error" }), {
         status: 500,
-        json: async () => ({ detail: "Internal server error" }),
       });
 
       const files = [new File(["content"], "test.txt", { type: "text/plain" })];
@@ -397,8 +395,8 @@ describe("chatbotApi", () => {
 
     it("aborts the request when timeout elapses", async () => {
       // Mock fetch to reject with AbortError when signal is aborted
-      (global.fetch as jest.Mock).mockImplementationOnce(
-        (_url: string, options?: RequestInit) =>
+      fetchMock.mockImplementationOnce(
+        (_url: string | Request | undefined, options?: RequestInit) =>
           new Promise((_, reject) => {
             // Reject with AbortError when signal is aborted
             if (options?.signal) {
@@ -436,8 +434,8 @@ describe("chatbotApi", () => {
 
     it("cancels the request when external signal is aborted", async () => {
       // Mock fetch to reject when signal is aborted
-      (global.fetch as jest.Mock).mockImplementationOnce(
-        (_url: string, options?: RequestInit) =>
+      fetchMock.mockImplementationOnce(
+        (_url: string | Request | undefined, options?: RequestInit) =>
           new Promise((_, reject) => {
             if (options?.signal) {
               options.signal.addEventListener("abort", () => {
@@ -490,7 +488,7 @@ describe("chatbotApi", () => {
     });
 
     it("handles network errors gracefully", async () => {
-      (global.fetch as jest.Mock).mockRejectedValueOnce(
+      fetchMock.mockRejectedValueOnce(
         new Error("Network error"),
       );
 
@@ -517,10 +515,7 @@ describe("chatbotApi", () => {
       const mockResponse = {
         reply: "Success",
       };
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
 
       const files = [
         new File(["content1"], "file1.txt", { type: "text/plain" }),

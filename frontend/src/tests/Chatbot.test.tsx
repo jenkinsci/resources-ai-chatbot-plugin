@@ -229,7 +229,7 @@ describe("Chatbot component", () => {
   });
 
   it("logs error when createChatSession returns empty id", async () => {
-    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => { });
     (chatbotApi.createChatSession as jest.Mock).mockResolvedValueOnce("");
 
     render(<Chatbot />);
@@ -284,9 +284,11 @@ describe("Chatbot component", () => {
         JSON.stringify([
           {
             id: "session-1",
+            name: "Test Session",
             messages: [],
             createdAt: "2024-01-01",
             isLoading: false,
+            loadingStatus: null,
           },
         ]),
       );
@@ -358,9 +360,11 @@ describe("Chatbot component", () => {
         JSON.stringify([
           {
             id: "session-1",
+            name: "Test Session",
             messages: [],
             createdAt: "2024-01-01",
             isLoading: false,
+            loadingStatus: null,
           },
         ]),
       );
@@ -426,9 +430,11 @@ describe("Chatbot component", () => {
         JSON.stringify([
           {
             id: "session-1",
+            name: "Test Session",
             messages: [],
             createdAt: "2024-01-01",
             isLoading: false,
+            loadingStatus: null,
           },
         ]),
       );
@@ -486,9 +492,11 @@ describe("Chatbot component", () => {
         JSON.stringify([
           {
             id: "session-1",
+            name: "Test Session",
             messages: [],
             createdAt: "2024-01-01",
             isLoading: false,
+            loadingStatus: null,
           },
         ]),
       );
@@ -522,6 +530,7 @@ describe("Chatbot component", () => {
             messages: [],
             createdAt: "2024-01-01",
             isLoading: false,
+            loadingStatus: null,
           },
         ]),
       );
@@ -638,9 +647,11 @@ describe("Chatbot component", () => {
         JSON.stringify([
           {
             id: "session-1",
+            name: "Test Session",
             messages: [],
             createdAt: "2024-01-01",
             isLoading: false,
+            loadingStatus: null,
           },
         ]),
       );
@@ -699,9 +710,11 @@ describe("Chatbot component", () => {
         JSON.stringify([
           {
             id: "session-1",
+            name: "Test Session",
             messages: [],
             createdAt: "2024-01-01",
             isLoading: false,
+            loadingStatus: null,
           },
         ]),
       );
