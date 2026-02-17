@@ -292,7 +292,9 @@ export const Chatbot = () => {
         abortControllerRef.current = null;
         setSessions((prev) =>
           prev.map((s) =>
-            s.id === currentSessionId ? { ...s, isLoading: false, loadingStatus: null } : s,
+            s.id === currentSessionId
+              ? { ...s, isLoading: false, loadingStatus: null }
+              : s,
           ),
         );
       }
@@ -312,13 +314,13 @@ export const Chatbot = () => {
         prevSessions.map((session) =>
           session.id === currentSessionId
             ? {
-              ...session,
-              messages: session.messages.map((msg) =>
-                msg.id === STREAMING_MESSAGE_ID
-                  ? { ...msg, text: streamingText }
-                  : msg,
-              ),
-            }
+                ...session,
+                messages: session.messages.map((msg) =>
+                  msg.id === STREAMING_MESSAGE_ID
+                    ? { ...msg, text: streamingText }
+                    : msg,
+                ),
+              }
             : session,
         ),
       );
@@ -539,11 +541,11 @@ export const Chatbot = () => {
             prevSessions.map((session) =>
               session.id === currentSessionId
                 ? {
-                  ...session,
-                  messages: session.messages.filter(
-                    (msg) => msg.id !== STREAMING_MESSAGE_ID,
-                  ),
-                }
+                    ...session,
+                    messages: session.messages.filter(
+                      (msg) => msg.id !== STREAMING_MESSAGE_ID,
+                    ),
+                  }
                 : session,
             ),
           );
@@ -615,11 +617,11 @@ export const Chatbot = () => {
             prevSessions.map((session) =>
               session.id === currentSessionId
                 ? {
-                  ...session,
-                  messages: session.messages.map((msg) =>
-                    msg.id === STREAMING_MESSAGE_ID ? finalMessage : msg,
-                  ),
-                }
+                    ...session,
+                    messages: session.messages.map((msg) =>
+                      msg.id === STREAMING_MESSAGE_ID ? finalMessage : msg,
+                    ),
+                  }
                 : session,
             ),
           );
@@ -637,11 +639,11 @@ export const Chatbot = () => {
           prevSessions.map((session) =>
             session.id === currentSessionId
               ? {
-                ...session,
-                messages: session.messages.filter(
-                  (msg) => msg.id !== STREAMING_MESSAGE_ID,
-                ),
-              }
+                  ...session,
+                  messages: session.messages.filter(
+                    (msg) => msg.id !== STREAMING_MESSAGE_ID,
+                  ),
+                }
               : session,
           ),
         );
@@ -731,7 +733,9 @@ export const Chatbot = () => {
     // Mark loading complete
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false, loadingStatus: null } : s,
+        s.id === currentSessionId
+          ? { ...s, isLoading: false, loadingStatus: null }
+          : s,
       ),
     );
   };
@@ -750,11 +754,11 @@ export const Chatbot = () => {
         prevSessions.map((session) =>
           session.id === currentSessionId
             ? {
-              ...session,
-              messages: session.messages.filter(
-                (msg) => msg.id !== STREAMING_MESSAGE_ID,
-              ),
-            }
+                ...session,
+                messages: session.messages.filter(
+                  (msg) => msg.id !== STREAMING_MESSAGE_ID,
+                ),
+              }
             : session,
         ),
       );
@@ -766,7 +770,9 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false, loadingStatus: null } : s,
+        s.id === currentSessionId
+          ? { ...s, isLoading: false, loadingStatus: null }
+          : s,
       ),
     );
   };
