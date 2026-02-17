@@ -398,7 +398,7 @@ describe("chatbotApi", () => {
     it("aborts the request when timeout elapses", async () => {
       // Mock fetch to reject with AbortError when signal is aborted
       (global.fetch as jest.Mock).mockImplementationOnce(
-        (url: string, options?: RequestInit) =>
+        (_url: string, options?: RequestInit) =>
           new Promise((_, reject) => {
             // Reject with AbortError when signal is aborted
             if (options?.signal) {
@@ -437,7 +437,7 @@ describe("chatbotApi", () => {
     it("cancels the request when external signal is aborted", async () => {
       // Mock fetch to reject when signal is aborted
       (global.fetch as jest.Mock).mockImplementationOnce(
-        (url: string, options?: RequestInit) =>
+        (_url: string, options?: RequestInit) =>
           new Promise((_, reject) => {
             if (options?.signal) {
               options.signal.addEventListener("abort", () => {

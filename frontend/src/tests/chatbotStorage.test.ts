@@ -11,12 +11,14 @@ describe("storageUtils", () => {
       messages: [],
       createdAt: "2024-01-01T00:00:00Z",
       isLoading: false,
+      loadingStatus: null,
     },
     {
       id: "session-2",
       messages: [],
       createdAt: "2024-01-02T00:00:00Z",
       isLoading: false,
+      loadingStatus: null,
     },
   ];
 

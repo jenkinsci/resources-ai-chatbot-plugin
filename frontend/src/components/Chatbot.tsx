@@ -25,6 +25,8 @@ import {
   loadChatbotLastSessionId,
 } from "../utils/chatbotStorage";
 import { v4 as uuidv4 } from "uuid";
+import { ProactiveToast } from "./Toast";
+import { useContextObserver } from "../utils/useContextObserver";
 
 /**
  * Special ID for the temporary streaming message displayed while WebSocket is streaming.
@@ -48,6 +50,9 @@ const WS_CONFIG = {
  * Chatbot is the core component responsible for managing the chatbot display.
  */
 
+const LOG_PATTERN =
+  /(Started by user|Running as SYSTEM|Building in workspace|FATAL:|ERROR:|Exception:|Stack trace|Build step .*? marked build as failure)/i;
+
 export const Chatbot = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const wsConnectionRef = useRef<WebSocket | null>(null);
@@ -68,6 +73,8 @@ export const Chatbot = () => {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [supportedExtensions, setSupportedExtensions] =
     useState<SupportedExtensions | null>(null);
+
+  const { showToast, setShowToast } = useContextObserver(isOpen);
 
   /**
    * Fetch supported file extensions on component mount.
@@ -162,7 +169,6 @@ export const Chatbot = () => {
       return chatSession.messages;
     }
 
-    console.error(`No session found with sessionId ${sessionId}`);
     return [];
   };
 
@@ -202,6 +208,7 @@ export const Chatbot = () => {
       messages: [],
       createdAt: new Date().toISOString(),
       isLoading: false,
+      loadingStatus: null,
     };
 
     setSessions((prev) => [newSession, ...prev]);
@@ -247,10 +254,16 @@ export const Chatbot = () => {
     setInput("");
     const filesToSend = [...attachedFiles];
     setAttachedFiles([]);
+    const isLogAnalysis = LOG_PATTERN.test(trimmed);
+    const statusMessage = isLogAnalysis
+      ? getChatbotText("analyzingLogs")
+      : getChatbotText("generatingMessage");
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: true } : s,
+        s.id === currentSessionId
+          ? { ...s, isLoading: true, loadingStatus: statusMessage }
+          : s,
       ),
     );
 
@@ -279,7 +292,7 @@ export const Chatbot = () => {
         abortControllerRef.current = null;
         setSessions((prev) =>
           prev.map((s) =>
-            s.id === currentSessionId ? { ...s, isLoading: false } : s,
+            s.id === currentSessionId ? { ...s, isLoading: false, loadingStatus: null } : s,
           ),
         );
       }
@@ -299,13 +312,13 @@ export const Chatbot = () => {
         prevSessions.map((session) =>
           session.id === currentSessionId
             ? {
-                ...session,
-                messages: session.messages.map((msg) =>
-                  msg.id === STREAMING_MESSAGE_ID
-                    ? { ...msg, text: streamingText }
-                    : msg,
-                ),
-              }
+              ...session,
+              messages: session.messages.map((msg) =>
+                msg.id === STREAMING_MESSAGE_ID
+                  ? { ...msg, text: streamingText }
+                  : msg,
+              ),
+            }
             : session,
         ),
       );
@@ -526,11 +539,11 @@ export const Chatbot = () => {
             prevSessions.map((session) =>
               session.id === currentSessionId
                 ? {
-                    ...session,
-                    messages: session.messages.filter(
-                      (msg) => msg.id !== STREAMING_MESSAGE_ID,
-                    ),
-                  }
+                  ...session,
+                  messages: session.messages.filter(
+                    (msg) => msg.id !== STREAMING_MESSAGE_ID,
+                  ),
+                }
                 : session,
             ),
           );
@@ -602,11 +615,11 @@ export const Chatbot = () => {
             prevSessions.map((session) =>
               session.id === currentSessionId
                 ? {
-                    ...session,
-                    messages: session.messages.map((msg) =>
-                      msg.id === STREAMING_MESSAGE_ID ? finalMessage : msg,
-                    ),
-                  }
+                  ...session,
+                  messages: session.messages.map((msg) =>
+                    msg.id === STREAMING_MESSAGE_ID ? finalMessage : msg,
+                  ),
+                }
                 : session,
             ),
           );
@@ -624,11 +637,11 @@ export const Chatbot = () => {
           prevSessions.map((session) =>
             session.id === currentSessionId
               ? {
-                  ...session,
-                  messages: session.messages.filter(
-                    (msg) => msg.id !== STREAMING_MESSAGE_ID,
-                  ),
-                }
+                ...session,
+                messages: session.messages.filter(
+                  (msg) => msg.id !== STREAMING_MESSAGE_ID,
+                ),
+              }
               : session,
           ),
         );
@@ -718,7 +731,7 @@ export const Chatbot = () => {
     // Mark loading complete
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false } : s,
+        s.id === currentSessionId ? { ...s, isLoading: false, loadingStatus: null } : s,
       ),
     );
   };
@@ -737,11 +750,11 @@ export const Chatbot = () => {
         prevSessions.map((session) =>
           session.id === currentSessionId
             ? {
-                ...session,
-                messages: session.messages.filter(
-                  (msg) => msg.id !== STREAMING_MESSAGE_ID,
-                ),
-              }
+              ...session,
+              messages: session.messages.filter(
+                (msg) => msg.id !== STREAMING_MESSAGE_ID,
+              ),
+            }
             : session,
         ),
       );
@@ -753,7 +766,7 @@ export const Chatbot = () => {
 
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId ? { ...s, isLoading: false } : s,
+        s.id === currentSessionId ? { ...s, isLoading: false, loadingStatus: null } : s,
       ),
     );
   };
@@ -781,8 +794,12 @@ export const Chatbot = () => {
 
   const getChatLoading = (): boolean => {
     const currentChat = sessions.find((chat) => chat.id === currentSessionId);
-
     return currentChat ? currentChat.isLoading : false;
+  };
+
+  const getChatLoadingStatus = (): string | null => {
+    const currentChat = sessions.find((chat) => chat.id === currentSessionId);
+    return currentChat ? currentChat.loadingStatus : null;
   };
 
   const openSideBar = () => {
@@ -797,6 +814,54 @@ export const Chatbot = () => {
   const openConfirmDeleteChatPopup = (chatSessionId: string) => {
     setSessionIdToDelete(chatSessionId);
     setIsPopupOpen(true);
+  };
+
+  const getConsoleLogContext = (): string => {
+    // 1. Try standard Jenkins console selector
+    const consoleElement = document.querySelector("pre.console-output");
+
+    if (!consoleElement || !consoleElement.textContent) {
+      return "";
+    }
+
+    const fullLog = consoleElement.textContent;
+
+    // 2. Truncate if too large (e.g., last 5000 characters)
+    // We only need the error at the end, and we don't want to overload the LLM.
+    const maxLength = 5000;
+    if (fullLog.length > maxLength) {
+      return "...(logs truncated due to size)...\n" + fullLog.slice(-maxLength);
+    }
+
+    return fullLog;
+  };
+
+  /**
+   * Handlers for Proactive Toast
+   */
+  const handleToastConfirm = () => {
+    setShowToast(false);
+    setIsOpen(true);
+
+    // 1. Scrape the logs
+    const logs = getConsoleLogContext();
+
+    // 2. Construct the prompt
+    if (logs) {
+      const messageWithContext = `I found a build failure. Here are the last 5000 characters of the log:\n\n\`\`\`\n${logs}\n\`\`\`\n\nCan you analyze this error?`;
+      setInput(messageWithContext);
+
+      // Optional: If you want to send it immediately without clicking the arrow button:
+      // sendMessage(messageWithContext);
+    } else {
+      setInput(
+        "I noticed a build failure, but I couldn't read the logs automatically. Can you paste them?",
+      );
+    }
+  };
+
+  const handleToastDismiss = () => {
+    setShowToast(false);
   };
 
   const getWelcomePage = () => {
@@ -854,6 +919,12 @@ export const Chatbot = () => {
       >
         {getChatbotText("toggleButtonLabel")}
       </button>
+      {showToast && !isOpen && (
+        <ProactiveToast
+          onConfirm={handleToastConfirm}
+          onDismiss={handleToastDismiss}
+        />
+      )}
 
       {isOpen && (
         <div
@@ -883,7 +954,8 @@ export const Chatbot = () => {
             <>
               <Messages
                 messages={getSessionMessages(currentSessionId)}
-                loading={getChatLoading()}
+                isLoading={getChatLoading()}
+                loadingStatus={getChatLoadingStatus()}
               />
               <Input
                 input={input}
