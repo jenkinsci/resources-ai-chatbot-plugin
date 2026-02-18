@@ -4,7 +4,6 @@ After collecting and preprocessing the raw content from various sources, the nex
 
 All chunking scripts are located under the directory:`chatbot-core/data/chunking/`
 
-
 Below are the chunking procedures for each data source.
 
 ---
@@ -46,8 +45,14 @@ This script performs chunking on the Jenkins documentation using a recursive spl
 ### To run:
 
 ```bash
+# Via Makefile (recommended)
+make run-data-chunking-docs
+
+# Or directly (uses centralized config if DATA_PIPELINE_CONFIG is set)
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/chunking/extract_chunk_docs.py
 ```
+
 > **Note**:
 > Ensure `langchain` and the other dependencies in the `requirements.txt` are met in your environment.
 
@@ -87,6 +92,11 @@ This script processes the pre-cleaned plugin documentation and splits it into co
 ### To run:
 
 ```bash
+# Via Makefile (recommended)
+make run-data-chunking-plugins
+
+# Or directly
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/chunking/extract_chunk_plugins.py
 ```
 
@@ -111,7 +121,7 @@ This script processes cleaned Discourse threads by concatenating the posts, extr
 ### Code Block Handling
 
 - The script identifies both:
-  - **Multiline code blocks** 
+  - **Multiline code blocks**
   - **Inline code snippets**
 - Code blocks are identified using regex patterns.
 - Code blocks are replaced with placeholder tokens before chunking.
@@ -129,6 +139,11 @@ This script processes cleaned Discourse threads by concatenating the posts, extr
 ### To run:
 
 ```bash
+# Via Makefile (recommended)
+make run-data-chunking-discourse
+
+# Or directly
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/chunking/extract_chunk_discourse.py
 ```
 
@@ -175,9 +190,28 @@ This script takes the filtered StackOverflow data, parses the HTML from both que
 ### To run:
 
 ```bash
+# Via Makefile (recommended)
+make run-data-chunking-stack
+
+# Or directly
+DATA_PIPELINE_CONFIG=chatbot-core/config/data-pipeline.yml \
 python data/chunking/extract_chunk_stack.py
 ```
 
 ## Utility Functions
 
 Several of the chunking scripts rely on shared helper functions to handle common tasks such as code block extraction, chunk-to-code matching, and title parsing. These utilities are defined in:`chatbot-core/data/chunking/utils/`.
+
+---
+
+## Configuration
+
+Chunk sizes, overlaps, placeholder formats, and per-source input/output files are centralized in `chatbot-core/config/data-pipeline.yml` under the `chunking:` section. See `docs/chatbot-core/data/data-pipeline-config.md` for tuning examples.
+
+Quick overrides via environment variables:
+
+```bash
+export CHUNK_SIZE=700
+export CHUNK_OVERLAP=140
+make run-data-chunking
+```

@@ -5,17 +5,19 @@ and returns both embeddings and associated metadata.
 
 import os
 import json
+
+from config.pipeline_loader import load_pipeline_config
 from .embedding_utils import load_embedding_model, embed_documents
 
+# Load pipeline configuration
+PIPELINE_CONFIG = load_pipeline_config()
+embedding_config = PIPELINE_CONFIG["embedding"]
+general_config = PIPELINE_CONFIG["general"]
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROCESSED_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "processed")
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-CHUNK_FILES = [
-    #"chunks_docs.json",
-    "chunks_plugin_docs.json",
-    #"chunks_discourse_docs.json",
-    #"chunks_stackoverflow_threads.json"
-]
+PROCESSED_DIR = os.path.join(SCRIPT_DIR, "..", "..", general_config["processed_data_dir"])
+MODEL_NAME = embedding_config["model_name"]
+CHUNK_FILES = embedding_config["chunk_files"]
 
 def load_chunks_from_file(path, logger):
     """Load JSON file and return data, with proper error handling."""

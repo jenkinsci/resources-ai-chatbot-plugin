@@ -57,66 +57,72 @@ make api
 ## Installation Guide for Linux
 
 ### Prerequisites
-* Python 3.11 or later
-* Git (to clone the repository)
-* Maven (for the Java components)
-* Sufficient disk space (at least 5GB for models and dependencies)
+
+- Python 3.11 or later
+- Git (to clone the repository)
+- Maven (for the Java components)
+- Sufficient disk space (at least 5GB for models and dependencies)
 
 ### Installation Steps
 
 1. **Clone the Repository**
-    ```bash
-    git clone <repository-url>
-    cd resources-ai-chatbot-plugin
-    ```
+
+   ```bash
+   git clone <repository-url>
+   cd resources-ai-chatbot-plugin
+   ```
 
 2. **Build the Maven Project**
-    ```bash
-    mvn install
-    ```
+   ```bash
+   mvn install
+   ```
 3. **Set Up the Python Environment**
 
-    Navigate to the Python subproject directory:
-    
-    ```bash
-    cd chatbot-core
-    ```
+   Navigate to the Python subproject directory:
 
-    Create a Python virtual environment:
-    ```bash
-    python3 -m venv venv
-    ```
-    
-    Activate the virtual environment
-    ```bash
-    source venv/bin/activate
-    ```
+   ```bash
+   cd chatbot-core
+   ```
+
+   Create a Python virtual environment:
+
+   ```bash
+   python3 -m venv venv
+   ```
+
+   Activate the virtual environment
+
+   ```bash
+   source venv/bin/activate
+   ```
+
 4. **Install the dependencies**
-    ```bash
-    pip install -r requirements.txt
-    ```
 
-    > **Note:** The backend requires `python-multipart` for multipart form handling.
-    > This dependency is included in the requirements file, but if you encounter
-    > runtime errors related to multipart requests, ensure it is installed:
-    >
-    > ```bash
-    > pip install python-multipart
-    > ```
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   > **Note:** The backend requires `python-multipart` for multipart form handling.
+   > This dependency is included in the requirements file, but if you encounter
+   > runtime errors related to multipart requests, ensure it is installed:
+   >
+   > ```bash
+   > pip install python-multipart
+   > ```
 
 5. **Set the `PYTHONPATH` to the current directory(`chatbot-core/`)**
-    ```bash
-    export PYTHONPATH=$(pwd)
-    ```
+   ```bash
+   export PYTHONPATH=$(pwd)
+   ```
 6. **Download the Required Model**
-    1. Create the model directory if it doesn't exist:
-        ```bash
-        mkdir -p api\models\mistral
-        ```
-    2. Download the Mistral 7B Instruct model from Hugging Face:
-        * Go to https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
-        * Download the file named `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
-        * Place the downloaded file in `api\models\mistral\`
+   1. Create the model directory if it doesn't exist:
+      ```bash
+      mkdir -p api\models\mistral
+      ```
+   2. Download the Mistral 7B Instruct model from Hugging Face:
+      - Go to https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
+      - Download the file named `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
+      - Place the downloaded file in `api\models\mistral\`
 
 By default, the backend attempts to load the local GGUF model during
 startup. If the model file is missing, the server will fail to start.
@@ -125,80 +131,86 @@ Contributors who do not need local inference can run the backend
 without a model by using test mode
 (see “Running without a local LLM model (test mode)” below).
 
-
 ## Installation Guide for Windows
+
 This guide provides step-by-step instructions for installing and running the Jenkins Chatbot on Windows systems.
 
 ### Prerequisites
-* Windows 10 or 11
-* Python 3.11 or later
-* Git (to clone the repository)
-* Maven (for the Java components)
-* Sufficient disk space (at least 5GB for models and dependencies)
+
+- Windows 10 or 11
+- Python 3.11 or later
+- Git (to clone the repository)
+- Maven (for the Java components)
+- Sufficient disk space (at least 5GB for models and dependencies)
 
 ### Installation Steps
 
 1. **Clone the Repository**
-    ```bash
-    git clone <repository-url>
-    cd resources-ai-chatbot-plugin
-    ```
+
+   ```bash
+   git clone <repository-url>
+   cd resources-ai-chatbot-plugin
+   ```
 
 2. **Build the Maven Project**
-    ```bash
-    mvn install
-    ```
+   ```bash
+   mvn install
+   ```
 3. **Set Up the Python Environment**
 
-    Navigate to the Python subproject directory:
-    
-    ```bash
-    cd chatbot-core
-    ```
+   Navigate to the Python subproject directory:
 
-    Create a Python virtual environment:
-    ```bash
-    python3 -m venv venv
-    ```
-    
-    Activate the virtual environment
-    ```bash
-    .\venv\Scripts\activate
-    ```
+   ```bash
+   cd chatbot-core
+   ```
+
+   Create a Python virtual environment:
+
+   ```bash
+   python3 -m venv venv
+   ```
+
+   Activate the virtual environment
+
+   ```bash
+   .\venv\Scripts\activate
+   ```
 
 4. **Install Dependencies**
 
-    Install the Python dependencies using the CPU-only requirements file to avoid NVIDIA CUDA dependency issues:
-    ```bash
-    pip install -r requirements-cpu.txt
-    ```
-    > **Note:** The backend requires `python-multipart` for multipart form handling.
-    > This dependency is included in the requirements file, but if you encounter
-    > runtime errors related to multipart requests, ensure it is installed:
-    >
-    > ```powershell
-    > pip install python-multipart
-    > ```
+   Install the Python dependencies using the CPU-only requirements file to avoid NVIDIA CUDA dependency issues:
 
-    > **Note**: If you encounter any dependency issues, especially with NVIDIA packages, use the `requirements-cpu.txt` file which excludes GPU-specific dependencies.
+   ```bash
+   pip install -r requirements-cpu.txt
+   ```
+
+   > **Note:** The backend requires `python-multipart` for multipart form handling.
+   > This dependency is included in the requirements file, but if you encounter
+   > runtime errors related to multipart requests, ensure it is installed:
+   >
+   > ```powershell
+   > pip install python-multipart
+   > ```
+
+   > **Note**: If you encounter any dependency issues, especially with NVIDIA packages, use the `requirements-cpu.txt` file which excludes GPU-specific dependencies.
 
 5. **Set the PYTHONPATH**
 
-    Set the PYTHONPATH environment variable to the current directory:
+   Set the PYTHONPATH environment variable to the current directory:
 
-    ```bash
-    $env:PYTHONPATH = (Get-Location).Path
-    ```
+   ```bash
+   $env:PYTHONPATH = (Get-Location).Path
+   ```
 
 6. **Download the Required Model**
-    1. Create the model directory if it doesn't exist:
-        ```bash
-        mkdir -p api\models\mistral
-        ```
-    2. Download the Mistral 7B Instruct model from Hugging Face:
-        * Go to https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
-        * Download the file named `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
-        * Place the downloaded file in `api\models\mistral\`
+   1. Create the model directory if it doesn't exist:
+      ```bash
+      mkdir -p api\models\mistral
+      ```
+   2. Download the Mistral 7B Instruct model from Hugging Face:
+      - Go to https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
+      - Download the file named `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
+      - Place the downloaded file in `api\models\mistral\`
 
 By default, the backend attempts to load the local GGUF model during
 startup. If the model file is missing, the server will fail to start.
@@ -212,11 +224,13 @@ without a model by using test mode
 To avoid running all the steps each time, we have provided a target in the `Makefile` to automate the setup process.
 
 To run it:
+
 ```bash
 make setup-backend
 ```
 
 By default the target will use the `requirements.txt` to install the dependencies. In case you would like to run it with the cpu requirements run:
+
 ```bash
 make setup-backend IS_CPU_REQ=1
 ```
@@ -228,6 +242,7 @@ make setup-backend IS_CPU_REQ=1
 ### What does `setup-backend` do?
 
 The `setup-backend` Makefile target prepares the Python backend by:
+
 - Creating a virtual environment in `chatbot-core/venv`
 - Installing backend dependencies from `requirements.txt`
   (or `requirements-cpu.txt` when `IS_CPU_REQ=1` is set)
@@ -252,6 +267,50 @@ Example:
 PYTEST_VERSION=1 make api
 ```
 
+## Data Pipeline Configuration
+
+This project uses a centralized configuration file for all data pipeline phases:
+
+- Default location: `chatbot-core/config/data-pipeline.yml`
+- Full schema and usage: `docs/chatbot-core/data/data-pipeline-config.md`
+
+### Using a custom configuration per run
+
+You can pass an alternate config file to any pipeline target via `CONFIG_PATH`:
+
+```bash
+# Run entire pipeline with a custom config
+make run-data-pipeline CONFIG_PATH=/path/to/my-config.yml
+
+# Run specific phases
+make run-data-collection CONFIG_PATH=/path/to/my-config.yml
+make run-data-preprocessing CONFIG_PATH=/path/to/my-config.yml
+make run-data-chunking CONFIG_PATH=/path/to/my-config.yml
+make run-data-storage CONFIG_PATH=/path/to/my-config.yml
+```
+
+### Quick overrides via environment variables
+
+For fast experimentation, override critical parameters via environment variables:
+
+```bash
+# Adjust chunking
+export CHUNK_SIZE=700
+export CHUNK_OVERLAP=140
+make run-data-chunking
+
+# Change embedding model
+export EMBEDDING_MODEL=sentence-transformers/all-mpnet-base-v2
+make run-data-storage
+
+# Tune FAISS index parameters
+export FAISS_N_LIST=512
+export FAISS_N_PROBE=30
+make run-data-storage
+```
+
+See the configuration guide for precedence rules and best practices.
+
 ## Common Troubleshooting
 
 This section covers common issues encountered during setup, especially when installing
@@ -262,6 +321,7 @@ dependencies that require native compilation (e.g. `llama-cpp-python`).
 ### llama-cpp-python fails to install
 
 **Symptoms**
+
 - `pip install llama-cpp-python` fails
 - Errors mentioning `cmake`, `gcc`, or “failed building wheel”
 
@@ -270,12 +330,13 @@ dependencies that require native compilation (e.g. `llama-cpp-python`).
 
 **Solution**
 For Linux (Ubuntu/Debian):
-```bash
+
+````bash
 sudo apt install build-essential cmake
 pip install llama-cpp-python
 
 For macOS:
 ```bash
 brew install cmake
-pip install llama-cpp-python    
-```
+pip install llama-cpp-python
+````
