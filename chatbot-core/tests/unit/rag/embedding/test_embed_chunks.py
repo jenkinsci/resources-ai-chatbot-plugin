@@ -63,6 +63,35 @@ def test_embed_chunks_skips_invalid_chunks(mocker):
     )
 
 
+def test_embed_chunks_with_preloaded_model(mocker):
+    """Testing that embed_chunks uses a pre-loaded model and skips loading."""
+    mock_collect_all_chunks = mocker.patch("rag.embedding.embed_chunks.collect_all_chunks")
+    mock_load_embedding_model = mocker.patch("rag.embedding.embed_chunks.load_embedding_model")
+    mock_embed_documents = mocker.patch("rag.embedding.embed_chunks.embed_documents")
+
+    mock_collect_all_chunks.return_value = get_mock_chunks("valid")
+    mock_preloaded_model = mocker.Mock()
+    mock_embed_documents.return_value = ["vec1", "vec2"]
+
+    mock_logger = mocker.Mock()
+
+    # Pass the pre-loaded model into the function
+    vectors, metadata = embed_chunks(mock_logger, model=mock_preloaded_model)
+
+    assert vectors == ["vec1", "vec2"]
+    assert len(metadata) == 2
+
+    # Assert that we DID NOT load a new model
+    mock_load_embedding_model.assert_not_called()
+
+    # Assert that the documents were embedded with the model we passed in
+    mock_embed_documents.assert_called_once_with(
+        ["Chunk text 1", "Chunk text 2"],
+        mock_preloaded_model,
+        mock_logger
+    )
+
+
 def test_collect_all_chunks_with_custom_files(mocker):
     """Testing that collect_all_chunks aggregates chunks and logs warnings for empty files."""
     patched_chunk_files = mocker.patch(
