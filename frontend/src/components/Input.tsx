@@ -65,6 +65,7 @@ export const Input = ({
       );
 
       if (isDuplicate) {
+        errors.push(`${file.name}: File is already attached`);
         return;
       }
       if (validateFile) {
