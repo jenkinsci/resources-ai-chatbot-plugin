@@ -19,8 +19,11 @@ export const callChatbotApi = async <T>(
   fallbackErrorValue: T,
   timeoutMs: number,
 ): Promise<T> => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
+  const callerSignal = options.signal;
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const signal = callerSignal
+    ? AbortSignal.any([callerSignal, timeoutSignal])
+    : timeoutSignal;
 
   try {
     // Merge headers and add CSRF token if available
@@ -37,7 +40,7 @@ export const callChatbotApi = async <T>(
       ...options,
       headers,
       credentials: "same-origin", // Send cookies for authentication
-      signal: controller.signal,
+      signal,
     });
 
     if (!response.ok) {
@@ -47,15 +50,17 @@ export const callChatbotApi = async <T>(
 
     return await response.json();
   } catch (error: unknown) {
-    if (error instanceof DOMException && error.name == "AbortError") {
-      console.error(
-        `API request to ${endpoint} timed out aftr ${timeoutMs}ms.`,
-      );
+    if (error instanceof DOMException && error.name === "AbortError") {
+      if (callerSignal?.aborted) {
+        console.error("API request cancelled by user");
+      } else {
+        console.error(
+          `API request to ${endpoint} timed out after ${timeoutMs}ms.`,
+        );
+      }
     } else {
       console.error(`API error calling ${endpoint}:`, error);
     }
     return fallbackErrorValue;
-  } finally {
-    clearTimeout(id);
   }
 };
