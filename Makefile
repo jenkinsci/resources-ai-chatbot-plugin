@@ -1,4 +1,4 @@
-.PHONY: all api setup-backend build-frontend test run-data-pipeline clean
+.PHONY: all api setup-backend build-frontend test run-data-pipeline clean generate-eval-dataset run-llm-eval
 
 BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate && export PYTHONPATH=$$(pwd)
 
@@ -55,6 +55,16 @@ run-backend-tests: setup-backend
 	pytest tests/integration
 
 run-test: run-frontend-tests run-backend-tests
+
+generate-eval-dataset: setup-backend
+	@$(BACKEND_SHELL) && \
+	echo "### GENERATING GOLDEN EVALUATION DATASET ###" && \
+	python3 evaluation/build_golden_dataset.py
+
+run-llm-eval: setup-backend
+	@$(BACKEND_SHELL) && \
+	echo "### RUNNING LLM-AS-A-JUDGE EVALUATION ###" && \
+	RUN_LLM_EVAL=1 pytest tests/evaluation -q
 
 # DATA PIPELINE
 

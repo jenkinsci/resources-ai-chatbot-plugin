@@ -1,0 +1,85 @@
+name: LLM-as-a-Judge Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample_size:
+        description: "Number of dataset samples to evaluate (0 = full dataset)"
+        required: false
+        default: "30"
+  pull_request:
+    branches:
+      - "main"
+      - "master"
+    types: [labeled, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  llm-eval:
+    name: Run LLM Judge Evaluation
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'pull_request' &&
+        contains(github.event.pull_request.labels.*.name, 'run-llm-eval') &&
+        github.event.pull_request.head.repo.fork == false
+      )
+
+    defaults:
+      run:
+        working-directory: chatbot-core
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-cpu.txt
+
+      - name: Validate required evaluation settings
+        env:
+          JUDGE_LLM_API_BASE_URL: ${{ secrets.LLM_JUDGE_API_BASE_URL }}
+          JUDGE_LLM_MODEL: ${{ secrets.LLM_JUDGE_MODEL }}
+        run: |
+          if [ -z "${JUDGE_LLM_API_BASE_URL}" ]; then
+            echo "Missing secret: LLM_JUDGE_API_BASE_URL"
+            exit 1
+          fi
+          if [ -z "${JUDGE_LLM_MODEL}" ]; then
+            echo "Missing secret: LLM_JUDGE_MODEL"
+            exit 1
+          fi
+
+      - name: Run evaluation pytest suite
+        env:
+          PYTHONPATH: ${{ github.workspace }}/chatbot-core
+          RUN_LLM_EVAL: "1"
+          LLM_EVAL_SAMPLE_SIZE: ${{ github.event.inputs.sample_size || '30' }}
+          LLM_EVAL_STORE_SAMPLE_DETAILS: "0"
+          LLM_EVAL_MAX_STORED_TEXT_CHARS: "1200"
+          LLM_EVAL_REPORT_PATH: ${{ github.workspace }}/artifacts/llm_judge_report.json
+          JUDGE_LLM_API_BASE_URL: ${{ secrets.LLM_JUDGE_API_BASE_URL }}
+          JUDGE_LLM_API_KEY: ${{ secrets.LLM_JUDGE_API_KEY }}
+          JUDGE_LLM_MODEL: ${{ secrets.LLM_JUDGE_MODEL }}
+          CANDIDATE_LLM_API_BASE_URL: ${{ secrets.CANDIDATE_LLM_API_BASE_URL }}
+          CANDIDATE_LLM_API_KEY: ${{ secrets.CANDIDATE_LLM_API_KEY }}
+          CANDIDATE_LLM_MODEL: ${{ secrets.CANDIDATE_LLM_MODEL }}
+        run: |
+          pytest tests/evaluation -q
+
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-judge-report
+          path: artifacts/llm_judge_report.json
+          if-no-files-found: warn

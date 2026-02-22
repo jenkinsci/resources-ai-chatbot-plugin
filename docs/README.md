@@ -27,6 +27,7 @@ Below is a brief explanation of the key subdirectories:
   - `tests/`: Tests for the backend.
     - `unit/`: Contains the unit tests and the related configuration.
     - `integration/`: Contains the integration tests and the related configuration.
+    - `evaluation/`: Opt-in LLM-as-a-judge regression suite.
   - `requirements.txt`: Python dependencies.
   - `requirements-cpu.txt`: Python dependencies for cpu only usage.
 - `docs/`: Developer documentation. Inside it mirros the codebase layout.
@@ -92,3 +93,13 @@ To run the tests:
 ```bash
 make run-test
 ```
+
+## Automated Quality Evaluation (LLM-as-a-judge)
+
+An opt-in evaluation pipeline is available for regression checks on answer quality:
+
+- Golden dataset: `chatbot-core/evaluation/dataset/`
+- Runner: `chatbot-core/evaluation/run_llm_judge_eval.py`
+- Pytest suite: `chatbot-core/tests/evaluation/`
+
+See details in [`docs/chatbot-core/evaluation/llm-as-judge.md`](chatbot-core/evaluation/llm-as-judge.md).

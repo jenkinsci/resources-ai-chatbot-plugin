@@ -97,6 +97,7 @@ pip install llama-cpp-python retriv
 ## Developer Documentation
 
 Development-related documentation can be found in the [`docs/`](docs/) directory.
+For the automated quality regression pipeline, see [`docs/chatbot-core/evaluation/llm-as-judge.md`](docs/chatbot-core/evaluation/llm-as-judge.md).
 
 ## Contributing
 
