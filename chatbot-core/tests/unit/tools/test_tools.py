@@ -27,7 +27,7 @@ def test_search_stackoverflow_threads_uses_hybrid_retrieval():
     mock_retrieve.assert_called_once_with(
         query=query,
         keywords=query,
-        logger=tools.logger,
+        logger=tools.tools_logger,
         source_name=tools.CONFIG.get("tool_names", {}).get(
             "stackoverflow_threads",
             "stackoverflow"
@@ -43,7 +43,7 @@ def test_search_stackoverflow_threads_uses_hybrid_retrieval():
             "top_k_stackoverflow",
             tools.retrieval_config["top_k_discourse"]
         ),
-        logger=tools.logger,
+        logger=tools.tools_logger,
         semantic_weight=0.7
     )
 
