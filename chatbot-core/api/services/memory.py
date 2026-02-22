@@ -6,7 +6,9 @@ import asyncio
 import uuid
 from datetime import datetime, timedelta
 from threading import Lock
+from typing import Optional
 from langchain.memory import ConversationBufferMemory
+from langchain_core.messages import HumanMessage, AIMessage
 from api.config.loader import CONFIG
 from api.services.sessionmanager import(
     delete_session_file,
@@ -37,7 +39,38 @@ def init_session() -> str:
     return session_id
 
 
-def get_session(session_id: str) -> ConversationBufferMemory | None:
+def _dict_to_message(msg_dict: dict):
+    """
+    Convert a serialized message dict back to a LangChain message object.
+
+    Args:
+        msg_dict: A dictionary with 'type' and 'data' keys representing the message.
+
+    Returns:
+        A LangChain message object (HumanMessage, AIMessage, etc.)
+    """
+    msg_type = msg_dict.get("type", "HumanMessage")
+    msg_data = msg_dict.get("data", {})
+
+    if msg_type == "HumanMessage":
+        return HumanMessage(
+            content=msg_data.get("content", ""),
+            additional_kwargs=msg_data.get("additional_kwargs", {})
+        )
+    elif msg_type == "AIMessage":
+        return AIMessage(
+            content=msg_data.get("content", ""),
+            additional_kwargs=msg_data.get("additional_kwargs", {})
+        )
+    else:
+        # Fallback to HumanMessage for unknown types
+        return HumanMessage(
+            content=msg_data.get("content", ""),
+            additional_kwargs=msg_data.get("additional_kwargs", {})
+        )
+
+
+def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
     """
     Retrieve the chat session memory for the given session ID.
     Lazily restores from disk if missing in memory.
@@ -46,7 +79,7 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
         session_id (str): The session identifier.
 
     Returns:
-        ConversationBufferMemory | None: The memory object if found, else None.
+        Optional[ConversationBufferMemory]: The memory object if found, else None.
     """
 
     with _lock:
@@ -63,12 +96,19 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
 
         memory = ConversationBufferMemory(return_messages=True)
         for msg in history:
-            memory.chat_memory.add_message(# pylint: disable=no-member
-                {
-                    "role": msg["role"],
-                    "content": msg["content"],
-                }
-            )
+            # Check if the message is in the new serialized format or old format
+            if isinstance(msg, dict) and "type" in msg and "data" in msg:
+                # New format: {"type": "HumanMessage", "data": {...}}
+                message_obj = _dict_to_message(msg)
+                memory.chat_memory.add_message(message_obj)  # pylint: disable=no-member
+            else:
+                # Old format: {"role": ..., "content": ...}
+                memory.chat_memory.add_message(# pylint: disable=no-member
+                    {
+                        "role": msg.get("role", "human"),
+                        "content": msg.get("content", ""),
+                    }
+                )
 
         _sessions[session_id] = {
             "memory": memory,
@@ -77,11 +117,31 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
 
         return memory
 
-async def get_session_async(session_id: str) -> ConversationBufferMemory | None:
+async def get_session_async(session_id: str) -> Optional[ConversationBufferMemory]:
     """
     Async wrapper for get_session to prevent event loop blocking.
     """
     return await asyncio.to_thread(get_session, session_id)
+
+
+def _message_to_dict(message) -> dict:
+    """
+    Convert a LangChain message (HumanMessage, AIMessage, etc.) to a JSON-serializable dict.
+
+    Args:
+        message: A LangChain message object (HumanMessage, AIMessage, etc.)
+
+    Returns:
+        dict: A dictionary with 'type' and 'data' keys representing the message.
+    """
+    # Use the message's type name and convert content/data to dict
+    return {
+        "type": type(message).__name__,
+        "data": {
+            "content": message.content,
+            "additional_kwargs": message.additional_kwargs,
+        }
+    }
 
 
 def persist_session(session_id: str)-> None:
@@ -94,7 +154,9 @@ def persist_session(session_id: str)-> None:
     session_data = get_session(session_id)
     if session_data:
         messages = list(session_data.chat_memory.messages)
-        append_message(session_id, messages)
+        # Convert messages to JSON-serializable dicts before persisting
+        serializable_messages = [_message_to_dict(msg) for msg in messages]
+        append_message(session_id, serializable_messages)
 
 
 
@@ -138,7 +200,7 @@ def reset_sessions():
     with _lock:
         _sessions.clear()
 
-def get_last_accessed(session_id: str) -> datetime | None:
+def get_last_accessed(session_id: str) -> Optional[datetime]:
     """
     Get the last accessed timestamp for a given session.
 
@@ -146,7 +208,7 @@ def get_last_accessed(session_id: str) -> datetime | None:
         session_id (str): The session identifier.
 
     Returns:
-        datetime | None: The last accessed timestamp if session exists, else None.
+        Optional[datetime]: The last accessed timestamp if session exists, else None.
     """
     with _lock:
         session_data = _sessions.get(session_id)
