@@ -12,10 +12,8 @@ from api.tools.utils import (
     extract_top_chunks
 )
 from api.config.loader import CONFIG
-from utils import LoggerFactory
 
 retrieval_config = CONFIG["retrieval"]
-tools_logger = LoggerFactory.instance().get_logger("tools")
 
 def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[str] = None) -> str:
     """
@@ -89,13 +87,13 @@ def search_jenkins_docs(query: str, keywords: str, logger) -> str:
         logger=logger
     )
 
-def search_stackoverflow_threads(query: str) -> str:
+def search_stackoverflow_threads(query: str, logger) -> str:
     """
     Search tool for StackOverflow threads.
     Uses the same local hybrid retrieval pattern as the other search tools.
     """
     if not query or not query.strip():
-        tools_logger.warning("Empty query received for StackOverflow search.")
+        logger.warning("Empty query received for StackOverflow search.")
         return retrieval_config["empty_context_message"]
 
     source_name = CONFIG.get("tool_names", {}).get(
@@ -106,7 +104,7 @@ def search_stackoverflow_threads(query: str) -> str:
         retrieve_documents(
             query=query,
             keywords=query,
-            logger=tools_logger,
+            logger=logger,
             source_name=source_name,
             embedding_model=EMBEDDING_MODEL
         )
@@ -118,7 +116,7 @@ def search_stackoverflow_threads(query: str) -> str:
         data_retrieved_keyword,
         scores_keyword,
         top_k=retrieval_config.get("top_k_stackoverflow", retrieval_config["top_k_discourse"]),
-        logger=tools_logger,
+        logger=logger,
         semantic_weight=0.7
     )
 

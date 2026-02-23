@@ -2,6 +2,7 @@
 
 import ast
 import json
+import inspect
 import re
 from typing import AsyncGenerator, List, Optional
 
@@ -326,7 +327,11 @@ def _execute_search_tools(tool_calls) -> str:
         tool_name, params = call.get("tool"), call.get("params")
         tool_fn = TOOL_REGISTRY.get(tool_name)
 
-        result = tool_fn(**params)
+        tool_params = params.copy() if isinstance(params, dict) else {}
+        if "logger" in inspect.signature(tool_fn).parameters and "logger" not in tool_params:
+            tool_params["logger"] = logger
+
+        result = tool_fn(**tool_params)
         retrieved_results.append({
             "tool": tool_name,
             "output": result
