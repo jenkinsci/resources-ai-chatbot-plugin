@@ -60,7 +60,7 @@ describe("callChatbotApi", () => {
   it("aborts when caller signal is aborted", async () => {
     const controller = new AbortController();
     fetchMock.mockImplementationOnce(
-      (_url: string, init?: RequestInit) =>
+    (_url: string | Request | undefined, init?: RequestInit) =>
         new Promise((_, reject) => {
           const signal = init?.signal as AbortSignal;
           if (signal) {
