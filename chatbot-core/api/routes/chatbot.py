@@ -225,6 +225,7 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
 )
 async def chatbot_reply_with_files(
     session_id: str,
+    background_tasks: BackgroundTasks,
     message: str = Form(...),
     files: Optional[List[UploadFile]] = File(None),
 ):
@@ -292,12 +293,17 @@ async def chatbot_reply_with_files(
         else "Please analyze the attached file(s)."
     )
 
-    return await asyncio.to_thread(
+    reply = await asyncio.to_thread(
         get_chatbot_reply,
         session_id,
         final_message,
         processed_files if processed_files else None
     )
+    background_tasks.add_task(
+        persist_session,
+        session_id,
+    )
+    return reply
 
 
 # =========================
