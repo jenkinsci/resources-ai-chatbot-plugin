@@ -121,6 +121,8 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
                 json.dumps({"end": True})
             )
 
+            asyncio.create_task(asyncio.to_thread(persist_session, session_id))
+
     except WebSocketDisconnect:
         logger.info(
             "WebSocket disconnected for session %s",
