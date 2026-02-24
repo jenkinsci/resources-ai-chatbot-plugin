@@ -225,7 +225,7 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
 )
 async def chatbot_reply_with_files(
     session_id: str,
-    message: str = Form(...),
+    message: Optional[str] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
 ):
     """
@@ -241,7 +241,7 @@ async def chatbot_reply_with_files(
 
     Args:
         session_id (str): The ID of the session from the URL path.
-        message (str): The user's message (form field).
+        message (Optional[str]): Optional user's message (form field).
         files (List[UploadFile]): Optional list of uploaded files.
 
     Returns:
@@ -255,7 +255,7 @@ async def chatbot_reply_with_files(
         raise HTTPException(status_code=404, detail="Session not found.")
 
     # Validate that at least message or files are provided
-    has_message = message and message.strip()
+    has_message = bool(message and message.strip())
     has_files = files and len(files) > 0
 
     if not has_message and not has_files:

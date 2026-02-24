@@ -151,6 +151,25 @@ def test_chatbot_reply_upload_empty_message_with_files(
     assert response.status_code == 200
 
 
+def test_chatbot_reply_upload_missing_message_field_with_files(
+    client, mock_session_exists, mock_get_chatbot_reply
+):
+    """Upload endpoint should accept files even if message form field is omitted."""
+    mock_session_exists.return_value = True
+    mock_get_chatbot_reply.return_value = {"reply": "I analyzed the file."}
+
+    files = [
+        ("files", ("test.txt", BytesIO(b"Content"), "text/plain"))
+    ]
+
+    response = client.post(
+        "/sessions/test-session-id/message/upload",
+        files=files
+    )
+
+    assert response.status_code == 200
+
+
 def test_chatbot_reply_upload_no_message_no_files(client, mock_session_exists):
     """Test that upload endpoint rejects empty message with no files."""
     mock_session_exists.return_value = True
