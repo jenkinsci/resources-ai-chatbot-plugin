@@ -13,7 +13,8 @@ from api.services.sessionmanager import(
     delete_session_file,
     load_session,
     session_exists_in_json,
-    append_message
+    append_message,
+    get_persisted_session_ids
 )
 # sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
 
@@ -138,6 +139,24 @@ def reset_sessions():
     """Helper function to clear all sessions. Useful for testing."""
     with _lock:
         _sessions.clear()
+
+
+def reload_persisted_sessions() -> int:
+    """
+    Load all persisted sessions from disk into memory.
+    Called once at application startup so that session_exists()
+    can remain a fast, memory-only check.
+
+    Returns:
+        int: The number of sessions restored.
+    """
+    session_ids = get_persisted_session_ids()
+    loaded = 0
+    for session_id in session_ids:
+        if get_session(session_id) is not None:
+            loaded += 1
+    return loaded
+
 
 def get_last_accessed(session_id: str) -> Optional[datetime]:
     """

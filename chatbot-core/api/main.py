@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import chatbot
 from api.config.loader import CONFIG
-from api.services.memory import cleanup_expired_sessions
+from api.services.memory import cleanup_expired_sessions, reload_persisted_sessions
 from utils import LoggerFactory
 from pydantic import BaseModel
 
@@ -37,6 +37,9 @@ async def lifespan(app_instance: FastAPI):  # pylint: disable=unused-argument
     """
     Manages the application lifecycle, starting background tasks on startup.
     """
+    loaded = reload_persisted_sessions()
+    logger.info("Restored %s persisted session(s) from disk", loaded)
+
     # Startup: Create the cleanup task
     cleanup_task = asyncio.create_task(periodic_session_cleanup())
     logger.info("Application startup complete, background tasks initialized")

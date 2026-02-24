@@ -93,3 +93,12 @@ def delete_session_file(session_id: str) -> bool:
     Public function to delete a session's JSON file.
     """
     return _delete_session(session_id)
+
+
+def get_persisted_session_ids() -> set:
+    """Return all session IDs that have persisted JSON files on disk."""
+    return {
+        filename[:-5]
+        for filename in os.listdir(_SESSION_DIRECTORY)
+        if filename.endswith(".json")
+    }
