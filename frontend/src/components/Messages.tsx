@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { FileText } from "lucide-react";
 import {
   type Message,
   type Sender,
@@ -24,6 +25,7 @@ const formatFileSize = (bytes: number): string => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+
 
 /**
  * Renders a file attachment display.
@@ -51,7 +53,9 @@ const FileAttachmentDisplay: React.FC<{ file: FileAttachment }> = ({
 
   return (
     <div style={chatbotStyles.fileAttachmentContainer}>
-      <div style={chatbotStyles.textFileIcon}>📄</div>
+      <div style={chatbotStyles.textFileIcon}>
+        <FileText size={20} color="var(--primary-color)" />
+      </div>
       <div style={chatbotStyles.fileAttachmentInfo}>
         <span style={chatbotStyles.fileAttachmentName}>{file.filename}</span>
         <span style={chatbotStyles.fileAttachmentSize}>
