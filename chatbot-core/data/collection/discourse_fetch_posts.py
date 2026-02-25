@@ -1,5 +1,4 @@
 """Module to fetch posts from Jenkins Discourse topics."""
-import time
 import os
 import json
 import requests
@@ -20,7 +19,6 @@ FILTERED_TOPICS_PATH = os.path.join(
 def fetch_topic_posts(topic_id):
     """Fetch all posts in a topic using the topic endpoint."""
     url = f"{BASE_URL}/t/{topic_id}.json"
-    time.sleep(1)
     response = requests.get(url, timeout=10)
     response.raise_for_status()
     topic_data = response.json()
@@ -33,7 +31,6 @@ def fetch_topic_posts(topic_id):
 def fetch_post_content(post_id):
     """Fetch the content of a single post."""
     url = f"{BASE_URL}/posts/{post_id}.json"
-    time.sleep(1)
     response = requests.get(url, timeout=30)
     response.raise_for_status()
     post_data = response.json()
