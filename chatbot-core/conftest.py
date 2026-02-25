@@ -10,6 +10,7 @@ pytest_plugins = [
     "tests.integration.mocks"
 ]
 
+
 @pytest.fixture
 def client(fastapi_app: FastAPI):
     """Fixture to provide a TestClient for the FastAPI app."""
