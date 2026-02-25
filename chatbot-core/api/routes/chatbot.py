@@ -249,19 +249,19 @@ async def chatbot_reply_with_files(
 
     Raises:
         HTTPException: 404 if session not found, 400 if file processing fails,
-                      422 if message is empty and no files provided.
+                      422 if both message and files are missing.
     """
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
 
-    # Validate that at least message or files are provided
-    has_message = bool(message and message.strip())
-    has_files = files and len(files) > 0
+    # Normalize message once to keep validation and fallback logic explicit.
+    normalized_message = (message or "").strip() or None
+    has_files = bool(files)
 
-    if not has_message and not has_files:
+    if not normalized_message and not has_files:
         raise HTTPException(
             status_code=422,
-            detail="Either message or files must be provided.",
+            detail="At least one file or a non-empty message is required.",
         )
 
     # Process uploaded files
@@ -286,11 +286,7 @@ async def chatbot_reply_with_files(
                 await upload_file.close()
 
     # Use default message if only files provided
-    final_message = (
-        message.strip()
-        if has_message
-        else "Please analyze the attached file(s)."
-    )
+    final_message = normalized_message or "Please analyze the attached file(s)."
 
     return await asyncio.to_thread(
         get_chatbot_reply,

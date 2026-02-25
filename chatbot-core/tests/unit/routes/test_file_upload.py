@@ -149,6 +149,9 @@ def test_chatbot_reply_upload_empty_message_with_files(
     )
 
     assert response.status_code == 200
+    mock_get_chatbot_reply.assert_called_once()
+    args, _ = mock_get_chatbot_reply.call_args
+    assert args[1] == "Please analyze the attached file(s)."
 
 
 def test_chatbot_reply_upload_missing_message_field_with_files(
@@ -168,6 +171,9 @@ def test_chatbot_reply_upload_missing_message_field_with_files(
     )
 
     assert response.status_code == 200
+    mock_get_chatbot_reply.assert_called_once()
+    args, _ = mock_get_chatbot_reply.call_args
+    assert args[1] == "Please analyze the attached file(s)."
 
 
 def test_chatbot_reply_upload_no_message_no_files(client, mock_session_exists):
@@ -180,6 +186,7 @@ def test_chatbot_reply_upload_no_message_no_files(client, mock_session_exists):
     )
 
     assert response.status_code == 422
+    assert response.json()["detail"] == "At least one file or a non-empty message is required."
 
 
 def test_chatbot_reply_upload_only_files_no_message(
@@ -201,6 +208,9 @@ def test_chatbot_reply_upload_only_files_no_message(
     )
 
     assert response.status_code == 200
+    mock_get_chatbot_reply.assert_called_once()
+    args, _ = mock_get_chatbot_reply.call_args
+    assert args[1] == "Please analyze the attached file(s)."
 
 
 def test_chatbot_reply_upload_file_too_large(client, mock_session_exists):
