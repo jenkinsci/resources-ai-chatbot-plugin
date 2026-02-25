@@ -1,6 +1,14 @@
 import { useRef } from "react";
 import { getChatbotText } from "../data/chatbotTexts";
 import { chatbotStyles } from "../styles/styles";
+import {
+  Paperclip,
+  SendHorizontal,
+  X,
+  FileText,
+  Image as ImageIcon,
+  Square
+} from "lucide-react";
 
 /**
  * Props for the Input component.
@@ -107,12 +115,12 @@ export const Input = ({
               key={`${file.name}-${index}`}
               style={chatbotStyles.attachedFileChip}
             >
+              {file.type.startsWith("image/") ? (
+                <ImageIcon size={14} color="var(--primary-color)" />
+              ) : (
+                <FileText size={14} color="var(--text-secondary)" />
+              )}
               <span style={chatbotStyles.attachedFileName}>
-                {file.type.startsWith("image/") ? (
-                  <span data-testid="file-icon-image">🖼️</span>
-                ) : (
-                  <span data-testid="file-icon-document">📄</span>
-                )}{" "}
                 {file.name}
               </span>
               <span style={chatbotStyles.attachedFileSize}>
@@ -124,7 +132,7 @@ export const Input = ({
                   style={chatbotStyles.removeFileButton}
                   title="Remove file"
                 >
-                  ×
+                  <X size={10} />
                 </button>
               )}
             </div>
@@ -153,7 +161,7 @@ export const Input = ({
             style={chatbotStyles.attachButton}
             title="Attach files"
           >
-            📎
+            <Paperclip size={20} />
           </button>
         )}
 
@@ -162,27 +170,27 @@ export const Input = ({
           placeholder={getChatbotText("placeholder")}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          style={{
-            ...chatbotStyles.input,
-            width: enableFileUpload && onFilesAttached ? "75%" : "85%",
-          }}
+          style={chatbotStyles.input}
+          rows={1}
         />
+
         {isLoading && onCancel ? (
           <button
             type="button"
             onClick={onCancel}
-            style={chatbotStyles.sendButton("x")}
+            style={chatbotStyles.sendButton("Cancel")}
             aria-label="Cancel message"
           >
-            Cancel
+            <Square size={16} fill="currentColor" />
           </button>
         ) : (
           <button
             onClick={onSend}
             disabled={!canSend}
-            style={chatbotStyles.sendButton(canSend ? "x" : "")}
+            style={chatbotStyles.sendButton(canSend ? "send" : "")}
+            aria-label="Send message"
           >
-            {getChatbotText("sendMessage")}
+            <SendHorizontal size={20} />
           </button>
         )}
       </div>
