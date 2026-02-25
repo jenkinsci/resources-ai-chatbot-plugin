@@ -123,11 +123,6 @@ def extract_chunks(threads):
 
 def main():
     """Main entry point."""
-    if not os.path.exists(INPUT_PATH):
-        logger.warning(
-            "Skipping StackOverflow chunking: %s not found.", INPUT_PATH)
-        return
-
     threads = read_json_file(INPUT_PATH, logger)
     if not threads:
         return
