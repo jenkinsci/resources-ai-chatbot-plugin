@@ -1,6 +1,7 @@
 """Unit tests for chat service logic."""
 
 import logging
+from unittest.mock import MagicMock
 import pytest
 from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
@@ -45,7 +46,6 @@ def test_get_chatbot_reply_does_not_log_raw_content(
     mock_retrieve_context,
     mock_prompt_builder,
     mock_llm_provider,
-    mocker,
     caplog
 ):
     """Ensure sensitive query/context/prompt content is not logged directly."""
@@ -55,7 +55,7 @@ def test_get_chatbot_reply_does_not_log_raw_content(
     sensitive_context = "internal secret context"
     sensitive_prompt = "prompt contains password=top-secret"
 
-    mock_chat_memory = mocker.MagicMock()
+    mock_chat_memory = MagicMock()
     mock_session = mock_get_session.return_value
     mock_session.chat_memory = mock_chat_memory
     mock_retrieve_context.return_value = sensitive_context
