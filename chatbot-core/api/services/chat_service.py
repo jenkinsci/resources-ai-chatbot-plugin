@@ -62,7 +62,8 @@ def get_chatbot_reply(
 
     memory = get_session(session_id)
     if memory is None:
-        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
+        raise RuntimeError(
+            f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
@@ -323,8 +324,17 @@ def _execute_search_tools(tool_calls) -> str:
     """
     retrieved_results = []
     for call in tool_calls:
-        tool_name, params = call.get("tool"), call.get("params")
+        tool_name = call.get("tool")
+        params = call.get("params") or {}  # Guard against params being None
+
         tool_fn = TOOL_REGISTRY.get(tool_name)
+
+        if tool_fn is None:
+            logger.warning("Unknown tool '%s' — skipping.", tool_name)
+            continue  # Prevent Crash 1: Don't execute a NoneType
+
+        # Prevent Crash 2: Inject the missing logger
+        params.setdefault("logger", logger)
 
         result = tool_fn(**params)
         retrieved_results.append({
@@ -333,7 +343,8 @@ def _execute_search_tools(tool_calls) -> str:
         })
 
     return "\n\n".join(
-        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip()
+        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip(
+        )
         for res in retrieved_results
     )
 
@@ -434,10 +445,12 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
         logger.error("LLM provider unavailable: %s", e)
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     except (ValueError, RuntimeError) as exc:
-        logger.error("LLM generation failed for prompt: %r. Error: %r", prompt, exc)
+        logger.error(
+            "LLM generation failed for prompt: %r. Error: %r", prompt, exc)
         return "Sorry, I'm having trouble generating a response right now."
     except Exception:  # pylint: disable=broad-except
-        logger.exception("Unexpected error during LLM generation for prompt: %r", prompt)
+        logger.exception(
+            "Unexpected error during LLM generation for prompt: %r", prompt)
         return "Sorry, an unexpected error occurred. Please contact support."
 
 
@@ -531,6 +544,7 @@ def _extract_relevance_score(response: str) -> str:
         relevance_score = 0
 
     return relevance_score
+
 
 def _generate_search_query_from_logs(log_text: str) -> str:
     """
