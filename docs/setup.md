@@ -1,6 +1,58 @@
 # Setup Instructions
 
-For the setup instructions have been provided for *Linux* and *Windows*. Moreover in the last section the automated setup using targets from the `Makefile` are discussed.
+This guide provides installation instructions for Linux and Windows, along with automated setup using the Makefile.
+
+## Choose Your Setup Method
+
+### Quick Start (Lite Mode)
+
+**For:** Most contributors working on API, backend, or data pipeline features
+
+```bash
+make dev-lite
+```
+
+This will:
+- Set up the Python virtual environment
+- Install dependencies (skips the 4GB model and GPU packages)
+- Start the API server without loading the LLM
+
+The API runs at `http://127.0.0.1:8000` within a few minutes.
+
+**Works:** All API endpoints, session management, context search, data pipeline  
+**Doesn't work:** Chat completions (no model loaded)
+
+**Use this when:**
+- Working on API endpoints or backend services
+- Developing data pipeline features
+- Running tests
+- You don't need to test actual chatbot responses
+
+### Full Installation (With LLM)
+
+**For:** Testing complete chat functionality or working on model-specific features
+
+Follow the platform-specific installation guide below to:
+- Install llama-cpp-python with GPU support
+- Download the 4GB Mistral model
+- Set up the complete environment
+
+Then run:
+```bash
+make api
+```
+
+**Works:** Everything, including real chat completions with the local LLM
+
+**Use this when:**
+- Testing the complete chatbot experience
+- Working on prompt engineering or model integration
+- Debugging inference issues
+- Preparing for production deployment
+
+---
+
+## Full Installation Guide
 
 ## Installation Guide for Linux
 
@@ -59,12 +111,12 @@ For the setup instructions have been provided for *Linux* and *Windows*. Moreove
 6. **Download the Required Model**
     1. Create the model directory if it doesn't exist:
         ```bash
-        mkdir -p api\models\mistral
+        mkdir -p api/models/mistral
         ```
     2. Download the Mistral 7B Instruct model from Hugging Face:
         * Go to https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
         * Download the file named `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
-        * Place the downloaded file in `api\models\mistral\`
+        * Place the downloaded file in `api/models/mistral/`
 
 By default, the backend attempts to load the local GGUF model during
 startup. If the model file is missing, the server will fail to start.
@@ -217,13 +269,15 @@ dependencies that require native compilation (e.g. `llama-cpp-python`).
 `llama-cpp-python` requires a working C/C++ toolchain and CMake to build native extensions.
 
 **Solution**
+
 For Linux (Ubuntu/Debian):
 ```bash
 sudo apt install build-essential cmake
 pip install llama-cpp-python
+```
 
 For macOS:
 ```bash
 brew install cmake
-pip install llama-cpp-python    
+pip install llama-cpp-python
 ```
