@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+markers = [
+    "e2e: end-to-end tests that exercise the full call chain with real disk I/O (deselect with '-m \"not e2e\"')",
+]
