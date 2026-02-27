@@ -2,6 +2,7 @@ api:
   prefix: "/api/chatbot"
 
 is_test_mode: false
+use_new_architecture: false
 
 session:
   timeout_hours: 24
