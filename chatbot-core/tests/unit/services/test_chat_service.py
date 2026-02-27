@@ -48,7 +48,7 @@ def test_get_chatbot_reply_does_not_log_raw_content(
     mock_llm_provider,
     caplog
 ):
-    """Ensure sensitive query/context/prompt content is not logged directly."""
+    """Ensure sensitive payloads are not logged at INFO level."""
     logging.getLogger("API").propagate = True
 
     sensitive_query = "token=abc123"
@@ -68,11 +68,11 @@ def test_get_chatbot_reply_does_not_log_raw_content(
     assert sensitive_query not in caplog.text
     assert sensitive_context not in caplog.text
     assert sensitive_prompt not in caplog.text
-    assert "length=" in caplog.text
+    assert "New message from session 'session-id'" in caplog.text
 
 
 def test_generate_answer_error_does_not_log_prompt_raw(mock_llm_provider, caplog):
-    """Ensure raw prompts are not included in error logs."""
+    """Ensure prompt payload is not included in ERROR level logs."""
     logging.getLogger("API").propagate = True
     sensitive_prompt = "api_key=very-secret-key"
     mock_llm_provider.generate.side_effect = RuntimeError("provider failure")
@@ -82,7 +82,7 @@ def test_generate_answer_error_does_not_log_prompt_raw(mock_llm_provider, caplog
 
     assert response == "Sorry, I'm having trouble generating a response right now."
     assert sensitive_prompt not in caplog.text
-    assert "prompt_length=" in caplog.text
+    assert "LLM generation failed" in caplog.text
 
 
 def test_retrieve_context_with_placeholders(mock_get_relevant_documents):
