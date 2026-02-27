@@ -3,6 +3,7 @@
 import ast
 import json
 import re
+import inspect
 from typing import AsyncGenerator, List, Optional
 
 from api.config.loader import CONFIG
@@ -313,28 +314,20 @@ def _get_agent_tool_calls(query: str):
 
 
 def _execute_search_tools(tool_calls) -> str:
-    """
-    Executes the tool calls to retrieve relevant context information.
-
-    Args:
-        tool_calls: A list of tool call specifications with tool names and parameters.
-
-    Returns:
-        str: Combined output from all retrieval tools.
-    """
     retrieved_results = []
     for call in tool_calls:
         tool_name = call.get("tool")
-        params = call.get("params") or {}  # Guard against params being None
+        params = call.get("params") or {}
 
         tool_fn = TOOL_REGISTRY.get(tool_name)
 
         if tool_fn is None:
             logger.warning("Unknown tool '%s' — skipping.", tool_name)
-            continue  # Prevent Crash 1: Don't execute a NoneType
+            continue
 
-        # Prevent Crash 2: Inject the missing logger
-        params.setdefault("logger", logger)
+        # Check if the tool actually expects a logger before injecting it
+        if "logger" in inspect.signature(tool_fn).parameters:
+            params.setdefault("logger", logger)
 
         result = tool_fn(**params)
         retrieved_results.append({
@@ -445,12 +438,10 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
         logger.error("LLM provider unavailable: %s", e)
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     except (ValueError, RuntimeError) as exc:
-        logger.error(
-            "LLM generation failed for prompt: %r. Error: %r", prompt, exc)
+        logger.error("LLM generation failed for prompt: %r. Error: %r", prompt, exc)
         return "Sorry, I'm having trouble generating a response right now."
     except Exception:  # pylint: disable=broad-except
-        logger.exception(
-            "Unexpected error during LLM generation for prompt: %r", prompt)
+        logger.exception("Unexpected error during LLM generation for prompt: %r", prompt)
         return "Sorry, an unexpected error occurred. Please contact support."
 
 
