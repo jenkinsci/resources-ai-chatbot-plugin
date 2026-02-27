@@ -187,8 +187,8 @@ def _handle_query_type(query: str, query_type: QueryType, memory) -> str:
         sub_queries = _get_sub_queries(query)
 
         answers = []
-        for idx, sub_query in enumerate(sub_queries, start=1):
-            logger.debug("Handling sub-query %d/%d: %s.", idx, len(sub_queries), sub_query)
+        for sub_query in sub_queries:
+            logger.debug("Handling sub-query: %s.", sub_query)
             answers.append(_get_reply_simple_query_pipeline(sub_query, memory))
 
         reply = _assemble_response(answers)
