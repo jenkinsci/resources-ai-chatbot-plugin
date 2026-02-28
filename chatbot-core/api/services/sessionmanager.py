@@ -43,15 +43,17 @@ def _append_message_to_json(session_id: str, messages:list) -> None:
     Persist the current session messages as a full snapshot using atomic write.
     """
     path = _get_session_file_path(session_id)
-    if os.path.exists(path):
-        tmp_path = f"{path}.tmp"
+    if not path:
+        return
 
-        with _FILE_LOCK:
+    tmp_path = f"{path}.tmp"
 
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(messages, f, indent=2, ensure_ascii=False)
+    with _FILE_LOCK:
 
-            os.replace(tmp_path, path)
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(messages, f, indent=2, ensure_ascii=False)
+
+        os.replace(tmp_path, path)
 
 
 

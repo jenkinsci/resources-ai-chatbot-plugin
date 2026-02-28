@@ -94,10 +94,20 @@ def persist_session(session_id: str)-> None:
     """
     session_data = get_session(session_id)
     if session_data:
-        messages = list(session_data.chat_memory.messages)
+        messages = []
+        for msg in session_data.chat_memory.messages:
+            role = "user"
+            if hasattr(msg, "type"):
+                if msg.type == "ai":
+                    role = "ai"
+                elif msg.type == "system":
+                    role = "system"
+
+            messages.append({
+                "role": role,
+                "content": msg.content
+            })
         append_message(session_id, messages)
-
-
 
 def delete_session(session_id: str) -> bool:
     """
