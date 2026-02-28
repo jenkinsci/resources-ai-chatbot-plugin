@@ -56,10 +56,10 @@ def _make_stub_module(name: str) -> types.ModuleType:
     mod.__loader__ = None
     mod.__spec__ = None
 
-    def _getattr(attr: str):
-        if attr.startswith("__") and attr.endswith("__"):
-            raise AttributeError(attr)
-        return MagicMock(name=f"{name}.{attr}")
+    def _getattr(name: str):
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
+        return MagicMock(name=f"{name}.{name}")
 
     mod.__getattr__ = _getattr
     return mod
