@@ -10,7 +10,6 @@ logic will be wired up in Part 2 (#194) once the scaffolding is merged.
 """
 
 import json
-import os
 from pathlib import Path
 
 import pytest

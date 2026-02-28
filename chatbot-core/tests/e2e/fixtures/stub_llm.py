@@ -29,10 +29,15 @@ class StubLLMProvider(LLMProvider):
 
     # --- LLMProvider interface ------------------------------------------------
 
-    def generate(self, prompt: str, max_tokens: int = 512) -> str:  # noqa: ARG002
+    def generate(self, prompt: str, max_tokens: int = 512) -> str:  # pylint: disable=unused-argument
         """Return the canned reply, ignoring *prompt* and *max_tokens*."""
         self._call_count += 1
         return self._reply
+
+    async def generate_stream(self, prompt: str, max_tokens: int = 512):  # pylint: disable=unused-argument
+        """Yield the canned reply as a single-item async generator."""
+        self._call_count += 1
+        yield self._reply
 
     # --- Test helpers ---------------------------------------------------------
 

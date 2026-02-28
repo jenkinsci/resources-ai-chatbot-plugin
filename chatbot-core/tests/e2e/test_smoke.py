@@ -17,8 +17,7 @@ The disk-write assertion is marked ``xfail`` because of a known bug:
 so new sessions never get persisted.  See #180.
 """
 
-import os
-from pathlib import Path
+import uuid
 
 import pytest
 
@@ -36,6 +35,7 @@ class TestSmoke:
         assert "session_id" in data
         assert isinstance(data["session_id"], str)
         assert len(data["session_id"]) > 0
+        uuid.UUID(data["session_id"])
 
     def test_send_message_returns_reply(self, e2e_client, stub_llm):
         """POST /sessions/{id}/message should return 200 with a reply."""
@@ -69,9 +69,7 @@ class TestSmoke:
             sessionmanager.append_message() → write JSON file
 
         ``TestClient`` as a context manager flushes ``BackgroundTasks``
-        on ``__exit__``, but we are still *inside* the ``with`` block
-        here (via ``e2e_client``), so the background task runs
-        synchronously during the response.
+        on ``__exit__`` of the ``with`` block.
         """
         session_id = e2e_client.post("/sessions").json()["session_id"]
 

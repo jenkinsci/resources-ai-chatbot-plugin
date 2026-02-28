@@ -55,9 +55,6 @@ def _make_stub_module(name: str) -> types.ModuleType:
     mod.__file__ = f"<e2e-stub {name}>"
     mod.__loader__ = None
     mod.__spec__ = None
-    # Make ``from mod import Foo`` work by returning a MagicMock for
-    # any attribute that isn't already defined.
-    _orig_getattr = mod.__getattr__ if hasattr(mod, "__getattr__") else None
 
     def _getattr(attr: str):
         if attr.startswith("__") and attr.endswith("__"):
@@ -68,6 +65,8 @@ def _make_stub_module(name: str) -> types.ModuleType:
     return mod
 
 
+import importlib.util
+
 for _name in (
     "sentence_transformers",
     "faiss",
@@ -75,7 +74,7 @@ for _name in (
     "numba",
     "llama_cpp",
 ):
-    if _name not in sys.modules:
+    if _name not in sys.modules and importlib.util.find_spec(_name) is None:
         sys.modules[_name] = _make_stub_module(_name)
 
 
@@ -166,7 +165,7 @@ def e2e_client(
     session_data_dir,       # noqa: ARG001 — activates the monkeypatch
     stub_llm,               # noqa: ARG001 — activates the monkeypatch
     dev_mode_config,        # noqa: ARG001 — activates the monkeypatch
-):
+):  # pylint: disable=unused-argument
     """Yield a ``TestClient`` with all E2E patches active.
 
     Used as a context manager so Starlette flushes ``BackgroundTasks``
