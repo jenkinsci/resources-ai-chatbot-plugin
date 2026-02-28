@@ -23,7 +23,7 @@ The chatbot UI is built using the following technologies:
 
 ## Setup and Use
 > **Note**:  
-> It is encouraged to use the latest**Node.js LTS** (project built with Node 24).  
+> It is encouraged to use the latest **Node.js LTS** (project built with Node 24).  
 > Ensure `npm` is available in your environment.
 
 To build and run the frontend as part of the Jenkins plugin:
