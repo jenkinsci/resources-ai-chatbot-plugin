@@ -90,6 +90,12 @@ def test_run_indexing_successful(
     """Test that run_indexing runs the indexing pipeline correctly."""
     mock_logger = mocker.Mock()
 
+    mock_model = mocker.Mock()
+    mock_load_model = mocker.patch(
+        "rag.vectorstore.store_embeddings.load_embedding_model",
+        return_value=mock_model
+    )
+
     vectors = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
     metadata = [{"chunk_text": "chunk 1"}, {"chunk_text": "chunk 2"}]
     mock_embed_chunks = mocker.patch(
@@ -108,7 +114,8 @@ def test_run_indexing_successful(
         logger=mock_logger
     )
 
-    mock_embed_chunks.assert_called_once_with(mock_logger)
+    mock_load_model.assert_called_once_with(store_embeddings.MODEL_NAME, mock_logger)
+    mock_embed_chunks.assert_called_once_with(mock_logger, model=mock_model)
     expected_vectors_np = np.array(vectors).astype("float32")
     mock_build_index.assert_called_once()
     np.testing.assert_array_equal(
