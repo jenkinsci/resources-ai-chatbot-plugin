@@ -131,7 +131,7 @@ run-data-chunking: run-data-chunking-docs run-data-chunking-plugins run-data-chu
 run-data-storage: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### EMBEDDING AND STORING THE CHUNKS ###" && \
-	python3 data/rag/vectorstore/store_embeddings.py
+	python3 rag/vectorstore/store_embeddings.py
 
 
 run-pipeline-core: run-data-collection run-data-preprocessing run-data-chunking run-data-storage
