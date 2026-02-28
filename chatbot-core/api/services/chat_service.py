@@ -58,21 +58,21 @@ def get_chatbot_reply(
         ChatResponse: The generated assistant response.
     """
     logger.info("New message from session '%s'", session_id)
-    logger.info("Handling the user query: %s", user_input)
+    logger.debug("Handling the user query: %s", user_input)
 
     memory = get_session(session_id)
     if memory is None:
         raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
-    logger.info("Context retrieved: %s", context)
+    logger.debug("Context retrieved: %s", context)
 
     # Process file context if files are provided
     context = _process_file_context(context, files)
 
     prompt = build_prompt(user_input, context, memory)
 
-    logger.info("Generating answer with prompt: %s", prompt)
+    logger.debug("Generating answer with prompt: %s", prompt)
     reply = generate_answer(prompt)
 
     # Format user message with file info for memory
@@ -129,7 +129,7 @@ def get_chatbot_reply_new_architecture(
         ChatResponse: The generated assistant response.
     """
     logger.info("New message from session '%s'", session_id)
-    logger.info("Handling the user query: %s", user_input)
+    logger.debug("Handling the user query: %s", user_input)
 
     memory = get_session(session_id)
     if memory is None:
@@ -188,11 +188,11 @@ def _handle_query_type(query: str, query_type: QueryType, memory) -> str:
 
         answers = []
         for sub_query in sub_queries:
-            logger.info("Handling the sub-query: %s.", sub_query)
+            logger.debug("Handling sub-query: %s.", sub_query)
             answers.append(_get_reply_simple_query_pipeline(sub_query, memory))
 
         reply = _assemble_response(answers)
-        logger.info("Final response: %s", reply)
+        logger.debug("Final response: %s", reply)
     else:
         reply = _get_reply_simple_query_pipeline(query, memory)
 
@@ -216,10 +216,8 @@ def _get_sub_queries(query: str) -> List[str]:
     try:
         queries = ast.literal_eval(queries_string)
     except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
-        logger.warning(
-            "Error in parsing the subqueries. The string may be not formed"
-            " correctly: %s. Setting to default array with 1 element.",
-            queries_string)
+        logger.warning("Error in parsing sub-queries. Falling back to single query mode.")
+        logger.debug("Failed sub-query payload: %s", queries_string)
         queries = [query]
 
     queries = [q.strip() for q in queries]
@@ -257,7 +255,7 @@ def _get_reply_simple_query_pipeline(query: str, memory) -> str:
 
         retrieved_context = _execute_search_tools(tool_calls)
 
-        logger.info("Retrieved context: %s", retrieved_context)
+        logger.debug("Retrieved context: %s", retrieved_context)
 
         relevance = _get_query_context_relevance(query, retrieved_context)
         logger.info("Query context relevance %s", relevance)
@@ -286,7 +284,7 @@ def _get_agent_tool_calls(query: str):
     tool_calls = generate_answer(
         retriever_agent_prompt, llm_config["max_tokens_retriever_agent"] + (len(query) * 3))
 
-    logger.warning("Tool calls: %s", tool_calls)
+    logger.debug("Tool calls: %s", tool_calls)
     try:
         tool_calls_parsed = json.loads(tool_calls)
         if not validate_tool_calls(tool_calls_parsed, logger):
@@ -294,17 +292,16 @@ def _get_agent_tool_calls(query: str):
                            "Going for the default config")
             tool_calls_parsed = get_default_tools_call(query)
     except json.JSONDecodeError:
-        logger.warning(
-            "Invalid JSON syntax in the tools output: %s.",
-            tool_calls)
+        logger.warning("Invalid JSON syntax in the tools output.")
+        logger.debug("Raw tool calls payload: %s", tool_calls)
         logger.warning("Calling all the search tools with default settings.")
         tool_calls_parsed = get_default_tools_call(query)
     except (KeyError, ValueError, TypeError, AttributeError) as e:
         logger.warning(
-            "JSON structure or value error(%s %s) in the tools output: %s.",
+            "JSON structure or value error(%s %s) in the tools output.",
             type(e).__name__,
-            e,
-            tool_calls)
+            e)
+        logger.debug("Raw tool calls payload: %s", tool_calls)
         logger.warning("Calling all the search tools with default settings.")
         tool_calls_parsed = get_default_tools_call(query)
 
@@ -434,10 +431,12 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
         logger.error("LLM provider unavailable: %s", e)
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     except (ValueError, RuntimeError) as exc:
-        logger.error("LLM generation failed for prompt: %r. Error: %r", prompt, exc)
+        logger.error("LLM generation failed: %r", exc)
+        logger.debug("Failed prompt payload: %r", prompt)
         return "Sorry, I'm having trouble generating a response right now."
     except Exception:  # pylint: disable=broad-except
-        logger.exception("Unexpected error during LLM generation for prompt: %r", prompt)
+        logger.exception("Unexpected error during LLM generation")
+        logger.debug("Failed prompt payload: %r", prompt)
         return "Sorry, an unexpected error occurred. Please contact support."
 
 
@@ -484,7 +483,7 @@ async def get_chatbot_reply_stream(
         str: Individual tokens from LLM response
     """
     logger.info("Streaming message from session '%s'", session_id)
-    logger.info("Handling user query: %s", user_input)
+    logger.debug("Handling user query: %s", user_input)
 
     memory = await get_session_async(session_id)
 
@@ -493,10 +492,10 @@ async def get_chatbot_reply_stream(
             f"Session '{session_id}' not found in memory store.")
 
     context = retrieve_context(user_input)
-    logger.info("Context retrieved: %s", context)
+    logger.debug("Context retrieved: %s", context)
 
     prompt = build_prompt(user_input, context, memory)
-    logger.info("Generating streaming answer with prompt: %s", prompt)
+    logger.debug("Generating streaming answer with prompt: %s", prompt)
 
     full_reply = ""
     async for token in generate_answer_stream(prompt):

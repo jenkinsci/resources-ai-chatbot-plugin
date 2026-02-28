@@ -1,8 +1,9 @@
 """Unit tests for chat service logic."""
 
 import logging
+from unittest.mock import MagicMock
 import pytest
-from api.services.chat_service import get_chatbot_reply, retrieve_context
+from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse
 
@@ -38,6 +39,50 @@ def test_get_chatbot_reply_session_not_found(mock_get_session):
         get_chatbot_reply("missing-session-id", "Query for the LLM")
 
     assert "Session 'missing-session-id' not found in the memory store." in str(exc_info.value)
+
+
+def test_get_chatbot_reply_does_not_log_raw_content(
+    mock_get_session,
+    mock_retrieve_context,
+    mock_prompt_builder,
+    mock_llm_provider,
+    caplog
+):
+    """Ensure sensitive payloads are not logged at INFO level."""
+    logging.getLogger("API").propagate = True
+
+    sensitive_query = "token=abc123"
+    sensitive_context = "internal secret context"
+    sensitive_prompt = "prompt contains password=top-secret"
+
+    mock_chat_memory = MagicMock()
+    mock_session = mock_get_session.return_value
+    mock_session.chat_memory = mock_chat_memory
+    mock_retrieve_context.return_value = sensitive_context
+    mock_prompt_builder.return_value = sensitive_prompt
+    mock_llm_provider.generate.return_value = "safe response"
+
+    with caplog.at_level(logging.INFO):
+        get_chatbot_reply("session-id", sensitive_query)
+
+    assert sensitive_query not in caplog.text
+    assert sensitive_context not in caplog.text
+    assert sensitive_prompt not in caplog.text
+    assert "New message from session 'session-id'" in caplog.text
+
+
+def test_generate_answer_error_does_not_log_prompt_raw(mock_llm_provider, caplog):
+    """Ensure prompt payload is not included in ERROR level logs."""
+    logging.getLogger("API").propagate = True
+    sensitive_prompt = "api_key=very-secret-key"
+    mock_llm_provider.generate.side_effect = RuntimeError("provider failure")
+
+    with caplog.at_level(logging.ERROR):
+        response = generate_answer(sensitive_prompt)
+
+    assert response == "Sorry, I'm having trouble generating a response right now."
+    assert sensitive_prompt not in caplog.text
+    assert "LLM generation failed" in caplog.text
 
 
 def test_retrieve_context_with_placeholders(mock_get_relevant_documents):
