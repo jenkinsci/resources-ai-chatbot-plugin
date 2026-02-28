@@ -143,48 +143,43 @@ def get_last_accessed(session_id: str) -> Optional[datetime]:
     """
     Get the last accessed timestamp for a given session.
 
+    Only returns a timestamp for sessions currently held in memory.
+    Disk-persisted sessions do not store a last_accessed timestamp,
+    so None is returned for those.
+
     Args:
         session_id (str): The session identifier.
 
     Returns:
-        Optional[datetime]: The last accessed timestamp if session exists, else None.
+        Optional[datetime]: The last accessed timestamp if session exists
+                            in memory, else None.
     """
     with _lock:
         session_data = _sessions.get(session_id)
         if session_data is not None:
             return session_data["last_accessed"]
-
-        history = load_session(session_id)
-        if not history:
-            return None
-
-
-    return history["last_accessed"]
+    return None
 
 def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
     """
     Set the last accessed timestamp for a given session (for testing purposes).
+
+    Only works for sessions currently held in memory. Disk-persisted
+    sessions do not store a last_accessed timestamp.
 
     Args:
         session_id (str): The session identifier.
         timestamp (datetime): The timestamp to set.
 
     Returns:
-        bool: True if session exists and timestamp was set, False otherwise.
+        bool: True if session exists in memory and timestamp was set,
+              False otherwise.
     """
     with _lock:
         session_data = _sessions.get(session_id)
         if session_data:
             session_data["last_accessed"] = timestamp
             return True
-
-        history = load_session(session_id)
-        if not history:
-            return False
-
-        history["last_accessed"] = timestamp
-        return True
-
     return False
 
 def get_session_count() -> int:
