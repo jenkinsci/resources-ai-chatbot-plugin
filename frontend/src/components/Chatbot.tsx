@@ -5,6 +5,7 @@ import { type ChatSession } from "../model/ChatSession";
 import {
   fetchChatbotReply,
   fetchChatbotReplyWithFiles,
+  streamChatbotReply,
   createChatSession,
   deleteChatSession,
   fetchSupportedExtensions,
@@ -12,6 +13,7 @@ import {
   fileToAttachment,
   type SupportedExtensions,
 } from "../api/chatbot";
+import { isWebSocketSupported } from "../utils/websocketSupport";
 import { Header } from "./Header";
 import { Messages } from "./Messages";
 import { Sidebar } from "./Sidebar";
@@ -27,6 +29,24 @@ import { ProactiveToast } from "./Toast";
 import { useContextObserver } from "../utils/useContextObserver";
 
 /**
+ * Special ID for the temporary streaming message displayed while WebSocket is streaming.
+ * This message is replaced with the final message when streaming completes.
+ */
+const STREAMING_MESSAGE_ID = "streaming-temp";
+
+/**
+ * Configuration for WebSocket connection lifecycle and error handling.
+ */
+const WS_CONFIG = {
+  /** Maximum time to wait for WebSocket connection and streaming (milliseconds) */
+  TIMEOUT_MS: 5000,
+  /** Interval to check timeout (milliseconds) */
+  CHECK_INTERVAL_MS: 100,
+  /** Enable detailed error logging for debugging - controlled via VITE_DEBUG_LOGGING env var */
+  DEBUG_LOGGING: process.env.VITE_DEBUG_LOGGING === "true",
+} as const;
+
+/**
  * Chatbot is the core component responsible for managing the chatbot display.
  */
 
@@ -35,6 +55,9 @@ const LOG_PATTERN =
 
 export const Chatbot = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
+  const wsConnectionRef = useRef<WebSocket | null>(null);
+  const currentSessionWsRef = useRef<string | null>(null);
+  const wsTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -82,6 +105,54 @@ export const Chatbot = () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [sessions, currentSessionId]);
+
+  /**
+   * Cleanup WebSocket connection and timeouts on component unmount.
+   */
+  useEffect(() => {
+    return () => {
+      if (WS_CONFIG.DEBUG_LOGGING) {
+        console.debug(
+          "Chatbot component unmounting, cleaning up WebSocket connections",
+        );
+      }
+      // Clear any pending timeout
+      if (wsTimeoutIdRef.current) {
+        clearInterval(wsTimeoutIdRef.current);
+        wsTimeoutIdRef.current = null;
+      }
+      // Close WebSocket connection
+      if (wsConnectionRef.current) {
+        wsConnectionRef.current.close();
+        wsConnectionRef.current = null;
+      }
+    };
+  }, []);
+
+  /**
+   * Close previous WebSocket connection when switching sessions.
+   * This prevents connection leaks and ensures clean state transitions.
+   */
+  useEffect(() => {
+    if (currentSessionId !== currentSessionWsRef.current) {
+      // Close previous session's WebSocket connection
+      if (wsConnectionRef.current) {
+        if (WS_CONFIG.DEBUG_LOGGING) {
+          console.debug(
+            `Session switched from ${currentSessionWsRef.current} to ${currentSessionId}, closing previous connection`,
+          );
+        }
+        wsConnectionRef.current.close();
+        wsConnectionRef.current = null;
+      }
+      // Clear any pending timeout
+      if (wsTimeoutIdRef.current) {
+        clearInterval(wsTimeoutIdRef.current);
+        wsTimeoutIdRef.current = null;
+      }
+      currentSessionWsRef.current = currentSessionId;
+    }
+  }, [currentSessionId]);
 
   /**
    * Returns the messages of a chat session.
@@ -156,6 +227,8 @@ export const Chatbot = () => {
 
   /**
    * Handles the send process in a chat session.
+   * Attempts to use WebSocket streaming first, with automatic fallback to HTTP.
+   * Prevents rapid sending while a message is being streamed.
    */
 
   const sendMessage = async () => {
@@ -164,6 +237,10 @@ export const Chatbot = () => {
 
     if (!currentSessionId) return;
     if (!trimmed && !hasFiles) return;
+
+    // Check if already streaming - prevent rapid sending
+    const currentSession = sessions.find((s) => s.id === currentSessionId);
+    if (currentSession?.isLoading) return;
 
     const fileAttachments = attachedFiles.map(fileToAttachment);
 
@@ -189,46 +266,505 @@ export const Chatbot = () => {
           : s,
       ),
     );
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
 
     appendMessageToCurrentSession(userMessage);
 
-    try {
-      const botReply =
-        filesToSend.length > 0
-          ? await fetchChatbotReplyWithFiles(
-              currentSessionId,
-              trimmed || "Please analyze the attached file(s).",
-              filesToSend,
-              controller.signal,
-            )
-          : controller.signal
-            ? await fetchChatbotReply(
-                currentSessionId,
-                trimmed,
-                controller.signal,
-              )
-            : await fetchChatbotReply(currentSessionId, trimmed);
-      appendMessageToCurrentSession(botReply);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        // Request was intentionally cancelled
-        return;
+    // File uploads always use HTTP endpoint
+    if (filesToSend.length > 0) {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      try {
+        const botReply = await fetchChatbotReplyWithFiles(
+          currentSessionId,
+          trimmed || "Please analyze the attached file(s).",
+          filesToSend,
+          controller.signal,
+        );
+        appendMessageToCurrentSession(botReply);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          // Request was intentionally cancelled
+          return;
+        }
+        throw error;
+      } finally {
+        abortControllerRef.current = null;
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === currentSessionId
+              ? { ...s, isLoading: false, loadingStatus: null }
+              : s,
+          ),
+        );
       }
-      throw error;
-    } finally {
-      abortControllerRef.current = null;
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === currentSessionId
-            ? { ...s, isLoading: false, loadingStatus: null }
-            : s,
+      return;
+    }
+
+    // Try WebSocket streaming if supported, otherwise fallback to HTTP
+    const streamingTokens: string[] = [];
+    let streamingCompleted = false;
+    let streamingError: Error | null = null;
+
+    const onToken = (token: string) => {
+      streamingTokens.push(token);
+      // Update streaming message with accumulated tokens
+      const streamingText = streamingTokens.join("");
+      setSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === currentSessionId
+            ? {
+                ...session,
+                messages: session.messages.map((msg) =>
+                  msg.id === STREAMING_MESSAGE_ID
+                    ? { ...msg, text: streamingText }
+                    : msg,
+                ),
+              }
+            : session,
+        ),
+      );
+    };
+
+    const onComplete = () => {
+      streamingCompleted = true;
+    };
+
+    const onError = (error: Error) => {
+      streamingError = error;
+    };
+
+    // Try WebSocket first if supported
+    if (isWebSocketSupported()) {
+      try {
+        // Create temporary streaming message
+        const streamingMessage: Message = {
+          id: STREAMING_MESSAGE_ID,
+          sender: "jenkins-bot",
+          text: "",
+        };
+        appendMessageToCurrentSession(streamingMessage);
+
+        // Set up mid-stream disconnection handler
+        const setupDisconnectionHandler = (ws: WebSocket) => {
+          const previousOnClose = ws.onclose;
+          const previousOnError = ws.onerror;
+
+          ws.onclose = (event) => {
+            // If connection closed unexpectedly during streaming
+            if (!streamingCompleted && !streamingError && !event.wasClean) {
+              if (WS_CONFIG.DEBUG_LOGGING) {
+                console.warn(
+                  `WebSocket connection closed unexpectedly: ${event.code} ${event.reason || "Unknown reason"}`,
+                );
+              }
+              streamingError = new Error(
+                `WebSocket disconnected mid-stream (code: ${event.code})`,
+              );
+            }
+            // Restore previous handler
+            if (previousOnClose) previousOnClose.call(ws, event);
+          };
+
+          ws.onerror = (error) => {
+            if (!streamingCompleted && !streamingError) {
+              if (WS_CONFIG.DEBUG_LOGGING) {
+                console.error("WebSocket error during streaming:", error);
+              }
+              streamingError = new Error(
+                `WebSocket error: ${error instanceof Error ? error.message : "Unknown error"}`,
+              );
+            }
+            // Restore previous handler
+            if (previousOnError) previousOnError.call(ws, error);
+          };
+        };
+
+        // Check if we can reuse existing WebSocket connection
+        const canReuseConnection =
+          wsConnectionRef.current &&
+          currentSessionWsRef.current === currentSessionId &&
+          wsConnectionRef.current.readyState === WebSocket.OPEN;
+
+        if (canReuseConnection) {
+          // Reuse existing connection
+          // We still need to set up handlers for this specific message streaming
+          const ws = wsConnectionRef.current!;
+
+          // Store current message handlers for reused connection
+          const previousOnMessage = ws.onmessage;
+
+          ws.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+
+              if (data.token !== undefined) {
+                // Token message: {token: "word"}
+                onToken(data.token);
+              } else if (data.end === true) {
+                // Completion message: {end: true}
+                onComplete();
+                // Restore previous handler if exists, or clear it
+                ws.onmessage = previousOnMessage;
+              } else if (data.error) {
+                // Error message: {error: "message"}
+                onError(new Error(data.error));
+                // Restore previous handler if exists, or clear it
+                ws.onmessage = previousOnMessage;
+              }
+            } catch (parseError) {
+              onError(
+                new Error(
+                  `Failed to parse WebSocket message: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+                ),
+              );
+              ws.onmessage = previousOnMessage;
+            }
+          };
+
+          // Set up disconnection handlers
+          setupDisconnectionHandler(ws);
+
+          // Send message on reused connection
+          if (ws.readyState === WebSocket.OPEN) {
+            if (WS_CONFIG.DEBUG_LOGGING) {
+              console.debug(
+                `Reusing WebSocket connection for session ${currentSessionId}`,
+              );
+            }
+            ws.send(JSON.stringify({ message: trimmed }));
+          } else {
+            // Connection lost, create new one
+            if (WS_CONFIG.DEBUG_LOGGING) {
+              console.warn(
+                `Connection lost (readyState: ${ws.readyState}), creating new connection`,
+              );
+            }
+            wsConnectionRef.current = streamChatbotReply(
+              currentSessionId,
+              trimmed,
+              onToken,
+              onComplete,
+              onError,
+            );
+            if (wsConnectionRef.current) {
+              setupDisconnectionHandler(wsConnectionRef.current);
+            }
+          }
+        } else {
+          // Create new connection for this session
+          if (WS_CONFIG.DEBUG_LOGGING) {
+            console.debug(
+              `Creating new WebSocket connection for session ${currentSessionId}`,
+            );
+          }
+          wsConnectionRef.current = streamChatbotReply(
+            currentSessionId,
+            trimmed,
+            onToken,
+            onComplete,
+            onError,
+          );
+          currentSessionWsRef.current = currentSessionId;
+
+          // Set up disconnection handlers
+          if (wsConnectionRef.current) {
+            setupDisconnectionHandler(wsConnectionRef.current);
+          }
+        }
+
+        // Enhanced timeout handling with cleanup
+        let timeout = 0;
+        const timeoutInterval = setInterval(() => {
+          timeout += WS_CONFIG.CHECK_INTERVAL_MS;
+
+          // Check for mid-stream disconnection
+          if (
+            wsConnectionRef.current &&
+            wsConnectionRef.current.readyState === WebSocket.CLOSED &&
+            !streamingCompleted
+          ) {
+            if (WS_CONFIG.DEBUG_LOGGING) {
+              console.warn(
+                "WebSocket disconnected, triggering fallback to HTTP",
+              );
+            }
+            clearInterval(timeoutInterval);
+            if (!streamingError) {
+              streamingError = new Error(
+                "WebSocket disconnected mid-stream, falling back to HTTP",
+              );
+            }
+            return;
+          }
+
+          // Timeout after configured duration
+          if (timeout > WS_CONFIG.TIMEOUT_MS) {
+            clearInterval(timeoutInterval);
+            if (!streamingCompleted && !streamingError) {
+              if (WS_CONFIG.DEBUG_LOGGING) {
+                console.warn(
+                  `WebSocket connection timeout (${WS_CONFIG.TIMEOUT_MS}ms), falling back to HTTP`,
+                );
+              }
+              streamingError = new Error(
+                `WebSocket connection timeout after ${WS_CONFIG.TIMEOUT_MS}ms, falling back to HTTP`,
+              );
+              if (wsConnectionRef.current) {
+                wsConnectionRef.current.close();
+                wsConnectionRef.current = null;
+              }
+            }
+          }
+        }, WS_CONFIG.CHECK_INTERVAL_MS);
+
+        // Store timeout ID for cleanup
+        wsTimeoutIdRef.current = timeoutInterval;
+
+        // Wait for streaming or error
+        while (
+          !streamingCompleted &&
+          !streamingError &&
+          timeout <= WS_CONFIG.TIMEOUT_MS
+        ) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, WS_CONFIG.CHECK_INTERVAL_MS),
+          );
+        }
+
+        clearInterval(timeoutInterval);
+        wsTimeoutIdRef.current = null;
+
+        if (streamingError) {
+          // Remove streaming message and fallback to HTTP
+          setSessions((prevSessions) =>
+            prevSessions.map((session) =>
+              session.id === currentSessionId
+                ? {
+                    ...session,
+                    messages: session.messages.filter(
+                      (msg) => msg.id !== STREAMING_MESSAGE_ID,
+                    ),
+                  }
+                : session,
+            ),
+          );
+
+          // Fallback to HTTP
+          if (WS_CONFIG.DEBUG_LOGGING) {
+            const errorMsg = streamingError
+              ? (streamingError as Error).message || String(streamingError)
+              : "Unknown error";
+            console.warn(
+              `WebSocket streaming failed: ${errorMsg}\nFalling back to HTTP for session ${currentSessionId}`,
+              streamingError,
+            );
+          }
+          const controller = new AbortController();
+          abortControllerRef.current = controller;
+
+          try {
+            if (WS_CONFIG.DEBUG_LOGGING) {
+              console.debug(
+                `Attempting HTTP fallback for session ${currentSessionId}`,
+              );
+            }
+            const botReply = await fetchChatbotReply(
+              currentSessionId,
+              trimmed,
+              controller.signal,
+            );
+            appendMessageToCurrentSession(botReply);
+            if (WS_CONFIG.DEBUG_LOGGING) {
+              console.debug(
+                `HTTP fallback successful for session ${currentSessionId}`,
+              );
+            }
+          } catch (error) {
+            if (error instanceof DOMException && error.name === "AbortError") {
+              if (WS_CONFIG.DEBUG_LOGGING) {
+                console.debug(
+                  `HTTP request cancelled for session ${currentSessionId}`,
+                );
+              }
+              return;
+            }
+            if (WS_CONFIG.DEBUG_LOGGING) {
+              console.error(
+                `HTTP fallback also failed for session ${currentSessionId}:`,
+                error,
+              );
+            }
+            throw error;
+          } finally {
+            abortControllerRef.current = null;
+          }
+        } else if (streamingCompleted) {
+          // Replace streaming message with final message
+          const finalMessage: Message = {
+            id: uuidv4(),
+            sender: "jenkins-bot",
+            text: streamingTokens.join(""),
+          };
+
+          if (WS_CONFIG.DEBUG_LOGGING) {
+            console.debug(
+              `WebSocket streaming completed successfully for session ${currentSessionId}`,
+            );
+          }
+
+          setSessions((prevSessions) =>
+            prevSessions.map((session) =>
+              session.id === currentSessionId
+                ? {
+                    ...session,
+                    messages: session.messages.map((msg) =>
+                      msg.id === STREAMING_MESSAGE_ID ? finalMessage : msg,
+                    ),
+                  }
+                : session,
+            ),
+          );
+        }
+      } catch (error) {
+        if (WS_CONFIG.DEBUG_LOGGING) {
+          console.error(
+            `Unexpected error in WebSocket streaming for session ${currentSessionId}:`,
+            error,
+          );
+        }
+
+        // Remove streaming message and fallback to HTTP
+        setSessions((prevSessions) =>
+          prevSessions.map((session) =>
+            session.id === currentSessionId
+              ? {
+                  ...session,
+                  messages: session.messages.filter(
+                    (msg) => msg.id !== STREAMING_MESSAGE_ID,
+                  ),
+                }
+              : session,
+          ),
+        );
+
+        // Fallback to HTTP
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        try {
+          if (WS_CONFIG.DEBUG_LOGGING) {
+            console.debug(
+              `Error in WebSocket streaming, attempting HTTP fallback for session ${currentSessionId}`,
+            );
+          }
+          const botReply = await fetchChatbotReply(
+            currentSessionId,
+            trimmed,
+            controller.signal,
+          );
+          appendMessageToCurrentSession(botReply);
+          if (WS_CONFIG.DEBUG_LOGGING) {
+            console.debug(
+              `HTTP fallback successful after error for session ${currentSessionId}`,
+            );
+          }
+        } catch (innerError) {
+          if (
+            innerError instanceof DOMException &&
+            innerError.name === "AbortError"
+          ) {
+            if (WS_CONFIG.DEBUG_LOGGING) {
+              console.debug(
+                `HTTP fallback request cancelled for session ${currentSessionId}`,
+              );
+            }
+            return;
+          }
+          if (WS_CONFIG.DEBUG_LOGGING) {
+            console.error(
+              `HTTP fallback also failed after WebSocket error for session ${currentSessionId}:`,
+              innerError,
+            );
+          }
+          throw innerError;
+        } finally {
+          abortControllerRef.current = null;
+        }
+      }
+    } else {
+      // WebSocket not supported, use HTTP directly
+      if (WS_CONFIG.DEBUG_LOGGING) {
+        console.debug(
+          `WebSocket not supported, using HTTP for session ${currentSessionId}`,
+        );
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      try {
+        const botReply = await fetchChatbotReply(
+          currentSessionId,
+          trimmed,
+          controller.signal,
+        );
+        appendMessageToCurrentSession(botReply);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          if (WS_CONFIG.DEBUG_LOGGING) {
+            console.debug(
+              `HTTP request cancelled for session ${currentSessionId}`,
+            );
+          }
+          return;
+        }
+        if (WS_CONFIG.DEBUG_LOGGING) {
+          console.error(
+            `HTTP request failed for session ${currentSessionId}:`,
+            error,
+          );
+        }
+        throw error;
+      } finally {
+        abortControllerRef.current = null;
+      }
+    }
+
+    // Mark loading complete
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === currentSessionId
+          ? { ...s, isLoading: false, loadingStatus: null }
+          : s,
+      ),
+    );
+  };
+
+  /**
+   * Handles canceling the current message.
+   * Closes WebSocket connection if streaming, or aborts HTTP request.
+   */
+  const handleCancelMessage = () => {
+    // Close WebSocket connection if active
+    if (wsConnectionRef.current) {
+      wsConnectionRef.current.close();
+      wsConnectionRef.current = null;
+      // Remove streaming message if present
+      setSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === currentSessionId
+            ? {
+                ...session,
+                messages: session.messages.filter(
+                  (msg) => msg.id !== STREAMING_MESSAGE_ID,
+                ),
+              }
+            : session,
         ),
       );
     }
-  };
-  const handleCancelMessage = () => {
+
+    // Abort HTTP request if active
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
 
