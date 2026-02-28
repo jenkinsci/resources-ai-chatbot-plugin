@@ -41,8 +41,10 @@ from api.models.schemas import (
     FileAttachment,
     SupportedExtensionsResponse,
 )
+from api.config.loader import CONFIG
 from api.services.chat_service import (
     get_chatbot_reply,
+    get_chatbot_reply_new_architecture,
     get_chatbot_reply_stream,
 )
 from api.services.memory import (
@@ -210,7 +212,10 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
             status_code=404,
             detail="Session not found.",
         )
-    reply =  get_chatbot_reply(session_id, request.message)
+    if CONFIG.get("use_new_architecture", False):
+        reply = get_chatbot_reply_new_architecture(session_id, request.message)
+    else:
+        reply = get_chatbot_reply(session_id, request.message)
     _background_tasks.add_task(
         persist_session,
         session_id,
