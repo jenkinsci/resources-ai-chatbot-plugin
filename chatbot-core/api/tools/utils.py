@@ -17,10 +17,14 @@ retrieval_config = CONFIG.get("retrieval", {})
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 
 TOOL_SIGNATURES = MappingProxyType({
-    "search_plugin_docs": {"plugin_name": str, "query": str},
-    "search_jenkins_docs": {"query": str},
+    "search_plugin_docs": {
+        "plugin_name": (str, type(None)),
+        "query": str,
+        "keywords": str,
+    },
+    "search_jenkins_docs": {"query": str, "keywords": str},
     "search_stackoverflow_threads": {"query": str},
-    "search_community_threads": {"query": str},
+    "search_community_threads": {"query": str, "keywords": str},
 })
 
 def get_default_tools_call(query: str):
@@ -38,14 +42,16 @@ def get_default_tools_call(query: str):
         {
             "tool": "search_jenkins_docs",
             "params": {
-                "query": query
+                "query": query,
+                "keywords": query,
             }
         },
         {
             "tool": "search_plugin_docs",
             "params": {
                 "plugin_name": None,
-                "query": query
+                "query": query,
+                "keywords": query,
             }
         },
         {
@@ -57,7 +63,8 @@ def get_default_tools_call(query: str):
         {
             "tool": "search_community_threads",
             "params": {
-                "query": query
+                "query": query,
+                "keywords": query,
             }
         }
     ]
@@ -82,14 +89,22 @@ def validate_tool_calls(tool_calls_parsed: list, logger) -> bool:
             if not isinstance(params, dict):
                 logger.warning("Params for tool %s is not a dict.", tool)
                 valid = False
+                continue
 
             for param_name, param_type in expected_params.items():
                 if param_name not in params:
-                    logger.warning("Tool: %s: Param %s is not expected.", tool, param_name)
+                    logger.warning("Tool: %s: Param %s is missing.", tool, param_name)
                     valid = False
+                    continue
+
                 if not isinstance(params[param_name], param_type):
+                    expected_type_name = (
+                        " or ".join(t.__name__ for t in param_type)
+                        if isinstance(param_type, tuple)
+                        else param_type.__name__
+                    )
                     logger.warning("Tool: %s: Param %s is not of the expected type %s.",
-                                tool, param_name, param_type.__name__)
+                                   tool, param_name, expected_type_name)
                     valid = False
 
     return valid
