@@ -1,4 +1,8 @@
-import { API_BASE_URL } from "../config";
+import {
+  API_BASE_URL,
+  JENKINS_CRUMB_FIELD,
+  JENKINS_CRUMB_VALUE,
+} from "../config";
 
 /**
  * Generic utility to call chatbot API endpoints.
@@ -22,8 +26,20 @@ export const callChatbotApi = async <T>(
     : timeoutSignal;
 
   try {
+    // Merge headers and add CSRF token if available
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string>),
+    };
+
+    // Add Jenkins CSRF crumb token for authentication
+    if (JENKINS_CRUMB_FIELD && JENKINS_CRUMB_VALUE) {
+      headers[JENKINS_CRUMB_FIELD] = JENKINS_CRUMB_VALUE;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/chatbot/${endpoint}`, {
       ...options,
+      headers,
+      credentials: "same-origin", // Send cookies for authentication
       signal,
     });
 

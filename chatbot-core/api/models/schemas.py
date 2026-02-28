@@ -38,14 +38,16 @@ class ChatRequest(BaseModel):
 
     Fields:
         message (str): The user's input message.
+        user_id (Optional[str]): Jenkins user ID (injected by Java gatekeeper).
 
     Validation:
         - Rejects messages that are empty.
     """
     message: str
+    user_id: Optional[str] = None
 
     @field_validator("message")
-    def message_must_not_be_empty(cls, v): # pylint: disable=no-self-argument
+    def message_must_not_be_empty(cls, v):  # pylint: disable=no-self-argument
         """Validator that checks that a message is not empty."""
         if not v.strip():
             raise ValueError("Message cannot be empty.")
@@ -59,12 +61,14 @@ class ChatRequestWithFiles(BaseModel):
     Fields:
         message (str): The user's input message.
         files (List[FileAttachment]): Optional list of file attachments.
+        user_id (Optional[str]): Jenkins user ID (injected by Java gatekeeper).
 
     Validation:
         - Rejects when both message is empty and no files are attached.
     """
     message: str = ""
     files: Optional[List[FileAttachment]] = None
+    user_id: Optional[str] = None
 
     @model_validator(mode="after")
     def validate_message_or_files(self):
@@ -74,6 +78,7 @@ class ChatRequestWithFiles(BaseModel):
         if not has_message and not has_files:
             raise ValueError("Either message or files must be provided.")
         return self
+
 
 class ChatResponse(BaseModel):
     """
@@ -125,17 +130,36 @@ class SupportedExtensionsResponse(BaseModel):
     max_text_size_mb: float
     max_image_size_mb: float
 
+
+class CreateSessionRequest(BaseModel):
+    """
+    Request model for creating a new chat session.
+
+    Fields:
+        user_id (Optional[str]): Jenkins user ID (injected by Java gatekeeper).
+                                 None for anonymous access.
+    """
+    user_id: Optional[str] = None
+
+
 class SessionResponse(BaseModel):
     """
     Response model when a new chat session is created.
+
+    Fields:
+        session_id (str): Unique session identifier.
+        user_id (str): Jenkins user ID associated with this session.
     """
     session_id: str
+    user_id: str
+
 
 class DeleteResponse(BaseModel):
     """
     Response model when a session is successfully deleted.
     """
     message: str
+
 
 class QueryType(Enum):
     """
@@ -145,6 +169,7 @@ class QueryType(Enum):
     """
     MULTI = 'MULTI'
     SIMPLE = 'SIMPLE'
+
 
 def is_valid_query_type(input_str: str) -> bool:
     """
@@ -157,6 +182,7 @@ def is_valid_query_type(input_str: str) -> bool:
         bool: True if the string is a valid QueryType member, False otherwise.
     """
     return input_str in QueryType.__members__
+
 
 def str_to_query_type(input_str: str) -> QueryType:
     """
@@ -176,6 +202,7 @@ def str_to_query_type(input_str: str) -> QueryType:
     except KeyError as e:
         raise ValueError(f"Invalid query type: {input_str}") from e
 
+
 def try_str_to_query_type(query_type: str, logger) -> QueryType:
     """
     Extract the generated query type. In case the query type is not
@@ -185,11 +212,13 @@ def try_str_to_query_type(query_type: str, logger) -> QueryType:
     Args:
         query (str): The user query.
         logger: The logger param.
-    
+
     Returns:
         QueryType: the query type, either 'SIMPLE' or 'MULTI'
     """
     if not is_valid_query_type(query_type):
-        logger.info("Not valid query type: %s. Setting to default to MULTI.", query_type)
+        logger.info(
+            "Not valid query type: %s. Setting to default to MULTI.",
+            query_type)
         query_type = 'MULTI'
     return str_to_query_type(query_type)

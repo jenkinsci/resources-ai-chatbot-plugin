@@ -51,6 +51,15 @@
     </dependencies>
   </dependencyManagement>
 
+  <dependencies>
+    <!-- JSON library for request payload manipulation -->
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20240303</version>
+    </dependency>
+  </dependencies>
+
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>

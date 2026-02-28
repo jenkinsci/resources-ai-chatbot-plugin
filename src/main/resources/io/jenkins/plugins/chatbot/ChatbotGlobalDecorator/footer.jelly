@@ -1,6 +1,16 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
   <div id="chatbot-root"></div>
-  <link rel="stylesheet" href="${rootURL}/plugin/resources-ai-chatbot/static/assets/index.css"/>
+  
+  <!-- Inject Jenkins configuration for the chatbot -->
+  <script type="text/javascript">
+    window.jenkinsConfig = {
+      rootURL: '${rootURL}',
+      apiBaseURL: '${rootURL}/chatbot',
+      crumb: '${it.getCrumbRequestField()}',
+      crumbValue: '${it.getCrumb()}'
+    };
+  </script>
+  
   <script type="module" src="${rootURL}/plugin/resources-ai-chatbot/static/assets/index.js"></script>
 </j:jelly>

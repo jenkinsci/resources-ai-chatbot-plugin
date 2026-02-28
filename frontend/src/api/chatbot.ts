@@ -1,7 +1,12 @@
 import { type Message, type FileAttachment } from "../model/Message";
 import { getChatbotText } from "../data/chatbotTexts";
 import { v4 as uuidv4 } from "uuid";
-import { CHATBOT_API_TIMEOUTS_MS, API_BASE_URL } from "../config";
+import {
+  CHATBOT_API_TIMEOUTS_MS,
+  API_BASE_URL,
+  JENKINS_CRUMB_FIELD,
+  JENKINS_CRUMB_VALUE,
+} from "../config";
 import { callChatbotApi } from "../utils/callChatbotApi";
 
 /**
@@ -97,11 +102,19 @@ export const fetchChatbotReplyWithFiles = async (
       formData.append("files", file);
     });
 
+    // Prepare headers with CSRF token
+    const headers: Record<string, string> = {};
+    if (JENKINS_CRUMB_FIELD && JENKINS_CRUMB_VALUE) {
+      headers[JENKINS_CRUMB_FIELD] = JENKINS_CRUMB_VALUE;
+    }
+
     const response = await fetch(
       `${API_BASE_URL}/api/chatbot/sessions/${sessionId}/message/upload`,
       {
         method: "POST",
+        headers,
         body: formData,
+        credentials: "same-origin", // Send cookies for authentication
         signal: combinedSignal,
       },
     );
