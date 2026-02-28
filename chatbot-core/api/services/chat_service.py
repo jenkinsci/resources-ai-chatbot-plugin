@@ -23,7 +23,7 @@ from api.services.file_service import format_file_context
 from api.tools.tools import TOOL_REGISTRY
 from api.tools.utils import (
     get_default_tools_call,
-    make_placeholder_replacer,
+    extract_chunks_content,
     validate_tool_calls,
 )
 from rag.retriever.retrieve import get_relevant_documents
@@ -362,7 +362,7 @@ def _get_query_context_relevance(query: str, context: str):
 # pylint: disable=duplicate-code
 def retrieve_context(user_input: str) -> str:
     """
-    Retrieves the most relevant document chunks for a user query
+    Retrieves relevant document chunks for a user query from all available sources
     and reconstructs them by replacing placeholder tokens with actual code blocks.
 
     Args:
@@ -370,7 +370,7 @@ def retrieve_context(user_input: str) -> str:
 
     Returns:
         str: Combined, reconstructed context text. Returns retrieval_config["empty_context_message"]
-        if any context have been retrieved.
+        if no context is retrieved.
     """
     # Dev mode: bypass RAG when indices are not built
     if CONFIG.get("dev_mode", False):
@@ -378,38 +378,23 @@ def retrieve_context(user_input: str) -> str:
             "Dev mode enabled - skipping RAG retrieval. Build indices to enable full RAG.")
         return "Dev mode: RAG indices not built. This is a placeholder context for testing."
 
-    data_retrieved, _ = get_relevant_documents(
-        user_input,
-        EMBEDDING_MODEL,
-        logger=logger,
-        source_name="plugins",
-        top_k=retrieval_config["top_k"]
-    )
-    if not data_retrieved:
-        logger.warning(retrieval_config["empty_context_message"])
-        return "No context available."
+    all_results = []
 
-    context_texts = []
-    for item in data_retrieved:
-        item_id = item.get("id", "")
-        text = item.get("chunk_text", "")
-        if not item_id:
-            logger.warning(
-                "Id of retrieved context not found. Skipping element.")
-            continue
-        if text:
-            code_iter = iter(item.get("code_blocks", []))
-            replace = make_placeholder_replacer(code_iter, item_id, logger)
-            text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
+    for source in CONFIG["tool_names"].values():
+        data_retrieved, scores = get_relevant_documents(
+            user_input,
+            EMBEDDING_MODEL,
+            logger=logger,
+            source_name=source,
+            top_k=retrieval_config["top_k"]
+        )
+        for item, score in zip(data_retrieved, scores):
+            all_results.append((score, item))
 
-            context_texts.append(text)
-        else:
-            logger.warning("Text of chunk with ID %s is missing", item_id)
-    return (
-        "\n\n".join(context_texts)
-        if context_texts
-        else retrieval_config["empty_context_message"]
-    )
+    all_results.sort(key=lambda x: x[0])
+    top_chunks = [item for score, item in all_results[:retrieval_config["top_k"]]]
+
+    return extract_chunks_content(top_chunks, logger)
 
 
 def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
@@ -509,8 +494,8 @@ async def get_chatbot_reply_stream(
 
 def _extract_query_type(response: str) -> str:
     """
-    Extracts 'SIMPLE' or 'MULTI' from the response if present, else returns an empty string.
-    The search is case-insensitive, and the result is returned in uppercase.
+    Extracts 'SIMPLE' or 'MULTI' from the response. Returns an empty string
+    if not found.
     """
     match = re.search(r"\b(SIMPLE|MULTI)\b", response, re.IGNORECASE)
     if match:
@@ -522,7 +507,6 @@ def _extract_query_type(response: str) -> str:
 def _extract_relevance_score(response: str) -> str:
     """
     Extracts relevance score (0 or 1) from a response labeled with 'Label: N'; defaults to 0.
-    The search is case-insensitive.
     """
     match = re.search(r"Label:\s*([01])", response, re.IGNORECASE)
     if match:
