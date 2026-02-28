@@ -1,6 +1,7 @@
 """Unit tests for file upload routes."""
 
 from io import BytesIO
+from unittest.mock import patch
 
 
 def test_get_supported_extensions(client, mock_session_exists):  # pylint: disable=unused-argument
@@ -44,6 +45,27 @@ def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chat
     args, _ = mock_get_chatbot_reply.call_args
     assert args[2][0].filename == "script.py"
     assert "print('Hello, World!')" in args[2][0].content
+
+
+def test_chatbot_reply_with_files_persists_session(
+    client, mock_session_exists, mock_get_chatbot_reply
+):
+    """Upload endpoint should persist session state like the text message endpoint."""
+    mock_session_exists.return_value = True
+    mock_get_chatbot_reply.return_value = {"reply": "I analyzed the file."}
+    files = [
+        ("files", ("script.py", BytesIO(b"print('Hello, World!')"), "text/plain"))
+    ]
+
+    with patch("api.routes.chatbot.persist_session") as mock_persist_session:
+        response = client.post(
+            "/sessions/test-session-id/message/upload",
+            data={"message": "What does this code do?"},
+            files=files
+        )
+
+    assert response.status_code == 200
+    mock_persist_session.assert_called_once_with("test-session-id")
 
 
 def test_chatbot_reply_with_image_file(client, mock_session_exists, mock_get_chatbot_reply):
