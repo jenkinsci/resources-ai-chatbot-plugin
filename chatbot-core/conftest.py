@@ -1,10 +1,15 @@
-"""conftest for integration tests."""
+"""Top-level conftest for the entire test suite."""
 
 import pytest
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
-pytest_plugins = ["tests.integration.mocks"]
+# Combine the plugins from both unit and integration tests
+pytest_plugins = [
+    "tests.unit.mocks.test_env",
+    "tests.integration.mocks"
+]
+
 
 @pytest.fixture
 def client(fastapi_app: FastAPI):
