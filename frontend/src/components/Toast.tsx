@@ -1,4 +1,5 @@
 import { chatbotStyles } from "../styles/styles";
+import { AlertCircle } from "lucide-react";
 
 interface ProactiveToastProps {
   onConfirm: () => void;
@@ -12,15 +13,15 @@ export const ProactiveToast = ({
   return (
     <div style={chatbotStyles.toastContainer}>
       <div style={chatbotStyles.toastHeader}>
-        <span>🤖 Jenkins Assistant</span>
+        <AlertCircle size={16} color="var(--primary-color)" />
+        <span>Jenkins AI</span>
       </div>
       <div style={chatbotStyles.toastContent}>
-        I detected a build failure. Would you like me to analyze the logs for
-        you?
+        It looks like the build failed. Would you like me to analyze the console output for you?
       </div>
       <div style={chatbotStyles.toastActions}>
         <button style={chatbotStyles.toastCancelButton} onClick={onDismiss}>
-          No
+          Not now
         </button>
         <button style={chatbotStyles.toastConfirmButton} onClick={onConfirm}>
           Yes, analyze

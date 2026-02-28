@@ -30,6 +30,8 @@ import { useContextObserver } from "../utils/useContextObserver";
  * Chatbot is the core component responsible for managing the chatbot display.
  */
 
+import { MessageSquare, X as CloseIcon } from "lucide-react";
+
 const LOG_PATTERN =
   /(Started by user|Running as SYSTEM|Building in workspace|FATAL:|ERROR:|Exception:|Stack trace|Build step .*? marked build as failure)/i;
 
@@ -198,17 +200,17 @@ export const Chatbot = () => {
       const botReply =
         filesToSend.length > 0
           ? await fetchChatbotReplyWithFiles(
-              currentSessionId,
-              trimmed || "Please analyze the attached file(s).",
-              filesToSend,
-              controller.signal,
-            )
+            currentSessionId,
+            trimmed || "Please analyze the attached file(s).",
+            filesToSend,
+            controller.signal,
+          )
           : controller.signal
             ? await fetchChatbotReply(
-                currentSessionId,
-                trimmed,
-                controller.signal,
-              )
+              currentSessionId,
+              trimmed,
+              controller.signal,
+            )
             : await fetchChatbotReply(currentSessionId, trimmed);
       appendMessageToCurrentSession(botReply);
     } catch (error) {
@@ -338,15 +340,30 @@ export const Chatbot = () => {
     return (
       <div style={chatbotStyles.containerWelcomePage}>
         <div style={chatbotStyles.boxWelcomePage}>
+          <div style={{
+            backgroundColor: "var(--input-background)",
+            width: "64px",
+            height: "64px",
+            borderRadius: "1rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 1.5rem",
+            color: "var(--primary-color)"
+          }}>
+            <MessageSquare size={32} />
+          </div>
           <h2 style={chatbotStyles.welcomePageH2}>
-            {getChatbotText("welcomeMessage")}
+            Hi there!
           </h2>
-          <p>{getChatbotText("welcomeDescription")}</p>
+          <p style={{ color: "var(--text-secondary)", marginBottom: "2rem", lineHeight: "1.5" }}>
+            I am your Jenkins AI assistant. Need help with build failures or pipelines? Just ask!
+          </p>
           <button
             style={chatbotStyles.welcomePageNewChatButton}
             onClick={handleNewChat}
           >
-            {getChatbotText("createNewChat")}
+            Start a Fresh Conversation
           </button>
         </div>
       </div>
@@ -356,17 +373,11 @@ export const Chatbot = () => {
   const getDeletePopup = () => {
     return (
       <div style={chatbotStyles.popupContainer}>
-        <h2 style={chatbotStyles.popupTitle}>{getChatbotText("popupTitle")}</h2>
+        <h2 style={chatbotStyles.popupTitle}>Clear Conversation?</h2>
         <p style={chatbotStyles.popupMessage}>
-          {getChatbotText("popupMessage")}
+          This action cannot be undone. All messages in this session will be permanently deleted.
         </p>
         <div style={chatbotStyles.popupButtonsContainer}>
-          <button
-            style={chatbotStyles.popupDeleteButton}
-            onClick={handleDeleteChat}
-          >
-            {getChatbotText("popupDeleteButton")}
-          </button>
           <button
             style={chatbotStyles.popupCancelButton}
             onClick={() => {
@@ -374,7 +385,13 @@ export const Chatbot = () => {
               setSessionIdToDelete(null);
             }}
           >
-            {getChatbotText("popupCancelButton")}
+            Cancel
+          </button>
+          <button
+            style={chatbotStyles.popupDeleteButton}
+            onClick={handleDeleteChat}
+          >
+            Clear History
           </button>
         </div>
       </div>
@@ -385,9 +402,13 @@ export const Chatbot = () => {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        style={chatbotStyles.toggleButton}
+        style={{
+          ...chatbotStyles.toggleButton,
+          transform: isOpen ? "scale(0.9)" : "scale(1)",
+        }}
+        aria-label={isOpen ? "Close chatbot" : "Open chatbot"}
       >
-        {getChatbotText("toggleButtonLabel")}
+        {isOpen ? <CloseIcon size={24} /> : <MessageSquare size={24} />}
       </button>
       {showToast && !isOpen && (
         <ProactiveToast
