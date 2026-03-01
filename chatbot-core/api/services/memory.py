@@ -94,7 +94,10 @@ def persist_session(session_id: str)-> None:
     """
     session_data = get_session(session_id)
     if session_data:
-        messages = list(session_data.chat_memory.messages)
+        messages = [
+            {"role": msg.type, "content": msg.content}
+            for msg in session_data.chat_memory.messages
+        ]
         append_message(session_id, messages)
 
 
