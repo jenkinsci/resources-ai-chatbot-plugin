@@ -2,7 +2,7 @@
 
 import logging
 import pytest
-from api.services.chat_service import get_chatbot_reply, retrieve_context
+from api.services.chat_service import _get_sub_queries, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse
 
@@ -109,6 +109,65 @@ def test_retrieve_context_with_missing_code(mock_get_relevant_documents, caplog)
     )
     assert "More placeholders than code blocks in chunk with ID doc-111" in caplog.text
 
+
+def test_get_sub_queries_valid_list_of_strings(mocker):
+    """Should return stripped sub-queries when LLM output is valid list[str]."""
+    mocker.patch(
+        "api.services.chat_service.generate_answer",
+        return_value='["  install Jenkins  ", "configure github plugin"]',
+    )
+
+    queries = _get_sub_queries("How to install Jenkins and configure GitHub plugin?")
+
+    assert queries == ["install Jenkins", "configure github plugin"]
+
+
+def test_get_sub_queries_skips_non_string_items(mocker, caplog):
+    """Should skip invalid item types and keep valid strings."""
+    logging.getLogger("API").propagate = True
+    mocker.patch(
+        "api.services.chat_service.generate_answer",
+        return_value='["valid query", 42, None]',
+    )
+
+    with caplog.at_level(logging.WARNING):
+        queries = _get_sub_queries("Any query")
+
+    assert queries == ["valid query"]
+    assert "Subquery item has invalid type int" in caplog.text
+    assert "Subquery item has invalid type NoneType" in caplog.text
+
+
+def test_get_sub_queries_fallback_when_parsed_type_is_not_list(mocker, caplog):
+    """Should fallback to original query when parsed output is not list/tuple."""
+    logging.getLogger("API").propagate = True
+    original_query = "Original query"
+    mocker.patch(
+        "api.services.chat_service.generate_answer",
+        return_value='{"query": "not a list"}',
+    )
+
+    with caplog.at_level(logging.WARNING):
+        queries = _get_sub_queries(original_query)
+
+    assert queries == [original_query]
+    assert "Subqueries output has invalid type dict" in caplog.text
+
+
+def test_get_sub_queries_fallback_when_empty_after_normalization(mocker, caplog):
+    """Should fallback to original query when all parsed items are empty/invalid."""
+    logging.getLogger("API").propagate = True
+    original_query = "Original query"
+    mocker.patch(
+        "api.services.chat_service.generate_answer",
+        return_value='["   ", None, 0]',
+    )
+
+    with caplog.at_level(logging.WARNING):
+        queries = _get_sub_queries(original_query)
+
+    assert queries == [original_query]
+    assert "Subqueries output is empty after normalization" in caplog.text
 
 
 def get_mock_documents(doc_type: str):
