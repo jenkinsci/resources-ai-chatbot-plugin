@@ -152,3 +152,77 @@ def get_mock_documents(doc_type: str):
             }
         ]
     return []
+
+def test_retrieve_context_detects_logs_and_calls_generator(mocker, caplog):
+    """Test that log patterns trigger the query generator and use the result for retrieval."""
+    # Mock dependencies
+    mock_generate_query = mocker.patch("api.services.chat_service._generate_search_query_from_logs")
+    mock_get_documents = mocker.patch("api.services.chat_service.get_relevant_documents")
+
+    # Setup inputs
+    log_content = "Error: Something went wrong..."
+    user_input = (
+        f"I found a build failure. Here are the last 5000 characters of the log:\n"
+        f"```\n{log_content}\n```\nAnalyze this."
+    )
+    generated_query = "Build failure with Error: Something went wrong"
+
+    mock_generate_query.return_value = generated_query
+    mock_get_documents.return_value = ([], None) # Return empty so we focus on the call args
+
+    # Force dev_mode to False to ensure RAG runs
+    mocker.patch.dict(CONFIG, {"dev_mode": False})
+
+    # Execute
+    retrieve_context(user_input)
+
+    # Assertions
+    mock_generate_query.assert_called_once_with(log_content.strip())
+
+    # Verify get_relevant_documents was called with the GENERATED query
+    args, _ = mock_get_documents.call_args
+    assert args[0] == generated_query
+
+    # Verify logs
+    assert "Log pattern detected in user input" in caplog.text
+    assert f"Generated search query from logs: {generated_query}" in caplog.text
+
+
+def test_retrieve_context_uses_raw_input_if_no_logs_detected(mocker):
+    """Test that normal questions bypass the log analysis logic."""
+    mock_generate_query = mocker.patch("api.services.chat_service._generate_search_query_from_logs")
+    mock_get_documents = mocker.patch("api.services.chat_service.get_relevant_documents")
+
+    user_input = "How do I configure the git plugin?"
+    mock_get_documents.return_value = ([], None)
+    mocker.patch.dict(CONFIG, {"dev_mode": False})
+
+    retrieve_context(user_input)
+
+    mock_generate_query.assert_not_called()
+
+    # Verify retrieval used the original raw input
+    args, _ = mock_get_documents.call_args
+    assert args[0] == user_input
+
+
+def test_retrieve_context_handles_generator_exception(mocker, caplog):
+    """Test that the system falls back to raw input if log summarization fails."""
+    mock_generate_query = mocker.patch("api.services.chat_service._generate_search_query_from_logs")
+    mock_get_documents = mocker.patch("api.services.chat_service.get_relevant_documents")
+
+    user_input = "Here are the last 5000 characters of the log:\n```\nSome Error\n```"
+
+    # Simulate an error in the LLM generator
+    mock_generate_query.side_effect = Exception("LLM generation failed")
+    mock_get_documents.return_value = ([], None)
+    mocker.patch.dict(CONFIG, {"dev_mode": False})
+
+    retrieve_context(user_input)
+
+    # Verify error was logged and fallback occurred
+    assert "Failed to generate search query from logs: LLM generation failed" in caplog.text
+
+    # Should fall back to the original input
+    args, _ = mock_get_documents.call_args
+    assert args[0] == user_input
