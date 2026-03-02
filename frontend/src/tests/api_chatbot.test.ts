@@ -3,11 +3,13 @@ import {
   createChatSession,
   fetchChatbotReply,
   deleteChatSession,
+  streamChatbotReply,
   fetchChatbotReplyWithFiles,
 } from "../api/chatbot";
 
 import { callChatbotApi } from "../utils/callChatbotApi";
 import { getChatbotText } from "../data/chatbotTexts";
+import { WS } from "jest-websocket-mock";
 import { API_BASE_URL, CHATBOT_API_TIMEOUTS_MS } from "../config";
 
 jest.mock("uuid", () => ({
@@ -22,8 +24,10 @@ jest.mock("../data/chatbotTexts", () => ({
   getChatbotText: jest.fn().mockReturnValue("Fallback error message"),
 }));
 
+import fetchMock from "jest-fetch-mock";
+
 // Mock global fetch for file upload tests
-global.fetch = jest.fn();
+fetchMock.enableMocks();
 
 describe("chatbotApi", () => {
   describe("createBotMessage", () => {
@@ -140,10 +144,195 @@ describe("chatbotApi", () => {
     });
   });
 
+  describe("streamChatbotReply", () => {
+    let server: WS;
+    const sessionId = "test-session-123";
+    const userMessage = "Hello, bot!";
+
+    beforeEach(() => {
+      // Create a new WebSocket server for each test
+      server = new WS(
+        `ws://localhost:8000/api/chatbot/sessions/${sessionId}/stream`,
+      );
+    });
+
+    afterEach(() => {
+      WS.clean();
+    });
+
+    it("establishes WebSocket connection successfully", async () => {
+      const onToken = jest.fn();
+      const onComplete = jest.fn();
+      const onError = jest.fn();
+
+      const ws = streamChatbotReply(
+        sessionId,
+        userMessage,
+        onToken,
+        onComplete,
+        onError,
+      );
+
+      expect(ws).not.toBeNull();
+      await server.connected;
+      // Wait for onopen handler to execute and send message
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(server).toHaveReceivedMessages([
+        JSON.stringify({ message: userMessage }),
+      ]);
+    });
+
+    it("streams tokens correctly", async () => {
+      const tokens: string[] = [];
+      const onToken = jest.fn((token: string) => {
+        tokens.push(token);
+      });
+      const onComplete = jest.fn();
+      const onError = jest.fn();
+
+      streamChatbotReply(sessionId, userMessage, onToken, onComplete, onError);
+
+      await server.connected;
+      await server.nextMessage; // Wait for initial message
+
+      // Simulate token streaming
+      server.send(JSON.stringify({ token: "Hello" }));
+      server.send(JSON.stringify({ token: " " }));
+      server.send(JSON.stringify({ token: "world" }));
+
+      // Wait for messages to be processed
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(onToken).toHaveBeenCalledTimes(3);
+      expect(onToken).toHaveBeenCalledWith("Hello");
+      expect(onToken).toHaveBeenCalledWith(" ");
+      expect(onToken).toHaveBeenCalledWith("world");
+      expect(tokens.join("")).toBe("Hello world");
+    });
+
+    it("calls onComplete when receiving {end: true}", async () => {
+      const onToken = jest.fn();
+      const onComplete = jest.fn();
+      const onError = jest.fn();
+
+      streamChatbotReply(sessionId, userMessage, onToken, onComplete, onError);
+
+      await server.connected;
+      await server.nextMessage;
+
+      server.send(JSON.stringify({ token: "Hello" }));
+      server.send(JSON.stringify({ end: true }));
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it("handles error messages from backend", async () => {
+      const onToken = jest.fn();
+      const onComplete = jest.fn();
+      const onError = jest.fn();
+
+      streamChatbotReply(sessionId, userMessage, onToken, onComplete, onError);
+
+      await server.connected;
+      await server.nextMessage;
+
+      const errorMessage = "Session not found";
+      server.send(JSON.stringify({ error: errorMessage }));
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: errorMessage,
+        }),
+      );
+      expect(onToken).not.toHaveBeenCalled();
+      expect(onComplete).not.toHaveBeenCalled();
+    });
+
+    it("handles connection failure and calls onError", async () => {
+      const onToken = jest.fn();
+      const onComplete = jest.fn();
+      const onError = jest.fn();
+
+      // Close server before connection attempt
+      server.close();
+
+      const ws = streamChatbotReply(
+        sessionId,
+        userMessage,
+        onToken,
+        onComplete,
+        onError,
+      );
+
+      // Wait for connection attempt to fail
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(ws).not.toBeNull();
+      // Error should be called when connection fails
+      expect(onError).toHaveBeenCalled();
+    });
+
+    it("returns null and calls onError when WebSocket is not supported", () => {
+      // Mock WebSocket as undefined
+      const originalWebSocket = globalThis.WebSocket;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).WebSocket = undefined;
+
+      const onToken = jest.fn();
+      const onComplete = jest.fn();
+      const onError = jest.fn();
+
+      const ws = streamChatbotReply(
+        sessionId,
+        userMessage,
+        onToken,
+        onComplete,
+        onError,
+      );
+
+      expect(ws).toBeNull();
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("WebSocket is not supported"),
+        }),
+      );
+
+      // Restore WebSocket
+      globalThis.WebSocket = originalWebSocket;
+    });
+
+    it("handles malformed JSON messages gracefully", async () => {
+      const onToken = jest.fn();
+      const onComplete = jest.fn();
+      const onError = jest.fn();
+
+      streamChatbotReply(sessionId, userMessage, onToken, onComplete, onError);
+
+      await server.connected;
+      await server.nextMessage;
+
+      // Send invalid JSON
+      server.send("not valid json");
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(onError).toHaveBeenCalled();
+      expect(onError.mock.calls[0][0].message).toContain(
+        "Failed to parse WebSocket message",
+      );
+    });
+  });
+
   describe("fetchChatbotReplyWithFiles", () => {
     beforeEach(() => {
       jest.clearAllMocks();
-      (global.fetch as jest.Mock).mockClear();
+      fetchMock.mockClear();
       jest.useFakeTimers();
     });
 
@@ -155,10 +344,7 @@ describe("chatbotApi", () => {
       const mockResponse = {
         reply: "File analyzed successfully!",
       };
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
 
       const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
@@ -176,7 +362,7 @@ describe("chatbotApi", () => {
         text: "File analyzed successfully!",
       });
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         `${API_BASE_URL}/api/chatbot/sessions/session-xyz/message/upload`,
         expect.objectContaining({
           method: "POST",
@@ -186,11 +372,12 @@ describe("chatbotApi", () => {
     });
 
     it("returns fallback message when API response is not ok", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({ detail: "Internal server error" }),
-      });
+      fetchMock.mockResponseOnce(
+        JSON.stringify({ detail: "Internal server error" }),
+        {
+          status: 500,
+        },
+      );
 
       const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
@@ -210,8 +397,8 @@ describe("chatbotApi", () => {
 
     it("aborts the request when timeout elapses", async () => {
       // Mock fetch to reject with AbortError when signal is aborted
-      (global.fetch as jest.Mock).mockImplementationOnce(
-        (url: string, options?: RequestInit) =>
+      fetchMock.mockImplementationOnce(
+        (_url: string | Request | undefined, options?: RequestInit) =>
           new Promise((_, reject) => {
             // Reject with AbortError when signal is aborted
             if (options?.signal) {
@@ -249,8 +436,8 @@ describe("chatbotApi", () => {
 
     it("cancels the request when external signal is aborted", async () => {
       // Mock fetch to reject when signal is aborted
-      (global.fetch as jest.Mock).mockImplementationOnce(
-        (url: string, options?: RequestInit) =>
+      fetchMock.mockImplementationOnce(
+        (_url: string | Request | undefined, options?: RequestInit) =>
           new Promise((_, reject) => {
             if (options?.signal) {
               options.signal.addEventListener("abort", () => {
@@ -303,9 +490,7 @@ describe("chatbotApi", () => {
     });
 
     it("handles network errors gracefully", async () => {
-      (global.fetch as jest.Mock).mockRejectedValueOnce(
-        new Error("Network error"),
-      );
+      fetchMock.mockRejectedValueOnce(new Error("Network error"));
 
       const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
@@ -330,10 +515,7 @@ describe("chatbotApi", () => {
       const mockResponse = {
         reply: "Success",
       };
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      fetchMock.mockResponseOnce(JSON.stringify(mockResponse));
 
       const files = [
         new File(["content1"], "file1.txt", { type: "text/plain" }),
