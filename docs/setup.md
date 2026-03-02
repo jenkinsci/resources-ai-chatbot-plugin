@@ -111,12 +111,12 @@ make api
 6. **Download the Required Model**
     1. Create the model directory if it doesn't exist:
         ```bash
-        mkdir -p api\models\mistral
+        mkdir -p api/models/mistral
         ```
     2. Download the Mistral 7B Instruct model from Hugging Face:
         * Go to https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
         * Download the file named `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
-        * Place the downloaded file in `api\models\mistral\`
+        * Place the downloaded file in `api/models/mistral/`
 
 By default, the backend attempts to load the local GGUF model during
 startup. If the model file is missing, the server will fail to start.
@@ -269,13 +269,15 @@ dependencies that require native compilation (e.g. `llama-cpp-python`).
 `llama-cpp-python` requires a working C/C++ toolchain and CMake to build native extensions.
 
 **Solution**
+
 For Linux (Ubuntu/Debian):
 ```bash
 sudo apt install build-essential cmake
 pip install llama-cpp-python
+```
 
 For macOS:
 ```bash
 brew install cmake
-pip install llama-cpp-python    
+pip install llama-cpp-python
 ```
