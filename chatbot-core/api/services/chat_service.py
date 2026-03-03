@@ -222,7 +222,19 @@ def _get_sub_queries(query: str) -> List[str]:
             queries_string)
         queries = [query]
 
-    queries = [q.strip() for q in queries]
+    if not isinstance(queries, (list, tuple)):
+        logger.warning(
+            "Subqueries parsed as non-list type: %s. Falling back to original query.",
+            type(queries).__name__)
+        queries = [query]
+    else:
+        queries = [
+            q.strip() for q in queries
+            if isinstance(q, str) and q.strip()
+        ]
+
+    if not queries:
+        queries = [query]
 
     return queries
 
