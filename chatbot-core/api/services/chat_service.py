@@ -220,13 +220,13 @@ def _get_sub_queries(query: str) -> List[str]:
             "Error in parsing the subqueries. The string may be not formed"
             " correctly: %s. Setting to default array with 1 element.",
             queries_string)
-        queries = [query]
+        queries = [query.strip()]
 
     if not isinstance(queries, (list, tuple)):
         logger.warning(
             "Subqueries parsed as non-list type: %s. Falling back to original query.",
             type(queries).__name__)
-        queries = [query]
+        queries = [query.strip()]
     else:
         queries = [
             q.strip() for q in queries
@@ -234,7 +234,7 @@ def _get_sub_queries(query: str) -> List[str]:
         ]
 
     if not queries:
-        queries = [query]
+        queries = [query.strip()]
 
     return queries
 
