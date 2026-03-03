@@ -8,6 +8,7 @@ from io import BytesIO
 
 import pytest
 from api.services import memory
+from api.services.file_service import MAX_TEXT_FILE_SIZE
 
 
 @pytest.fixture(autouse=True)
@@ -147,10 +148,10 @@ def test_upload_unsupported_file_type_returns_400(client):
 
 
 def test_upload_file_too_large_returns_400(client):
-    """Upload a text file exceeding 5 MB — expect 400 size limit."""
+    """Upload a text file exceeding MAX_TEXT_FILE_SIZE — expect 400 size limit."""
     session_id = _create_session(client)
 
-    large_content = b"x" * (6 * 1024 * 1024)  # 6 MB
+    large_content = b"x" * (MAX_TEXT_FILE_SIZE + 1)
     files = [("files", ("huge.txt", BytesIO(large_content), "text/plain"))]
     resp = client.post(
         f"/sessions/{session_id}/message/upload",
