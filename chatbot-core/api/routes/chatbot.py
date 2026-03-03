@@ -37,6 +37,7 @@ from api.models.schemas import (
     ChatRequest,
     ChatResponse,
     DeleteResponse,
+    MessageHistoryResponse,
     SessionResponse,
     FileAttachment,
     SupportedExtensionsResponse,
@@ -47,6 +48,7 @@ from api.services.chat_service import (
 )
 from api.services.memory import (
     delete_session,
+    get_session,
     session_exists,
     persist_session,
     init_session,
@@ -185,6 +187,41 @@ def delete_chat(session_id: str):
 
     return DeleteResponse(
         message=f"Session {session_id} deleted."
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/message",
+    response_model=MessageHistoryResponse,
+)
+def get_chat_history(session_id: str):
+    """
+    Retrieve the conversation history for a session.
+
+    Returns the ordered list of messages exchanged in the
+    given session. Restores persisted sessions from disk
+    if they are not currently in memory.
+
+    Args:
+        session_id (str): The session identifier.
+
+    Returns:
+        MessageHistoryResponse: The session ID and message list.
+    """
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found.",
+        )
+
+    messages = [
+        {"role": msg.type, "content": msg.content}
+        for msg in session.chat_memory.messages
+    ]
+    return MessageHistoryResponse(
+        session_id=session_id,
+        messages=messages,
     )
 
 
