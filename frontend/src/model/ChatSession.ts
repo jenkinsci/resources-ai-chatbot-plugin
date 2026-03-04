@@ -1,7 +1,7 @@
-import { type Message } from "./Message";
+import { isMessage, type Message } from "./Message";
 
 /**
- * Repreesents a chat item, with its id, its messages and the date in which it was created.
+ * Represents a chat item, with its id, its messages and the date in which it was created.
  */
 export interface ChatSession {
   id: string;
@@ -23,7 +23,7 @@ export const isChatSession = (obj: unknown): obj is ChatSession => {
 
   return (
     typeof o.id === "string" &&
-    Array.isArray(o.messages) &&
+    Array.isArray(o.messages) && o.messages.every(isMessage) &&
     typeof o.createdAt === "string" &&
     typeof o.isLoading === "boolean" &&
     (typeof o.loadingStatus === "string" || o.loadingStatus === null)
