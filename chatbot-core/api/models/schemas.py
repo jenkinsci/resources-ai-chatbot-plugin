@@ -137,6 +137,28 @@ class DeleteResponse(BaseModel):
     """
     message: str
 
+class MessageItem(BaseModel):
+    """
+    Represents a single message in the conversation history.
+
+    Fields:
+        role (str): The role of the message sender ('human' or 'ai').
+        content (str): The text content of the message.
+    """
+    role: str
+    content: str
+
+class MessageHistoryResponse(BaseModel):
+    """
+    Response model for retrieving the conversation history of a session.
+
+    Fields:
+        session_id (str): The session identifier.
+        messages (List[MessageItem]): Ordered list of messages in the session.
+    """
+    session_id: str
+    messages: List[MessageItem]
+
 class QueryType(Enum):
     """
     Enum that represents the possible query types:
