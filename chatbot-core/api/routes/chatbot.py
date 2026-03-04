@@ -38,6 +38,7 @@ from api.models.schemas import (
     ChatResponse,
     DeleteResponse,
     SessionResponse,
+    SessionListResponse,
     FileAttachment,
     SupportedExtensionsResponse,
 )
@@ -50,6 +51,7 @@ from api.services.memory import (
     session_exists,
     persist_session,
     init_session,
+    get_all_sessions,
 )
 from api.services.file_service import (
     process_uploaded_file,
@@ -165,6 +167,26 @@ def start_chat(response: Response):
         f"/sessions/{session_id}/message"
     )
     return SessionResponse(session_id=session_id)
+
+
+@router.get(
+    "/sessions",
+    response_model=SessionListResponse,
+)
+def list_sessions(offset: int = 0, limit: int = 20):
+    """
+    List all active chat sessions with pagination.
+
+    Returns session IDs with basic metadata (message count).
+    Note: Once authentication is implemented, this will be
+    filtered to only return the current user's sessions.
+
+    Query Parameters:
+        offset (int): Starting index (default: 0).
+        limit (int): Max sessions per page (default: 20).
+    """
+    result = get_all_sessions(offset=offset, limit=limit)
+    return SessionListResponse(**result)
 
 @router.delete(
     "/sessions/{session_id}",

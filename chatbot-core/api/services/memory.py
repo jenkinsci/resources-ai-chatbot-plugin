@@ -139,6 +139,41 @@ def reset_sessions():
     with _lock:
         _sessions.clear()
 
+
+def get_all_sessions(offset: int = 0, limit: int = 20,
+                     user_id: str = None) -> dict:  # pylint: disable=unused-argument
+    """
+    Return a paginated list of active sessions with basic metadata.
+
+    Each entry contains the session ID and its message count.
+
+    Args:
+        offset (int): Starting index for pagination (default: 0).
+        limit (int): Maximum number of sessions to return (default: 20).
+        user_id (str): Optional user ID to filter sessions.
+            Currently unused — once authentication is implemented
+            (#78), this should filter to only that user's sessions.
+
+    Returns:
+        dict: Contains 'sessions' (paginated list), 'total', 'offset', 'limit'.
+    """
+    with _lock:
+        all_sessions = []
+        for session_id, session_data in _sessions.items():
+            memory = session_data["memory"]
+            all_sessions.append({
+                "session_id": session_id,
+                "message_count": len(memory.chat_memory.messages),
+            })
+        total = len(all_sessions)
+        paginated = all_sessions[offset:offset + limit]
+        return {
+            "sessions": paginated,
+            "total": total,
+            "offset": offset,
+            "limit": limit,
+        }
+
 def get_last_accessed(session_id: str) -> Optional[datetime]:
     """
     Get the last accessed timestamp for a given session.

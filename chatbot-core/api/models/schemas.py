@@ -137,6 +137,56 @@ class DeleteResponse(BaseModel):
     """
     message: str
 
+
+class SessionSummary(BaseModel):
+    """
+    Summary of a single session for the session list endpoint.
+
+    Fields:
+        session_id (str): The unique session identifier.
+        message_count (int): Number of messages in the session.
+    """
+    session_id: str
+    message_count: int
+
+
+class SessionListResponse(BaseModel):
+    """
+    Paginated response model for listing all active sessions.
+
+    Fields:
+        sessions (List[SessionSummary]): Paginated list of session summaries.
+        total (int): Total number of sessions available.
+        offset (int): Starting index of the returned page.
+        limit (int): Maximum number of sessions per page.
+    """
+    sessions: List[SessionSummary]
+    total: int
+    offset: int
+    limit: int
+
+class MessageItem(BaseModel):
+    """
+    Represents a single message in the conversation history.
+
+    Fields:
+        role (str): The role of the message sender ('human' or 'ai').
+        content (str): The text content of the message.
+    """
+    role: str
+    content: str
+
+class MessageHistoryResponse(BaseModel):
+    """
+    Response model for retrieving the conversation history of a session.
+
+    Fields:
+        session_id (str): The session identifier.
+        messages (List[MessageItem]): Ordered list of messages in the session.
+    """
+    session_id: str
+    messages: List[MessageItem]
+
 class QueryType(Enum):
     """
     Enum that represents the possible query types:

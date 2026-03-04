@@ -156,3 +156,112 @@ def get_relevant_documents_output():
             "id": "docid",
             "chunk_text": "Relevant chunk text."
         }],[0.84])
+
+
+# =========================
+# GET /sessions tests
+# =========================
+
+def test_list_sessions_empty(client):
+    """Should return an empty list when no sessions exist."""
+    response = client.get("/sessions")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["sessions"] == []
+    assert data["total"] == 0
+    assert data["offset"] == 0
+    assert data["limit"] == 20
+
+
+def test_list_sessions_single(client):
+    """Should return one session after creating it."""
+    create_resp = client.post("/sessions")
+    session_id = create_resp.json()["session_id"]
+
+    response = client.get("/sessions")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert len(data["sessions"]) == 1
+    assert data["sessions"][0]["session_id"] == session_id
+    assert data["sessions"][0]["message_count"] == 0
+
+
+def test_list_sessions_with_messages(client, mock_llm_provider, mock_get_relevant_documents):
+    """Should reflect correct message counts per session."""
+    mock_llm_provider.generate.return_value = "Reply"
+    mock_get_relevant_documents.return_value = get_relevant_documents_output()
+
+    s1 = client.post("/sessions").json()["session_id"]
+    s2 = client.post("/sessions").json()["session_id"]
+
+    # Send 2 messages to s1, none to s2
+    client.post(f"/sessions/{s1}/message", json={"message": "Hi"})
+    client.post(f"/sessions/{s1}/message", json={"message": "Again"})
+
+    response = client.get("/sessions")
+    data = response.json()
+    sessions_map = {s["session_id"]: s["message_count"] for s in data["sessions"]}
+
+    assert data["total"] == 2
+    assert sessions_map[s1] == 4  # 2 human + 2 AI
+    assert sessions_map[s2] == 0
+
+
+def test_list_sessions_after_deletion(client):
+    """Deleted sessions should not appear in the list."""
+    s1 = client.post("/sessions").json()["session_id"]
+    s2 = client.post("/sessions").json()["session_id"]
+
+    client.delete(f"/sessions/{s1}")
+
+    response = client.get("/sessions")
+    data = response.json()
+    session_ids = [s["session_id"] for s in data["sessions"]]
+
+    assert data["total"] == 1
+    assert s1 not in session_ids
+    assert s2 in session_ids
+
+
+def test_list_sessions_pagination_default(client):
+    """Should include pagination metadata with default values."""
+    client.post("/sessions")
+    client.post("/sessions")
+
+    response = client.get("/sessions")
+    data = response.json()
+
+    assert data["total"] == 2
+    assert data["offset"] == 0
+    assert data["limit"] == 20
+    assert len(data["sessions"]) == 2
+
+
+def test_list_sessions_pagination_custom(client):
+    """Custom offset and limit should return the correct slice."""
+    session_ids = []
+    for _ in range(5):
+        resp = client.post("/sessions")
+        session_ids.append(resp.json()["session_id"])
+
+    response = client.get("/sessions", params={"offset": 2, "limit": 2})
+    data = response.json()
+
+    assert data["total"] == 5
+    assert data["offset"] == 2
+    assert data["limit"] == 2
+    assert len(data["sessions"]) == 2
+
+
+def test_list_sessions_pagination_beyond(client):
+    """Offset past total should return an empty sessions list."""
+    client.post("/sessions")
+    client.post("/sessions")
+
+    response = client.get("/sessions", params={"offset": 100})
+    data = response.json()
+
+    assert data["total"] == 2
+    assert data["offset"] == 100
+    assert data["sessions"] == []
