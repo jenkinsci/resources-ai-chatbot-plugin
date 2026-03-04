@@ -122,6 +122,7 @@ You have access to the following tools to retrieve relevant information:
 2. search_plugin_docs(query, keywords, plugin_name) - Retrieves information from official documentation related to a specific Jenkins plugin. Use this when the user query involves a known or suspected plugin. If the plugin name is unclear or unknown, pass null for the plugin_name. You must also extract appropriate keywords from the query to fill the keywords parameter.
 3. search_stackoverflow_threads(query) - Retrieves discussions from StackOverflow related to Jenkins issues. Ideal for troubleshooting specific errors, unexpected behavior, or edge cases.
 4. search_community_threads(query, keywords) - Retrieves Jenkins-related posts from community forums. Also ideal for troubleshooting, user workarounds, or undocumented use cases. You must also extract appropriate keywords from the query to fill the keywords parameter.
+5. analyze_jenkins_logs(query) - Analyzes Jenkins build logs to find root causes of failures. Use this when the user's query is about a failed build, error logs, or they have attached log files.
 
 Your task is to:
 - Choose the most appropriate tool(s) based on the user's query.

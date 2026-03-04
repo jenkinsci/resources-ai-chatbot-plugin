@@ -36,6 +36,15 @@ tool_names:
   jenkins_docs: "docs"
   community_threads: "discourse"
 
+# =========================
+# Agentic Pipeline Settings
+# =========================
+use_new_architecture: true
+
+jenkins_api:
+  base_url: "http://localhost:8080" # Default Jenkins local URL
+  timeout_seconds: 10
+
 cors:
   allowed_origins:
     - "*"

@@ -21,6 +21,7 @@ TOOL_SIGNATURES = MappingProxyType({
     "search_jenkins_docs": {"query": str},
     "search_stackoverflow_threads": {"query": str},
     "search_community_threads": {"query": str},
+    "analyze_jenkins_logs": {"query": str},
 })
 
 def get_default_tools_call(query: str):

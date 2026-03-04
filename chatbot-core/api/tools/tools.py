@@ -129,9 +129,43 @@ def search_community_threads(query: str, keywords: str, logger) -> str:
         semantic_weight=0.7
     )
 
+def analyze_jenkins_logs(query: str, logger, files: Optional[List] = None) -> str:
+    """
+    Log analysis tool. Extracts error signatures from provided logs
+    or external sources to identify root causes of failures.
+
+    Args:
+        query (str): The search query or focus area for log analysis.
+        logger: Logger for debugging.
+        files (Optional[List]): Attached files that might contain logs.
+    
+    Returns:
+        str: Extracted error details or a status message.
+    """
+    if not files:
+        return "No local log files provided for analysis. Please upload build logs."
+
+    # Look for files that likely contain logs
+    log_contents = []
+    for file in files:
+        # File object is likely a FileAttachment pydantic model or dict
+        filename = getattr(file, 'filename', '').lower() if hasattr(file, 'filename') else str(file.get('filename', '')).lower()
+        content = getattr(file, 'content', '') if hasattr(file, 'content') else file.get('content', '')
+        
+        if any(ext in filename for ext in ['.log', '.txt', 'jenkins', 'build']):
+            log_contents.append(f"--- File: {filename} ---\n{content[:2000]}") # Truncate for prompt safety
+
+    if not log_contents:
+        return "No relevant build logs found in the attached files."
+
+    # We return the raw (but truncated) log segments as "Context".
+    # The main LLM will use LOG_ANALYSIS_INSTRUCTION to process this.
+    return "\n\n".join(log_contents)
+
 TOOL_REGISTRY = MappingProxyType({
     "search_plugin_docs": search_plugin_docs,
     "search_jenkins_docs": search_jenkins_docs,
     "search_stackoverflow_threads": search_stackoverflow_threads,
     "search_community_threads": search_community_threads,
+    "analyze_jenkins_logs": analyze_jenkins_logs,
 })

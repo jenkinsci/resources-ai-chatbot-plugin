@@ -116,10 +116,11 @@ def _format_user_message_for_memory(user_input: str, files: Optional[List[FileAt
 
 def get_chatbot_reply_new_architecture(
         session_id: str,
-        user_input: str) -> ChatResponse:
+        user_input: str,
+        files: Optional[List[FileAttachment]] = None) -> ChatResponse:
     """
-    Main chatbot entry point. Retrieves context, constructs a prompt with memory,
-    and generates an LLM response. Also updates the memory with the latest exchange.
+    Main chatbot entry point for the new agentic architecture. 
+    Decomposes the query and uses specialized tools to retrieve context.
 
     Args:
         session_id (str): The unique ID for the chat session.
@@ -140,9 +141,12 @@ def get_chatbot_reply_new_architecture(
 
     logger.info("The provided user query is of type %s.", query_type)
 
-    reply = _handle_query_type(user_input, query_type, memory)
+    reply = _handle_query_type(user_input, query_type, memory, files)
 
-    memory.chat_memory.add_user_message(user_input)
+    # Format user message with file info for memory
+    user_message = _format_user_message_for_memory(user_input, files)
+
+    memory.chat_memory.add_user_message(user_message)
     memory.chat_memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)
@@ -169,7 +173,7 @@ def _get_query_type(query: str) -> QueryType:
     return try_str_to_query_type(query_type, logger)
 
 
-def _handle_query_type(query: str, query_type: QueryType, memory) -> str:
+def _handle_query_type(query: str, query_type: QueryType, memory, files: Optional[List[FileAttachment]] = None) -> str:
     """
     Handles the query generation based on the query type. If SIMPLE it will call
     the simple pipeline, otherwise it will decompose into many queries and
@@ -189,12 +193,12 @@ def _handle_query_type(query: str, query_type: QueryType, memory) -> str:
         answers = []
         for sub_query in sub_queries:
             logger.info("Handling the sub-query: %s.", sub_query)
-            answers.append(_get_reply_simple_query_pipeline(sub_query, memory))
+            answers.append(_get_reply_simple_query_pipeline(sub_query, memory, files))
 
         reply = _assemble_response(answers)
         logger.info("Final response: %s", reply)
     else:
-        reply = _get_reply_simple_query_pipeline(query, memory)
+        reply = _get_reply_simple_query_pipeline(query, memory, files)
 
     return reply
 
@@ -240,7 +244,7 @@ def _assemble_response(answers: List[str]):
     return "\n\n".join(answer for answer in answers)
 
 
-def _get_reply_simple_query_pipeline(query: str, memory) -> str:
+def _get_reply_simple_query_pipeline(query: str, memory, files: Optional[List[FileAttachment]] = None) -> str:
     """
     Executes the pipeline to answer a simple query using retrieval and generation.
 
@@ -255,7 +259,7 @@ def _get_reply_simple_query_pipeline(query: str, memory) -> str:
     while iterations < retrieval_config["max_reformulate_iterations"] and relevance != 1:
         tool_calls = _get_agent_tool_calls(query)
 
-        retrieved_context = _execute_search_tools(tool_calls)
+        retrieved_context = _execute_search_tools(tool_calls, files)
 
         logger.info("Retrieved context: %s", retrieved_context)
 
@@ -311,12 +315,13 @@ def _get_agent_tool_calls(query: str):
     return tool_calls_parsed
 
 
-def _execute_search_tools(tool_calls) -> str:
+def _execute_search_tools(tool_calls, files: Optional[List[FileAttachment]] = None) -> str:
     """
     Executes the tool calls to retrieve relevant context information.
 
     Args:
         tool_calls: A list of tool call specifications with tool names and parameters.
+        files (Optional[List[FileAttachment]]): The files uploaded by the user.
 
     Returns:
         str: Combined output from all retrieval tools.
@@ -326,11 +331,25 @@ def _execute_search_tools(tool_calls) -> str:
         tool_name, params = call.get("tool"), call.get("params")
         tool_fn = TOOL_REGISTRY.get(tool_name)
 
-        result = tool_fn(**params)
-        retrieved_results.append({
-            "tool": tool_name,
-            "output": result
-        })
+        # Inject logger and potentially files/context into params if expected
+        if "logger" not in params:
+            params["logger"] = logger
+            
+        if tool_name == "analyze_jenkins_logs":
+            params["files"] = files
+
+        try:
+            result = tool_fn(**params)
+            retrieved_results.append({
+                "tool": tool_name,
+                "output": result
+            })
+        except Exception as e:
+            logger.error("Error executing tool %s: %s", tool_name, e)
+            retrieved_results.append({
+                "tool": tool_name,
+                "output": f"Error: {str(e)}"
+            })
 
     return "\n\n".join(
         f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip()

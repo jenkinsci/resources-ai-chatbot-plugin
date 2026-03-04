@@ -247,7 +247,15 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
             status_code=404,
             detail="Session not found.",
         )
-    reply =  get_chatbot_reply(session_id, request.message)
+    
+    # Use the new agentic architecture if enabled in config
+    if CONFIG.get("use_new_architecture", False):
+        logger.info("Using new agentic architecture for session %s", session_id)
+        reply_content = get_chatbot_reply_new_architecture(session_id, request.message, files=None)
+        reply = ChatResponse(reply=reply_content) if isinstance(reply_content, str) else reply_content
+    else:
+        reply = get_chatbot_reply(session_id, request.message)
+        
     _background_tasks.add_task(
         persist_session,
         session_id,
@@ -328,6 +336,16 @@ async def chatbot_reply_with_files(
         if has_message
         else "Please analyze the attached file(s)."
     )
+
+    # Use the new agentic architecture if enabled in config
+    if CONFIG.get("use_new_architecture", False):
+        logger.info("Using new agentic architecture (with files) for session %s", session_id)
+        return await asyncio.to_thread(
+            get_chatbot_reply_new_architecture,
+            session_id,
+            final_message,
+            processed_files if processed_files else None
+        )
 
     return await asyncio.to_thread(
         get_chatbot_reply,
