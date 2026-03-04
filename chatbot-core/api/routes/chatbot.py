@@ -246,7 +246,7 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
         raise HTTPException(
             status_code=404,
             detail="Session not found.",
-    )
+        )
 
     # Use the new agentic architecture if enabled in config
     if CONFIG.get("use_new_architecture", False):
