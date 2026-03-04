@@ -129,7 +129,7 @@ def search_community_threads(query: str, keywords: str, logger) -> str:
         semantic_weight=0.7
     )
 
-def analyze_jenkins_logs(query: str, logger, files: Optional[List] = None) -> str:
+def analyze_jenkins_logs(_query: str, logger, files: Optional[List] = None) -> str:
     """
     Log analysis tool. Extracts error signatures from provided logs
     or external sources to identify root causes of failures.

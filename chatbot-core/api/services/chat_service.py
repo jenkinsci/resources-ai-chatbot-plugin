@@ -344,7 +344,7 @@ def _execute_search_tools(tool_calls, files: Optional[List[FileAttachment]] = No
                 "tool": tool_name,
                 "output": result
             })
-        except Exception as e:
+        except Exception as e: # pylint: disable=broad-exception-caught
             logger.error("Error executing tool %s: %s", tool_name, e)
             retrieved_results.append({
                 "tool": tool_name,
