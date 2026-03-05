@@ -275,7 +275,8 @@ def validate_file_content_type(content: bytes, filename: str) -> None:
                     filename, detected_mime
                 )
                 raise FileProcessingError(
-                    f"File '{filename}' validation failed. Detected as {detected_mime}, not a text file."
+                    f"File '{filename}' validation failed. "
+                    f"Detected as {detected_mime}, not a text file."
                 )
 
 
