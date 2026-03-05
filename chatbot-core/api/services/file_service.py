@@ -243,11 +243,13 @@ def validate_file_content_type(content: bytes, filename: str) -> None:
         # We check the first 1024 bytes to catch disguised binary files instantly.
         if b'\x00' in content[:1024]:
             logger.warning(
-                "Security Check Failed: File '%s' claims to be text but contains binary null bytes.",
+                "Security Check Failed: File '%s' claims to be text "
+                "but contains binary null bytes.",
                 filename
             )
             raise FileProcessingError(
-                f"File validation failed: '{filename}' appears to be a binary file, not valid text."
+                f"File validation failed: '{filename}' appears to be "
+                "a binary file, not valid text."
             )
 
         # 2. MIME-Type Whitelist/Blacklist Validation
