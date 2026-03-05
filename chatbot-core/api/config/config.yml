@@ -36,6 +36,9 @@ tool_names:
   jenkins_docs: "docs"
   community_threads: "discourse"
 
+stackoverflow:
+  page_size: 5
+
 cors:
   allowed_origins:
     - "*"

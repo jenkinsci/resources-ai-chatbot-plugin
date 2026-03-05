@@ -19,7 +19,7 @@ CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 TOOL_SIGNATURES = MappingProxyType({
     "search_plugin_docs": {"plugin_name": str, "query": str},
     "search_jenkins_docs": {"query": str},
-    "search_stackoverflow_threads": {"query": str},
+    "search_stackoverflow_threads": {"query": str, "keywords": str},
     "search_community_threads": {"query": str},
 })
 
@@ -51,7 +51,8 @@ def get_default_tools_call(query: str):
         {
             "tool": "search_stackoverflow_threads",
             "params": {
-                "query": query
+                "query": query,
+                "keywords": query
             }
         },
         {
