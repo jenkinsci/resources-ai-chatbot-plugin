@@ -16,6 +16,7 @@ from api.prompts.prompts import (
     RETRIEVER_AGENT_PROMPT,
     SPLIT_QUERY_PROMPT,
     LOG_SUMMARY_PROMPT,
+    QUERY_REFORMULATION_PROMPT,
 )
 
 from api.services.memory import get_session, get_session_async
@@ -62,7 +63,8 @@ def get_chatbot_reply(
 
     memory = get_session(session_id)
     if memory is None:
-        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
+        raise RuntimeError(
+            f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
@@ -252,15 +254,23 @@ def _get_reply_simple_query_pipeline(query: str, memory) -> str:
         str: The generated answer or a fallback message if relevance is too low.
     """
     iterations, relevance = -1, 0
+    current_query = query
+    retrieved_context = ""
+
     while iterations < retrieval_config["max_reformulate_iterations"] and relevance != 1:
-        tool_calls = _get_agent_tool_calls(query)
+        tool_calls = _get_agent_tool_calls(current_query)
 
         retrieved_context = _execute_search_tools(tool_calls)
 
         logger.info("Retrieved context: %s", retrieved_context)
 
-        relevance = _get_query_context_relevance(query, retrieved_context)
+        relevance = _get_query_context_relevance(
+            current_query, retrieved_context)
         logger.info("Query context relevance %s", relevance)
+
+        if relevance != 1:
+            current_query = _reformulate_query(query, retrieved_context)
+
         iterations += 1
 
     if relevance != 1:
@@ -333,9 +343,28 @@ def _execute_search_tools(tool_calls) -> str:
         })
 
     return "\n\n".join(
-        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip()
+        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip(
+        )
         for res in retrieved_results
     )
+
+
+def _reformulate_query(original_query: str, context: str) -> str:
+    """
+    Uses the LLM to reformulate a query that failed to retrieve relevant context.
+    """
+    prompt = QUERY_REFORMULATION_PROMPT.format(
+        original_query=original_query,
+        context=context
+    )
+
+    # We use a small max_tokens since we only want a short query string back
+    reformulated = generate_answer(
+        prompt, max_tokens=llm_config.get("max_tokens_query_classifier", 50))
+
+    logger.info("Reformulated query from '%s' to '%s'",
+                original_query, reformulated.strip())
+    return reformulated.strip()
 
 
 def _get_query_context_relevance(query: str, context: str):
@@ -434,10 +463,12 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
         logger.error("LLM provider unavailable: %s", e)
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     except (ValueError, RuntimeError) as exc:
-        logger.error("LLM generation failed for prompt: %r. Error: %r", prompt, exc)
+        logger.error(
+            "LLM generation failed for prompt: %r. Error: %r", prompt, exc)
         return "Sorry, I'm having trouble generating a response right now."
     except Exception:  # pylint: disable=broad-except
-        logger.exception("Unexpected error during LLM generation for prompt: %r", prompt)
+        logger.exception(
+            "Unexpected error during LLM generation for prompt: %r", prompt)
         return "Sorry, an unexpected error occurred. Please contact support."
 
 
@@ -531,6 +562,7 @@ def _extract_relevance_score(response: str) -> str:
         relevance_score = 0
 
     return relevance_score
+
 
 def _generate_search_query_from_logs(log_text: str) -> str:
     """

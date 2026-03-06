@@ -291,3 +291,12 @@ Logs:
 
 Search Query:
 """
+QUERY_REFORMULATION_PROMPT = """
+The user asked the following question: "{original_query}"
+
+We tried to search our database for an answer and retrieved the following context, but it was not relevant enough to answer the question:
+{context}
+
+Please reformulate the user's query to be more specific, use different keywords, or approach the problem from a different angle so we can find better search results.
+Return ONLY the reformulated query text, without any additional explanation, quotes, or formatting.
+"""

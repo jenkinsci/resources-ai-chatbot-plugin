@@ -6,6 +6,7 @@ from api.services.chat_service import get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse
 
+
 def test_get_chatbot_reply_success(
     mock_get_session,
     mock_retrieve_context,
@@ -26,8 +27,10 @@ def test_get_chatbot_reply_success(
 
     assert isinstance(response, ChatResponse)
     assert response.reply == "LLM answers to the query"
-    mock_chat_memory.add_user_message.assert_called_once_with("Query for the LLM")
-    mock_chat_memory.add_ai_message.assert_called_once_with("LLM answers to the query")
+    mock_chat_memory.add_user_message.assert_called_once_with(
+        "Query for the LLM")
+    mock_chat_memory.add_ai_message.assert_called_once_with(
+        "LLM answers to the query")
 
 
 def test_get_chatbot_reply_session_not_found(mock_get_session):
@@ -37,7 +40,8 @@ def test_get_chatbot_reply_session_not_found(mock_get_session):
     with pytest.raises(RuntimeError) as exc_info:
         get_chatbot_reply("missing-session-id", "Query for the LLM")
 
-    assert "Session 'missing-session-id' not found in the memory store." in str(exc_info.value)
+    assert "Session 'missing-session-id' not found in the memory store." in str(
+        exc_info.value)
 
 
 def test_retrieve_context_with_placeholders(mock_get_relevant_documents):
@@ -67,9 +71,11 @@ def test_retrieve_context_no_documents(mock_get_relevant_documents):
 
     assert result == CONFIG["retrieval"]["empty_context_message"]
 
+
 def test_retrieve_context_missing_id(mock_get_relevant_documents, caplog):
     """Test retrieve_context skips chunks missing an ID and logs a warning."""
-    mock_get_relevant_documents.return_value = (get_mock_documents("missing_id"), None)
+    mock_get_relevant_documents.return_value = (
+        get_mock_documents("missing_id"), None)
     logging.getLogger("API").propagate = True
 
     with caplog.at_level(logging.WARNING):
@@ -81,7 +87,8 @@ def test_retrieve_context_missing_id(mock_get_relevant_documents, caplog):
 
 def test_retrieve_context_missing_text(mock_get_relevant_documents, caplog):
     """Test retrieve_context skips chunks missing text and logs a warning."""
-    mock_get_relevant_documents.return_value = (get_mock_documents("missing_text"), None)
+    mock_get_relevant_documents.return_value = (
+        get_mock_documents("missing_text"), None)
     logging.getLogger("API").propagate = True
 
     with caplog.at_level(logging.WARNING):
@@ -108,7 +115,6 @@ def test_retrieve_context_with_missing_code(mock_get_relevant_documents, caplog)
         "Snippet 1: print('Only one snippet'), Snippet 2: [MISSING_CODE]"
     )
     assert "More placeholders than code blocks in chunk with ID doc-111" in caplog.text
-
 
 
 def get_mock_documents(doc_type: str):
@@ -141,7 +147,7 @@ def get_mock_documents(doc_type: str):
                 "code_blocks": ["print('no text here')"]
             }
         ]
-    if doc_type== "missing_code":
+    if doc_type == "missing_code":
         return [
             {
                 "id": "doc-111",
@@ -152,3 +158,47 @@ def get_mock_documents(doc_type: str):
             }
         ]
     return []
+
+
+def test_reformulation_loop_mutates_query(mocker):
+    """Test that the simple query pipeline reformulates the query when relevance is 0."""
+    from api.services.chat_service import _get_reply_simple_query_pipeline
+    from unittest.mock import call
+
+    # 0. Override the config limit so our loop is allowed to run 3 times
+    mocker.patch.dict("api.services.chat_service.retrieval_config", {
+                      "max_reformulate_iterations": 3})
+
+    # 1. Mock the tools and context retrieval
+    mock_get_agent = mocker.patch(
+        "api.services.chat_service._get_agent_tool_calls", return_value=[])
+    mocker.patch("api.services.chat_service._execute_search_tools",
+                 return_value="dummy context")
+
+    # 2. Mock relevance to fail twice, then succeed on the 3rd try (0, 0, 1)
+    mock_get_relevance = mocker.patch(
+        "api.services.chat_service._get_query_context_relevance", side_effect=[0, 0, 1])
+
+    # 3. Mock the reformulation to return new strings
+    mock_reformulate = mocker.patch("api.services.chat_service._reformulate_query", side_effect=[
+                                    "rephrased 1", "rephrased 2"])
+
+    # 4. Mock the final prompt builder and generation
+    mocker.patch("api.services.chat_service.build_prompt",
+                 return_value="final prompt")
+    mocker.patch("api.services.chat_service.generate_answer",
+                 return_value="final answer")
+
+    # Run the pipeline
+    reply = _get_reply_simple_query_pipeline("original query", memory=None)
+
+    # Assertions to prove we met the Acceptance Criteria
+    assert reply == "final answer"
+    assert mock_get_relevance.call_count == 3
+
+    # CRITICAL ASSERTION: Prove the loop used different queries on iterations 2 and 3!
+    mock_get_agent.assert_has_calls([
+        call("original query"),
+        call("rephrased 1"),
+        call("rephrased 2")
+    ])
