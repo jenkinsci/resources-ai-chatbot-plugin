@@ -3,6 +3,7 @@
 import ast
 import json
 import re
+import inspect
 from typing import AsyncGenerator, List, Optional
 
 from api.config.loader import CONFIG
@@ -62,7 +63,8 @@ def get_chatbot_reply(
 
     memory = get_session(session_id)
     if memory is None:
-        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
+        raise RuntimeError(
+            f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
@@ -312,19 +314,20 @@ def _get_agent_tool_calls(query: str):
 
 
 def _execute_search_tools(tool_calls) -> str:
-    """
-    Executes the tool calls to retrieve relevant context information.
-
-    Args:
-        tool_calls: A list of tool call specifications with tool names and parameters.
-
-    Returns:
-        str: Combined output from all retrieval tools.
-    """
     retrieved_results = []
     for call in tool_calls:
-        tool_name, params = call.get("tool"), call.get("params")
+        tool_name = call.get("tool")
+        params = call.get("params") or {}
+
         tool_fn = TOOL_REGISTRY.get(tool_name)
+
+        if tool_fn is None:
+            logger.warning("Unknown tool '%s' — skipping.", tool_name)
+            continue
+
+        # Check if the tool actually expects a logger before injecting it
+        if "logger" in inspect.signature(tool_fn).parameters:
+            params.setdefault("logger", logger)
 
         result = tool_fn(**params)
         retrieved_results.append({
@@ -333,7 +336,8 @@ def _execute_search_tools(tool_calls) -> str:
         })
 
     return "\n\n".join(
-        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip()
+        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip(
+        )
         for res in retrieved_results
     )
 
@@ -531,6 +535,7 @@ def _extract_relevance_score(response: str) -> str:
         relevance_score = 0
 
     return relevance_score
+
 
 def _generate_search_query_from_logs(log_text: str) -> str:
     """

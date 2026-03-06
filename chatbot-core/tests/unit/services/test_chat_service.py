@@ -5,6 +5,8 @@ import pytest
 from api.services.chat_service import get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse
+from api.services.chat_service import _execute_search_tools
+
 
 def test_get_chatbot_reply_success(
     mock_get_session,
@@ -26,8 +28,10 @@ def test_get_chatbot_reply_success(
 
     assert isinstance(response, ChatResponse)
     assert response.reply == "LLM answers to the query"
-    mock_chat_memory.add_user_message.assert_called_once_with("Query for the LLM")
-    mock_chat_memory.add_ai_message.assert_called_once_with("LLM answers to the query")
+    mock_chat_memory.add_user_message.assert_called_once_with(
+        "Query for the LLM")
+    mock_chat_memory.add_ai_message.assert_called_once_with(
+        "LLM answers to the query")
 
 
 def test_get_chatbot_reply_session_not_found(mock_get_session):
@@ -37,7 +41,8 @@ def test_get_chatbot_reply_session_not_found(mock_get_session):
     with pytest.raises(RuntimeError) as exc_info:
         get_chatbot_reply("missing-session-id", "Query for the LLM")
 
-    assert "Session 'missing-session-id' not found in the memory store." in str(exc_info.value)
+    assert "Session 'missing-session-id' not found in the memory store." in str(
+        exc_info.value)
 
 
 def test_retrieve_context_with_placeholders(mock_get_relevant_documents):
@@ -67,9 +72,11 @@ def test_retrieve_context_no_documents(mock_get_relevant_documents):
 
     assert result == CONFIG["retrieval"]["empty_context_message"]
 
+
 def test_retrieve_context_missing_id(mock_get_relevant_documents, caplog):
     """Test retrieve_context skips chunks missing an ID and logs a warning."""
-    mock_get_relevant_documents.return_value = (get_mock_documents("missing_id"), None)
+    mock_get_relevant_documents.return_value = (
+        get_mock_documents("missing_id"), None)
     logging.getLogger("API").propagate = True
 
     with caplog.at_level(logging.WARNING):
@@ -81,7 +88,8 @@ def test_retrieve_context_missing_id(mock_get_relevant_documents, caplog):
 
 def test_retrieve_context_missing_text(mock_get_relevant_documents, caplog):
     """Test retrieve_context skips chunks missing text and logs a warning."""
-    mock_get_relevant_documents.return_value = (get_mock_documents("missing_text"), None)
+    mock_get_relevant_documents.return_value = (
+        get_mock_documents("missing_text"), None)
     logging.getLogger("API").propagate = True
 
     with caplog.at_level(logging.WARNING):
@@ -108,7 +116,6 @@ def test_retrieve_context_with_missing_code(mock_get_relevant_documents, caplog)
         "Snippet 1: print('Only one snippet'), Snippet 2: [MISSING_CODE]"
     )
     assert "More placeholders than code blocks in chunk with ID doc-111" in caplog.text
-
 
 
 def get_mock_documents(doc_type: str):
@@ -141,7 +148,7 @@ def get_mock_documents(doc_type: str):
                 "code_blocks": ["print('no text here')"]
             }
         ]
-    if doc_type== "missing_code":
+    if doc_type == "missing_code":
         return [
             {
                 "id": "doc-111",
@@ -152,3 +159,46 @@ def get_mock_documents(doc_type: str):
             }
         ]
     return []
+
+
+def test_execute_search_tools_skips_unknown_tool(caplog):
+    """Test that unknown/hallucinated tool names do not crash the pipeline."""
+    import logging
+    tool_calls = [
+        {"tool": "hallucinated_tool_name", "params": {"query": "test"}}]
+
+    with caplog.at_level(logging.WARNING):
+        result = _execute_search_tools(tool_calls)
+
+    assert result == ""
+    assert "Unknown tool 'hallucinated_tool_name'" in caplog.text
+
+
+def test_execute_search_tools_injects_logger_conditionally(mocker):
+    """Test that logger is only injected into tools that declare it in their signature."""
+
+    # Dummy tools to simulate registry behavior
+    def tool_needs_logger(query, logger):
+        assert logger is not None
+        return "logged result"
+
+    def tool_no_logger(query):
+        return "unlogged result"
+
+    mocker.patch(
+        "api.services.chat_service.TOOL_REGISTRY",
+        {
+            "needs_logger": tool_needs_logger,
+            "no_logger": tool_no_logger
+        }
+    )
+
+    tool_calls = [
+        {"tool": "needs_logger", "params": {"query": "test1"}},
+        {"tool": "no_logger", "params": {"query": "test2"}}
+    ]
+
+    result = _execute_search_tools(tool_calls)
+
+    assert "logged result" in result
+    assert "unlogged result" in result
