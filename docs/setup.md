@@ -244,12 +244,12 @@ is available.
 
 The backend includes a `config-testing.yml` file that disables local
 LLM loading. This configuration is activated when the
-`PYTEST_VERSION` environment variable is set.
+`APP_ENV` environment variable is set to `testing`.
 
 Example:
 
 ```bash
-PYTEST_VERSION=1 make api
+APP_ENV=testing make api
 ```
 
 ## Common Troubleshooting
