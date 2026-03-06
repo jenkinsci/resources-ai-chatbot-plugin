@@ -135,8 +135,12 @@ def session_exists(session_id: str) -> bool:
         return session_id in _sessions
 
 
-def reset_sessions():
-    """Helper function to clear all sessions. Useful for testing."""
+def reset_sessions() -> None:
+    """
+    Clear all in-memory sessions.
+
+    This is primarily intended for use in tests.
+    """
     with _lock:
         _sessions.clear()
 
@@ -144,8 +148,11 @@ def reset_sessions():
 def reload_persisted_sessions() -> int:
     """
     Load all persisted sessions from disk into memory.
-    Called once at application startup so that session_exists()
-    can remain a fast, memory-only check.
+
+    This is expected to be called once at application startup so that
+    `session_exists()` can remain a fast, memory-only check. Each restored
+    session will receive a fresh `last_accessed` timestamp corresponding
+    to the time of reload.
 
     Returns:
         int: The number of sessions restored.
@@ -160,51 +167,53 @@ def reload_persisted_sessions() -> int:
 
 def get_last_accessed(session_id: str) -> Optional[datetime]:
     """
-    Get the last accessed timestamp for a given session.
+    Get the last accessed timestamp for a given in-memory session.
+
+    The TTL mechanism is intentionally scoped to the in-memory session
+    dictionary. Persisted JSON files do not currently track a
+    `last_accessed` field, so this function returns ``None`` for
+    sessions that are only present on disk.
 
     Args:
         session_id (str): The session identifier.
 
     Returns:
-        Optional[datetime]: The last accessed timestamp if session exists, else None.
+        Optional[datetime]: The last accessed timestamp if the session is
+        currently loaded in memory, else ``None``.
     """
     with _lock:
         session_data = _sessions.get(session_id)
         if session_data is not None:
             return session_data["last_accessed"]
 
-        history = load_session(session_id)
-        if not history:
-            return None
+    # Not in memory – we do not attempt to infer or persist timestamps
+    # from disk-backed sessions at this time.
+    return None
 
-
-    return history["last_accessed"]
 
 def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
     """
-    Set the last accessed timestamp for a given session (for testing purposes).
+    Set the last accessed timestamp for a given in-memory session.
+
+    This is primarily used by tests to simulate stale sessions for the
+    TTL cleanup logic. It only affects sessions that are already loaded
+    in memory; persisted JSON files are left untouched.
 
     Args:
         session_id (str): The session identifier.
         timestamp (datetime): The timestamp to set.
 
     Returns:
-        bool: True if session exists and timestamp was set, False otherwise.
+        bool: True if the session exists in memory and the timestamp
+        was updated, False otherwise.
     """
     with _lock:
         session_data = _sessions.get(session_id)
-        if session_data:
-            session_data["last_accessed"] = timestamp
-            return True
-
-        history = load_session(session_id)
-        if not history:
+        if not session_data:
             return False
 
-        history["last_accessed"] = timestamp
+        session_data["last_accessed"] = timestamp
         return True
-
-    return False
 
 def get_session_count() -> int:
     """
