@@ -48,13 +48,13 @@ def collect_all_chunks(logger):
         all_chunks.extend(chunks)
     return all_chunks
 
-def embed_chunks(logger):
+def embed_chunks(logger, model=None):
     """
     Embed all loaded text chunks and return vectors and associated metadata.
 
     Args:
         logger (logging.Logger): Logger for progress updates.
-        model (SentenceTransformer, optional): Optionally pass a preloaded model.
+        model (SentenceTransformer, optional): Optionally pass a pre-loaded model.
 
     Returns:
         tuple: (list[np.ndarray], list[dict]) - embeddings and structured metadata.
@@ -83,7 +83,8 @@ def embed_chunks(logger):
         })
 
     texts = [el["chunk_text"] for el in metadata]
-    model = load_embedding_model(MODEL_NAME, logger)
+    if model is None:
+        model = load_embedding_model(MODEL_NAME, logger)
     vectors = embed_documents(texts, model, logger)
 
     return vectors, metadata
