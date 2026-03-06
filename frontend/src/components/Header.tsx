@@ -1,4 +1,3 @@
-import { getChatbotText } from "../data/chatbotTexts";
 import { chatbotStyles } from "../styles/styles";
 import {
   exportAsTxt,
@@ -9,12 +8,14 @@ import {
 import { type Message } from "../model/Message";
 import { useEffect, useRef, useState } from "react";
 import {
-  Upload,
+  Download,
   Trash2,
   FileText,
   FileCode,
-  FileSpreadsheet,
-  File,
+  FileBox,
+  File as FileIcon,
+  Menu,
+  ChevronDown
 } from "lucide-react";
 
 /**
@@ -61,13 +62,17 @@ export const Header = ({
 
   return (
     <div style={chatbotStyles.chatbotHeader}>
-      <button
-        onClick={openSideBar}
-        style={chatbotStyles.openSidebarButton}
-        aria-label="Toggle sidebar"
-      >
-        {getChatbotText("sidebarLabel")}
-      </button>
+      <div style={chatbotStyles.headerTitleContainer}>
+        <button
+          onClick={openSideBar}
+          style={chatbotStyles.openSidebarButton}
+          aria-label="Toggle sidebar"
+        >
+          <Menu size={18} />
+        </button>
+        <div style={chatbotStyles.headerTitle}>Jenkins AI</div>
+      </div>
+
       {currentSessionId !== null && (
         <div ref={exportMenuRef} style={chatbotStyles.headerActions}>
           <div style={{ position: "relative", display: "inline-block" }}>
@@ -78,7 +83,8 @@ export const Header = ({
               title="Export chat"
               aria-label="Export chat"
             >
-              <Upload size={16} />
+              <Download size={16} />
+              <ChevronDown size={12} />
             </button>
 
             {/* Export menu */}
@@ -91,8 +97,8 @@ export const Header = ({
                     setShowExportMenu(false);
                   }}
                 >
-                  <FileText size={20} />
-                  <span>.txt</span>
+                  <FileText size={16} color="var(--text-secondary)" />
+                  <span>Text File (.txt)</span>
                 </button>
                 <button
                   style={chatbotStyles.exportMenuItem}
@@ -101,8 +107,8 @@ export const Header = ({
                     setShowExportMenu(false);
                   }}
                 >
-                  <FileCode size={20} />
-                  <span>.md</span>
+                  <FileCode size={16} color="var(--primary-color)" />
+                  <span>Markdown (.md)</span>
                 </button>
                 <button
                   style={chatbotStyles.exportMenuItem}
@@ -111,8 +117,8 @@ export const Header = ({
                     setShowExportMenu(false);
                   }}
                 >
-                  <FileSpreadsheet size={20} />
-                  <span>.docx</span>
+                  <FileBox size={16} color="#4586ff" />
+                  <span>Word (.docx)</span>
                 </button>
                 <button
                   style={chatbotStyles.exportMenuItem}
@@ -121,8 +127,8 @@ export const Header = ({
                     setShowExportMenu(false);
                   }}
                 >
-                  <File size={20} />
-                  <span>.pdf</span>
+                  <FileIcon size={16} color="#ff4d4d" />
+                  <span>PDF Document</span>
                 </button>
               </div>
             )}
