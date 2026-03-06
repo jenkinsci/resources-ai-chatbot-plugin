@@ -1,5 +1,7 @@
 """Unit Tests for the extract_functions module."""
+# pylint: disable=import-error
 
+from unittest.mock import Mock
 from bs4 import BeautifulSoup
 from data.chunking.chunking_utils import (
     extract_title,
@@ -47,14 +49,14 @@ def test_extract_code_blocks_replaces_code_with_placeholders():
     assert "[[CODE_1]]" in placeholders[1]
 
 
-def test_assign_code_blocks_to_chunks_basic_match(mocker):
+def test_assign_code_blocks_to_chunks_basic_match():
     """Test that it associates code blocks when valid placeholders are present."""
     chunks = [
         "Some text [[CODE_0]] more text [[CODE_1]] end."
     ]
     code_blocks = ["code A", "code B"]
     pattern = r"\[\[CODE_(\d+)\]\]"
-    logger = mocker.Mock()
+    logger = Mock()
 
     result = assign_code_blocks_to_chunks(chunks, code_blocks, pattern, logger)
     assert len(result) == 1
@@ -63,12 +65,12 @@ def test_assign_code_blocks_to_chunks_basic_match(mocker):
     logger.warning.assert_not_called()
 
 
-def test_assign_code_blocks_to_chunks_out_of_range(mocker):
+def test_assign_code_blocks_to_chunks_out_of_range():
     """Test that it logs a warning when placeholder index is out of range."""
     chunks = ["Text with [[CODE_2]] placeholder."]
     code_blocks = ["only one"]
     pattern = r"\[\[CODE_(\d+)\]\]"
-    logger = mocker.Mock()
+    logger = Mock()
 
     result = assign_code_blocks_to_chunks(chunks, code_blocks, pattern, logger)
     assert len(result) == 1
@@ -77,12 +79,12 @@ def test_assign_code_blocks_to_chunks_out_of_range(mocker):
     assert "out of range" in logger.warning.call_args[0][0]
 
 
-def test_assign_code_blocks_to_chunks_malformed_placeholder(mocker):
+def test_assign_code_blocks_to_chunks_malformed_placeholder():
     """Test that a log warning is printed when placeholder index is invalid."""
     chunks = ["Text with [[CODE_XYZ]] placeholder."]
     code_blocks = ["some code"]
     pattern = r"\[\[CODE_(\w+)\]\]"
-    logger = mocker.Mock()
+    logger = Mock()
 
     result = assign_code_blocks_to_chunks(chunks, code_blocks, pattern, logger)
     assert len(result) == 1
@@ -91,12 +93,12 @@ def test_assign_code_blocks_to_chunks_malformed_placeholder(mocker):
     assert "Malformed" in logger.warning.call_args[0][0]
 
 
-def test_assign_code_blocks_to_chunks_no_placeholders(mocker):
+def test_assign_code_blocks_to_chunks_no_placeholders():
     """Test that asserts the correct handling of chunks without any placeholders."""
     chunks = ["Plain text with no placeholders."]
     code_blocks = ["some code"]
     pattern = r"\[\[CODE_(\d+)\]\]"
-    logger = mocker.Mock()
+    logger = Mock()
 
     result = assign_code_blocks_to_chunks(chunks, code_blocks, pattern, logger)
     assert len(result) == 1
