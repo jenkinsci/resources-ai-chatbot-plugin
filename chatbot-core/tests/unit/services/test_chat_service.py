@@ -3,6 +3,7 @@
 import logging
 import pytest
 from api.services.chat_service import get_chatbot_reply, retrieve_context
+import api.services.chat_service as chat_service_module
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse
 
@@ -43,14 +44,17 @@ def test_get_chatbot_reply_session_not_found(mock_get_session):
 def test_retrieve_context_with_placeholders(mock_get_relevant_documents):
     """Test retrieve_context replaces placeholders with code blocks correctly."""
     mock_documents = get_mock_documents("with_placeholders")
-    mock_get_relevant_documents.return_value = (mock_documents, None)
+
+    def side_effect(query, model, logger, source_name, top_k): # pylint: disable=unused-argument
+        if source_name == "plugins":
+            return (mock_documents, [0.1])
+        return ([], [])
+    mock_get_relevant_documents.side_effect = side_effect
 
     result = retrieve_context("This is an interesting query")
 
-    document = mock_documents[0]
-
-    assert document["code_blocks"][0] in result
-    assert document["code_blocks"][1] in result
+    assert "print('Hello, code block')" in result
+    assert "print('Hello, code snippet')" in result
     assert "[[CODE_BLOCK_0]]" not in result
     assert "[[CODE_SNIPPET_1]]" not in result
     assert result == (
@@ -61,15 +65,49 @@ def test_retrieve_context_with_placeholders(mock_get_relevant_documents):
 
 def test_retrieve_context_no_documents(mock_get_relevant_documents):
     """Test retrieve_context returns empty context message when no data is found."""
-    mock_get_relevant_documents.return_value = ([], None)
+    mock_get_relevant_documents.return_value = ([], [])
 
     result = retrieve_context("This is a relevant query")
 
     assert result == CONFIG["retrieval"]["empty_context_message"]
 
+def test_retrieve_context_multi_source_ranking(mock_get_relevant_documents):
+    """Test that retrieve_context correctly ranks results from multiple sources."""
+    def side_effect(query, model, logger, source_name, top_k): # pylint: disable=unused-argument
+        if source_name == "plugins":
+            return ([{"id": "p1", "chunk_text": "Plugin result", "code_blocks": []}], [0.4])
+        if source_name == "docs":
+            return ([{"id": "d1", "chunk_text": "Doc result", "code_blocks": []}], [0.1])
+        if source_name == "discourse":
+            return ([{"id": "c1", "chunk_text": "Discourse result", "code_blocks": []}], [0.2])
+        if source_name == "stackoverflow":
+            return ([{"id": "s1", "chunk_text": "StackOverflow result", "code_blocks": []}], [0.3])
+        return ([], [])
+
+    mock_get_relevant_documents.side_effect = side_effect
+
+    # We mock CONFIG tool_names to include our 4th source for this test
+    original_tool_names = chat_service_module.CONFIG["tool_names"]
+    chat_service_module.CONFIG["tool_names"] = {
+        "p": "plugins", "d": "docs", "c": "discourse", "s": "stackoverflow"
+    }
+
+    try:
+        result = retrieve_context("Multi source query")
+
+        expected = "Doc result\n\nDiscourse result\n\nStackOverflow result"
+        assert result == expected
+    finally:
+        # Restore original config
+        chat_service_module.CONFIG["tool_names"] = original_tool_names
+
 def test_retrieve_context_missing_id(mock_get_relevant_documents, caplog):
     """Test retrieve_context skips chunks missing an ID and logs a warning."""
-    mock_get_relevant_documents.return_value = (get_mock_documents("missing_id"), None)
+    def side_effect(query, model, logger, source_name, top_k): # pylint: disable=unused-argument
+        if source_name == "plugins":
+            return (get_mock_documents("missing_id"), [0.1])
+        return ([], [])
+    mock_get_relevant_documents.side_effect = side_effect
     logging.getLogger("API").propagate = True
 
     with caplog.at_level(logging.WARNING):
@@ -81,7 +119,11 @@ def test_retrieve_context_missing_id(mock_get_relevant_documents, caplog):
 
 def test_retrieve_context_missing_text(mock_get_relevant_documents, caplog):
     """Test retrieve_context skips chunks missing text and logs a warning."""
-    mock_get_relevant_documents.return_value = (get_mock_documents("missing_text"), None)
+    def side_effect(query, model, logger, source_name, top_k): # pylint: disable=unused-argument
+        if source_name == "plugins":
+            return (get_mock_documents("missing_text"), [0.1])
+        return ([], [])
+    mock_get_relevant_documents.side_effect = side_effect
     logging.getLogger("API").propagate = True
 
     with caplog.at_level(logging.WARNING):
@@ -94,15 +136,17 @@ def test_retrieve_context_missing_text(mock_get_relevant_documents, caplog):
 def test_retrieve_context_with_missing_code(mock_get_relevant_documents, caplog):
     """Test retrieve_context replaces unmatched placeholders with [MISSING_CODE]."""
     mock_documents = get_mock_documents("missing_code")
-    mock_get_relevant_documents.return_value = (mock_documents, None)
+    def side_effect(query, model, logger, source_name, top_k): # pylint: disable=unused-argument
+        if source_name == "plugins":
+            return (mock_documents, [0.1])
+        return ([], [])
+    mock_get_relevant_documents.side_effect = side_effect
     logging.getLogger("API").propagate = True
 
     with caplog.at_level(logging.WARNING):
         result = retrieve_context("Query with too many placeholders")
 
-    document = mock_documents[0]
-
-    assert document["code_blocks"][0] in result
+    assert "print('Only one snippet')" in result
     assert "[MISSING_CODE]" in result
     assert result == (
         "Snippet 1: print('Only one snippet'), Snippet 2: [MISSING_CODE]"
