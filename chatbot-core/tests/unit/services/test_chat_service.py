@@ -71,18 +71,54 @@ def test_get_chatbot_reply_does_not_log_raw_content(
     assert "New message from session 'session-id'" in caplog.text
 
 
-def test_generate_answer_error_does_not_log_prompt_raw(mock_llm_provider, caplog):
-    """Ensure prompt payload is not included in ERROR level logs."""
+def test_get_chatbot_reply_debug_logs_are_sanitized(
+    mock_get_session,
+    mock_retrieve_context,
+    mock_prompt_builder,
+    mock_llm_provider,
+    caplog
+):
+    """Ensure payload-heavy debug logs keep structure but redact secrets."""
+    logging.getLogger("API").propagate = True
+
+    sanitized_query = "api_key=[REDACTED]"
+    sanitized_context = "password=[REDACTED]"
+    sanitized_prompt = "Bearer [REDACTED_TOKEN]"
+
+    mock_chat_memory = MagicMock()
+    mock_session = mock_get_session.return_value
+    mock_session.chat_memory = mock_chat_memory
+    mock_retrieve_context.return_value = "context password=top-secret"
+    mock_prompt_builder.return_value = (
+        "prompt Authorization: Bearer "
+        "ghp_1234567890abcdef1234567890abcdef1234"
+    )
+    mock_llm_provider.generate.return_value = "safe response"
+
+    with caplog.at_level(logging.DEBUG, logger="API"):
+        get_chatbot_reply("session-id", "api_key=abc123")
+
+    assert "api_key=abc123" not in caplog.text
+    assert "password=top-secret" not in caplog.text
+    assert "ghp_1234567890abcdef1234567890abcdef1234" not in caplog.text
+    assert sanitized_query in caplog.text
+    assert sanitized_context in caplog.text
+    assert sanitized_prompt in caplog.text
+
+
+def test_generate_answer_error_logs_sanitized_prompt(mock_llm_provider, caplog):
+    """Ensure failed prompt logging is sanitized across ERROR and DEBUG paths."""
     logging.getLogger("API").propagate = True
     sensitive_prompt = "api_key=very-secret-key"
     mock_llm_provider.generate.side_effect = RuntimeError("provider failure")
 
-    with caplog.at_level(logging.ERROR):
+    with caplog.at_level(logging.DEBUG, logger="API"):
         response = generate_answer(sensitive_prompt)
 
     assert response == "Sorry, I'm having trouble generating a response right now."
     assert sensitive_prompt not in caplog.text
     assert "LLM generation failed" in caplog.text
+    assert "api_key=[REDACTED]" in caplog.text
 
 
 def test_retrieve_context_with_placeholders(mock_get_relevant_documents):
