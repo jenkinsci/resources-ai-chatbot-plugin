@@ -240,8 +240,7 @@ def validate_file_content_type(content: bytes, filename: str) -> None:
     elif is_text_file(filename):
         # 1. Strict Byte-Level Validation (The Null Byte Check)
         # Standard text files rarely contain null bytes. Compiled binaries and images do.
-        # We check the first 1024 bytes to catch disguised binary files instantly.
-        if b'\x00' in content[:1024]:
+        if b'\x00' in content:
             logger.warning(
                 "Security Check Failed: File '%s' claims to be text "
                 "but contains binary null bytes.",
