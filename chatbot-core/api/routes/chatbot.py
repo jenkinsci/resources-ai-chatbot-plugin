@@ -41,6 +41,7 @@ from api.models.schemas import (
     SessionResponse,
     FileAttachment,
     SupportedExtensionsResponse,
+    MAX_MESSAGE_LENGTH,
 )
 from api.services.chat_service import (
     get_chatbot_reply,
@@ -58,7 +59,6 @@ from api.services.file_service import (
     get_supported_extensions,
     FileProcessingError,
 )
-from api.config.loader import CONFIG
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -123,13 +123,10 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
             if not user_message:
                 continue
 
-            max_msg_len = CONFIG.get("chat", {}).get(
-                "max_message_length", 5000
-            )
-            if len(user_message) > max_msg_len:
+            if len(user_message) > MAX_MESSAGE_LENGTH:
                 await websocket.send_text(json.dumps({
                     "error": f"Message too long. "
-                             f"Maximum {max_msg_len} characters."
+                             f"Maximum {MAX_MESSAGE_LENGTH} characters."
                 }))
                 continue
 

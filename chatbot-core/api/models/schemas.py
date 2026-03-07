@@ -11,6 +11,7 @@ from pydantic import BaseModel, field_validator, model_validator
 from api.config.loader import CONFIG
 
 chat_config = CONFIG.get("chat", {})
+MAX_MESSAGE_LENGTH = chat_config.get("max_message_length", 5000)
 
 
 class FileType(str, Enum):
@@ -52,10 +53,9 @@ class ChatRequest(BaseModel):
         """Validator that checks that a message is not empty or too long."""
         if not v.strip():
             raise ValueError("Message cannot be empty.")
-        max_length = chat_config.get("max_message_length", 5000)
-        if len(v) > max_length:
+        if len(v) > MAX_MESSAGE_LENGTH:
             raise ValueError(
-                f"Message too long. Maximum {max_length} characters."
+                f"Message too long. Maximum {MAX_MESSAGE_LENGTH} characters."
             )
         return v
 
@@ -81,12 +81,10 @@ class ChatRequestWithFiles(BaseModel):
         has_files = bool(self.files and len(self.files) > 0)
         if not has_message and not has_files:
             raise ValueError("Either message or files must be provided.")
-        if has_message:
-            max_length = chat_config.get("max_message_length", 5000)
-            if len(self.message) > max_length:
-                raise ValueError(
-                    f"Message too long. Maximum {max_length} characters."
-                )
+        if has_message and len(self.message) > MAX_MESSAGE_LENGTH:
+            raise ValueError(
+                f"Message too long. Maximum {MAX_MESSAGE_LENGTH} characters."
+            )
         return self
 
 class ChatResponse(BaseModel):
