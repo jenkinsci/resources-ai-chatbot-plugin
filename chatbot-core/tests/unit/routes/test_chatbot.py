@@ -1,5 +1,11 @@
 """Unit Tests for FastAPI routes."""
 
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from api.routes.chatbot import router
+
+
 def test_start_chat(client, mock_init_session):
     """Testing that creating a session returns session ID and location."""
     mock_init_session.return_value = "test-session-id"
@@ -9,6 +15,20 @@ def test_start_chat(client, mock_init_session):
     assert response.status_code == 201
     assert response.json() == {"session_id": "test-session-id"}
     assert response.headers["location"] == "/sessions/test-session-id/message"
+
+
+def test_start_chat_location_includes_router_prefix(mock_init_session):
+    """Location header should include API prefix when router is mounted with one."""
+    mock_init_session.return_value = "test-session-id"
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api/chatbot")
+    prefixed_client = TestClient(app)
+
+    response = prefixed_client.post("/api/chatbot/sessions")
+
+    assert response.status_code == 201
+    assert response.headers["location"] == "/api/chatbot/sessions/test-session-id/message"
 
 
 def test_chatbot_reply_success(client, mock_session_exists, mock_get_chatbot_reply):
