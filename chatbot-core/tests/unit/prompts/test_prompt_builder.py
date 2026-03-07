@@ -203,6 +203,7 @@ def test_build_prompt_with_none_content_message():
     history_section, _, _ = get_prompt_sections(prompt)
     # Should show "User: " with empty content, not crash
     assert "User: " in history_section
+    assert "Hello" not in history_section
 
 
 def test_build_prompt_with_special_characters_in_query():
@@ -234,6 +235,23 @@ def test_build_prompt_log_data_section_appears_between_context_and_question():
 
     # Log data must appear AFTER context and BEFORE question
     assert context_idx < log_data_idx < question_idx
+
+def test_build_prompt_with_whitespace_only_log_context_triggers_log_branch():
+    """Test that a whitespace-only log_context is truthy and triggers the
+    log analysis branch. This is the current intended behavior — the
+    log_context check uses `if log_context:` which treats non-empty
+    whitespace strings as truthy. If this behavior should change,
+    the source should be updated to use `if log_context and log_context.strip():`."""
+    memory = ConversationBufferMemory(return_messages=True)
+    context = "Some context."
+    user_query = "Why did my build fail?"
+
+    prompt = build_prompt(user_query, context, memory, log_context="   ")
+
+    # Whitespace-only string is truthy, so log analysis branch is triggered
+    assert LOG_ANALYSIS_INSTRUCTION.strip() in prompt
+    assert SYSTEM_INSTRUCTION.strip() not in prompt
+    assert "User-Provided Log Data:" in prompt
 
 def get_prompt_indexes(prompt: str) -> tuple[int, int, int, int]:
     """Helper to extract section positions in the prompt."""
