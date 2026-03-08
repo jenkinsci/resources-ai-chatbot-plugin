@@ -22,6 +22,8 @@ import pytest
 
 @pytest.mark.e2e
 class TestChatLifecycle:
+    """Lifecycle E2E checks for session, upload, and streaming paths."""
+
     # ------------------------------------------------------------------
     # 1. Session survival across in-memory reset (xfail #175)
     # ------------------------------------------------------------------
@@ -35,7 +37,10 @@ class TestChatLifecycle:
         Note: #180 also affects this path because new sessions are not always
         written to disk, but the primary acceptance gate remains #175.
         """
-        import api.services.memory as memory_module
+        import api.services.memory as memory_module  # pylint: disable=import-outside-toplevel
+
+        # Fixture activates isolated session directory monkeypatching from #201.
+        assert session_data_dir.exists()
 
         session_id = e2e_client.post("/sessions").json()["session_id"]
         e2e_client.post(
