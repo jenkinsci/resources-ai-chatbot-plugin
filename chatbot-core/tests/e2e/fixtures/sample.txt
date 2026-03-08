@@ -1,0 +1,2 @@
+Jenkins Pipeline syntax reference - E2E upload fixture.
+This file is used by E2E tests that exercise the file upload path.
