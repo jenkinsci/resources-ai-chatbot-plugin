@@ -20,7 +20,6 @@ from api.prompts.prompts import (
 from api.tools.sanitizer import sanitize_logs
 from api.services.memory import get_session, get_session_async
 from api.services.file_service import format_file_context
-from api.tools.sanitizer import sanitize_logs
 from api.tools.tools import TOOL_REGISTRY
 from api.tools.utils import (
     get_default_tools_call,

@@ -6,8 +6,6 @@ import pytest
 from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse
-from unittest.mock import patch, MagicMock
-from api.services.chat_service import get_chatbot_reply
 
 
 def test_get_chatbot_reply_success(
@@ -266,10 +264,16 @@ def test_get_chatbot_reply_sanitizes_secrets_at_entry(
 
     # 2. The "Poisoned" Input (Raw Log)
     session_id = "test-session-123"
-    raw_user_input = "Jenkins failed at line 42: password=MySuperSecret123 and aws_key=AKIAIOSFODNN7EXAMPLE"
+    raw_user_input = (
+        "Jenkins failed at line 42: password=MySuperSecret123 "
+        "and aws_key=AKIAIOSFODNN7EXAMPLE"
+    )
 
     # What it SHOULD look like after our new front-door sanitizer
-    expected_safe_input = "Jenkins failed at line 42: password=[REDACTED] and aws_key=[REDACTED_AWS_KEY]"
+    expected_safe_input = (
+        "Jenkins failed at line 42: password=[REDACTED] "
+        "and aws_key=[REDACTED_AWS_KEY]"
+    )
 
     # 3. Fire the function
     get_chatbot_reply(session_id=session_id, user_input=raw_user_input)
