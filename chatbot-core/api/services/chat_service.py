@@ -17,7 +17,7 @@ from api.prompts.prompts import (
     SPLIT_QUERY_PROMPT,
     LOG_SUMMARY_PROMPT,
 )
-
+from api.tools.sanitizer import sanitize_logs
 from api.services.memory import get_session, get_session_async
 from api.services.file_service import format_file_context
 from api.tools.tools import TOOL_REGISTRY
@@ -58,11 +58,13 @@ def get_chatbot_reply(
         ChatResponse: The generated assistant response.
     """
     logger.info("New message from session '%s'", session_id)
+    user_input = sanitize_logs(user_input)
     logger.info("Handling the user query: %s", user_input)
 
     memory = get_session(session_id)
     if memory is None:
-        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
+        raise RuntimeError(
+            f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
@@ -129,6 +131,7 @@ def get_chatbot_reply_new_architecture(
         ChatResponse: The generated assistant response.
     """
     logger.info("New message from session '%s'", session_id)
+    user_input = sanitize_logs(user_input)
     logger.info("Handling the user query: %s", user_input)
 
     memory = get_session(session_id)
@@ -333,7 +336,8 @@ def _execute_search_tools(tool_calls) -> str:
         })
 
     return "\n\n".join(
-        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip()
+        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip(
+        )
         for res in retrieved_results
     )
 
@@ -434,10 +438,12 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
         logger.error("LLM provider unavailable: %s", e)
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     except (ValueError, RuntimeError) as exc:
-        logger.error("LLM generation failed for prompt: %r. Error: %r", prompt, exc)
+        logger.error(
+            "LLM generation failed for prompt: %r. Error: %r", prompt, exc)
         return "Sorry, I'm having trouble generating a response right now."
     except Exception:  # pylint: disable=broad-except
-        logger.exception("Unexpected error during LLM generation for prompt: %r", prompt)
+        logger.exception(
+            "Unexpected error during LLM generation for prompt: %r", prompt)
         return "Sorry, an unexpected error occurred. Please contact support."
 
 
@@ -484,6 +490,7 @@ async def get_chatbot_reply_stream(
         str: Individual tokens from LLM response
     """
     logger.info("Streaming message from session '%s'", session_id)
+    user_input = sanitize_logs(user_input)
     logger.info("Handling user query: %s", user_input)
 
     memory = await get_session_async(session_id)
@@ -531,6 +538,7 @@ def _extract_relevance_score(response: str) -> str:
         relevance_score = 0
 
     return relevance_score
+
 
 def _generate_search_query_from_logs(log_text: str) -> str:
     """
