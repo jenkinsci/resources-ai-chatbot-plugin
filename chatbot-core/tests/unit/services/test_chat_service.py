@@ -1,7 +1,7 @@
 """Unit tests for chat service logic."""
 
 import logging
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
