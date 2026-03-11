@@ -18,6 +18,7 @@ try:
 except ImportError:
     MAGIC_AVAILABLE = False
 
+from api.tools.sanitizer import sanitize_logs
 from utils import LoggerFactory
 
 logger = LoggerFactory.instance().get_logger("api")
@@ -58,6 +59,13 @@ MAX_TEXT_CONTENT_LENGTH = 10000
 
 class FileProcessingError(Exception):
     """Custom exception for file processing errors."""
+
+
+def _safe_filename_for_log(filename: str) -> str:
+    """
+    Return a sanitized basename for log messages.
+    """
+    return sanitize_logs(Path(filename).name)
 
 
 def get_file_extension(filename: str) -> str:
@@ -229,7 +237,7 @@ def validate_file_content_type(content: bytes, filename: str) -> None:
             if detected_mime != expected_mime:
                 logger.warning(
                     "File content mismatch for '%s': detected %s, expected %s",
-                    filename, detected_mime, expected_mime
+                    _safe_filename_for_log(filename), detected_mime, expected_mime
                 )
                 raise FileProcessingError(
                     f"File '{filename}' content does not match its extension. "
@@ -251,7 +259,7 @@ def validate_file_content_type(content: bytes, filename: str) -> None:
         if detected_mime in dangerous_mimes:
             logger.warning(
                 "Dangerous file disguised as text: '%s' (detected: %s)",
-                filename, detected_mime
+                _safe_filename_for_log(filename), detected_mime
             )
             raise FileProcessingError(
                 f"File '{filename}' appears to be an executable, not a text file."
@@ -292,7 +300,7 @@ def process_text_file(content: bytes, filename: str) -> str:
     if len(text_content) > MAX_TEXT_CONTENT_LENGTH:
         logger.warning(
             "File '%s' content truncated from %d to %d characters",
-            filename, len(text_content), MAX_TEXT_CONTENT_LENGTH
+            _safe_filename_for_log(filename), len(text_content), MAX_TEXT_CONTENT_LENGTH
         )
         text_content = text_content[:MAX_TEXT_CONTENT_LENGTH] + "\n... [truncated]"
 
@@ -355,7 +363,11 @@ def process_uploaded_file(content: bytes, filename: str) -> dict:
     Raises:
         FileProcessingError: If the file type is not supported or processing fails.
     """
-    logger.info("Processing uploaded file: %s (%d bytes)", filename, len(content))
+    logger.info(
+        "Processing uploaded file (size_bytes=%d, extension=%s)",
+        len(content),
+        get_file_extension(filename) or "[none]",
+    )
 
     if not is_supported_file(filename):
         raise FileProcessingError(
