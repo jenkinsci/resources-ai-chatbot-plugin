@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from threading import Lock
 from typing import Optional
 from langchain.memory import ConversationBufferMemory
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from api.config.loader import CONFIG
 from api.services.sessionmanager import(
     delete_session_file,
@@ -21,6 +22,13 @@ from api.services.sessionmanager import(
 
 _sessions = {}
 _lock = Lock()
+_ROLE_TO_MESSAGE_CLASS = {
+    "human": HumanMessage,
+    "user": HumanMessage,
+    "ai": AIMessage,
+    "assistant": AIMessage,
+    "system": SystemMessage,
+}
 
 
 def init_session() -> str:
@@ -37,6 +45,30 @@ def init_session() -> str:
             "last_accessed": datetime.now()
         }
     return session_id
+
+
+def _restore_persisted_message(memory: ConversationBufferMemory, message: object) -> None:
+    """
+    Restore one persisted message into LangChain memory.
+
+    Persisted snapshots are dicts with {"role": ..., "content": ...}.
+    We convert them back to message objects so downstream code can safely
+    rely on attributes like msg.type and msg.content.
+    """
+    if not isinstance(message, dict):
+        return
+
+    role = message.get("role", "human")
+    normalized_role = role.lower() if isinstance(role, str) else "human"
+
+    content = message.get("content", "")
+    if content is None:
+        content = ""
+    elif not isinstance(content, str):
+        content = str(content)
+
+    message_class = _ROLE_TO_MESSAGE_CLASS.get(normalized_role, HumanMessage)
+    memory.chat_memory.add_message(message_class(content=content))
 
 
 def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
@@ -65,12 +97,7 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
 
         memory = ConversationBufferMemory(return_messages=True)
         for msg in history:
-            memory.chat_memory.add_message(# pylint: disable=no-member
-                {
-                    "role": msg["role"],
-                    "content": msg["content"],
-                }
-            )
+            _restore_persisted_message(memory, msg)
 
         _sessions[session_id] = {
             "memory": memory,
