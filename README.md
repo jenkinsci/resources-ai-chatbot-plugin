@@ -182,6 +182,37 @@ pip install llama-cpp-python
 ```
 
 **API crashes on startup:**
+### Model Downloads
+- **Symptom**: The application appears "stuck" or frozen during the first run of the data pipeline or API.
+- **Cause**: The system is downloading the embedding model (`all-MiniLM-L6-v2`, ~80MB) or initializing the LLM.
+- **Solution**: This is normal behavior for the first run. Please wait for a few minutes. Ensure you have a stable internet connection.
+
+### Python Version Mismatches
+- **Symptom**: `SyntaxError` or `ModuleNotFoundError` during setup or execution.
+- **Solution**: 
+  - Ensure you are using **Python 3.11+**. Verify with `python --version`.
+  - Ensure the virtual environment is activated:
+    ```bash
+    source chatbot-core/venv/bin/activate
+    ```
+
+### Common Startup Errors
+- **Memory Limits**: If the process is killed (e.g., `OOM Killed`), ensure your machine has sufficient RAM (at least 8GB recommended for full mode). Try running in **Lite Mode** (`make dev-lite`) first.
+- **Missing Dependencies**: If you see import errors, re-run dependency installation:
+  ```bash
+  pip install -r chatbot-core/requirements.txt
+  ```
+- **llama-cpp-python installation fails**: Ensure build tools (gcc, cmake) are installed. See [docs/setup.md](docs/setup.md) for platform-specific instructions.
+
+### Verification Steps
+To confirm your local setup is correct:
+1. **Virtual Environment**: Ensure `(venv)` appears in your terminal prompt.
+2. **Lite Mode Check**: Run `make dev-lite`. It should start without errors.
+3. **API Check**: Run `curl -X POST http://127.0.0.1:8000/api/chatbot/sessions`. It should return a default session response.
+
+For more details, see [docs/setup.md](docs/setup.md).
+
+## Developer Documentation
 
 ```bash
 cd chatbot-core && source venv/bin/activate
@@ -189,6 +220,10 @@ pip install llama-cpp-python retriv
 ```
 
 **Clean and rebuild:**
+- [Setup Guide](docs/setup.md)
+- [Windows/WSL2 Setup Guide](docs/windows-setup.md) — for contributors on Windows machines
+
+## Contributing
 
 ```bash
 make clean && make setup-backend IS_CPU_REQ=1
