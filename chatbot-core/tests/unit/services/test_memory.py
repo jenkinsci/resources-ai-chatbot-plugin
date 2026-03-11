@@ -145,3 +145,59 @@ def test_cleanup_expired_sessions_with_no_sessions():
 
     assert cleaned_count == 0
     assert memory.get_session_count() == 0
+
+
+# Tests for session history restoration (Issue #<issue_number>)
+
+
+def test_get_session_restores_human_message_as_HumanMessage(mocker):
+    """get_session() must restore human messages as HumanMessage, not a raw dict."""
+    from langchain.schema import HumanMessage as LCHumanMessage  # pylint: disable=import-outside-toplevel
+    session_id = "test-session-restore-human"
+    mock_history = [{"role": "human", "content": "How do I configure Jenkins?"}]
+    mocker.patch("api.services.memory.load_session", return_value=mock_history)
+
+    session = memory.get_session(session_id)
+
+    messages = session.chat_memory.messages
+    assert len(messages) == 1
+    assert isinstance(messages[0], LCHumanMessage)
+    assert messages[0].content == "How do I configure Jenkins?"
+
+
+def test_get_session_restores_ai_message_as_AIMessage(mocker):
+    """get_session() must restore AI messages as AIMessage, not a raw dict."""
+    from langchain.schema import AIMessage as LCAIMessage  # pylint: disable=import-outside-toplevel
+    session_id = "test-session-restore-ai"
+    mock_history = [{"role": "ai", "content": "Here is how to configure Jenkins..."}]
+    mocker.patch("api.services.memory.load_session", return_value=mock_history)
+
+    session = memory.get_session(session_id)
+
+    messages = session.chat_memory.messages
+    assert len(messages) == 1
+    assert isinstance(messages[0], LCAIMessage)
+    assert messages[0].content == "Here is how to configure Jenkins..."
+
+
+def test_get_session_restores_full_conversation_in_order(mocker):
+    """get_session() must restore a multi-turn conversation preserving order and types."""
+    from langchain.schema import HumanMessage as LCHumanMessage, AIMessage as LCAIMessage  # pylint: disable=import-outside-toplevel
+    session_id = "test-session-restore-multi"
+    mock_history = [
+        {"role": "human", "content": "What is Jenkins?"},
+        {"role": "ai", "content": "Jenkins is a CI/CD tool."},
+        {"role": "human", "content": "How do I install it?"},
+    ]
+    mocker.patch("api.services.memory.load_session", return_value=mock_history)
+
+    session = memory.get_session(session_id)
+
+    messages = session.chat_memory.messages
+    assert len(messages) == 3
+    assert isinstance(messages[0], LCHumanMessage)
+    assert isinstance(messages[1], LCAIMessage)
+    assert isinstance(messages[2], LCHumanMessage)
+    assert messages[0].content == "What is Jenkins?"
+    assert messages[1].content == "Jenkins is a CI/CD tool."
+    assert messages[2].content == "How do I install it?"
