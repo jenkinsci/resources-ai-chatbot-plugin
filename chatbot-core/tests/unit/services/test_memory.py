@@ -150,7 +150,7 @@ def test_cleanup_expired_sessions_with_no_sessions():
 # Tests for session history restoration (Issue #<issue_number>)
 
 
-def test_get_session_restores_human_message_as_HumanMessage(mocker):
+def test_get_session_restores_human_message_as_human_message(mocker):
     """get_session() must restore human messages as HumanMessage, not a raw dict."""
     from langchain.schema import HumanMessage as LCHumanMessage  # pylint: disable=import-outside-toplevel
     session_id = "test-session-restore-human"
@@ -165,7 +165,7 @@ def test_get_session_restores_human_message_as_HumanMessage(mocker):
     assert messages[0].content == "How do I configure Jenkins?"
 
 
-def test_get_session_restores_ai_message_as_AIMessage(mocker):
+def test_get_session_restores_ai_message_as_ai_message(mocker):
     """get_session() must restore AI messages as AIMessage, not a raw dict."""
     from langchain.schema import AIMessage as LCAIMessage  # pylint: disable=import-outside-toplevel
     session_id = "test-session-restore-ai"
