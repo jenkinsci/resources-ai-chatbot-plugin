@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from threading import Lock
 from typing import Optional
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from api.config.loader import CONFIG
 from api.services.sessionmanager import(
     delete_session_file,
@@ -67,11 +67,11 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
         memory = ConversationBufferMemory(return_messages=True)
         for msg in history:
             if msg.get("role") == "human":
-                memory.chat_memory.add_message(  # pylint: disable=no-member
+                memory.chat_memory.add_message(
                     HumanMessage(content=msg["content"])
                 )
             else:
-                memory.chat_memory.add_message(  # pylint: disable=no-member
+                memory.chat_memory.add_message(
                     AIMessage(content=msg["content"])
                 )
 
