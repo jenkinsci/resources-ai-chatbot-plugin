@@ -5,21 +5,14 @@ Covers the two bugs fixed by PR #181:
 1. Gate bug: _append_message_to_json() silently skipped new sessions (os.path.exists guard)
 2. Serialization bug: persist_session() passed raw HumanMessage/AIMessage to json.dump()
 """
+# pylint: disable=redefined-outer-name
 import json
-import os
 import uuid
 
 import pytest
-from langchain.memory import ConversationBufferMemory
 from langchain.schema import AIMessage, HumanMessage
 
 from api.services import memory
-from api.services.sessionmanager import (
-    append_message,
-    delete_session_file,
-    load_session,
-    session_exists_in_json,
-)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -47,7 +40,7 @@ def tmp_session(tmp_path, monkeypatch):
     import importlib  # pylint: disable=import-outside-toplevel
     import api.services.sessionmanager as sm  # pylint: disable=import-outside-toplevel
     importlib.reload(sm)
-    # Also re-patch the public helpers in memory.py to use the reloaded module.
+    # Re-patch the public helpers in memory.py to use the reloaded module.
     monkeypatch.setattr("api.services.memory.append_message", sm.append_message)
     monkeypatch.setattr("api.services.memory.load_session", sm.load_session)
     monkeypatch.setattr("api.services.memory.delete_session_file", sm.delete_session_file)
@@ -68,7 +61,7 @@ class TestAppendMessageGateFix:
 
     def test_append_message_creates_file_for_new_session(self, tmp_session):
         """append_message must create the session file if it does not yet exist."""
-        sm, tmp_path = tmp_session
+        sm, _ = tmp_session
         session_id = _new_uuid()
         messages = [{"role": "human", "content": "Hello"}]
 
@@ -117,7 +110,7 @@ class TestAppendMessageGateFix:
 
         # No file should have been created
         files_created = list(tmp_path.iterdir())
-        assert files_created == [], "No file should be created for an invalid session ID"
+        assert not files_created, "No file should be created for an invalid session ID"
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -179,7 +172,7 @@ class TestPersistSessionSerializationFix:
 
     def test_persist_session_output_is_valid_json(self, tmp_session):
         """The session file written by persist_session() must be valid JSON."""
-        sm, tmp_path = tmp_session
+        _, tmp_path = tmp_session
         session_id = memory.init_session()
         session = memory.get_session(session_id)
         session.chat_memory.add_message(HumanMessage(content="Hello"))
@@ -236,4 +229,3 @@ class TestPersistLoadRoundTrip:
         assert loaded[0] == {"role": "human", "content": "What is Jenkins?"}
         assert loaded[1] == {"role": "ai", "content": "Jenkins is a CI/CD tool."}
         assert loaded[2] == {"role": "human", "content": "Thanks!"}
-
