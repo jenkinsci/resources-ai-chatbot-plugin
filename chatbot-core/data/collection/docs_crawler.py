@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
@@ -30,8 +31,20 @@ SITEMAP_NS = {"ns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 # Max parallel requests
 MAX_CONCURRENT = 15
 
-# Set to check for duplicates
-visited_urls = set()
+# Retry configuration
+MAX_RETRIES = 3
+BACKOFF_FACTOR = 1  # 1s, 2s, 4s between retries
+RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
+
+
+@dataclass
+class CrawlState:
+    """Mutable state for a single crawl run."""
+
+    visited_urls: set = field(default_factory=set)
+    page_content: dict = field(default_factory=dict)
+    non_canonic_content_urls: set = field(default_factory=set)
+    visited_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 def create_session_with_retries():
@@ -52,11 +65,6 @@ def create_session_with_retries():
     session.mount("http://", adapter)
     session.mount("https://", adapter)
     return session
-
-# Key: url ; Value: content of that page
-page_content = {}
-
-non_canonic_content_urls = set()
 
 
 def normalize_url(url):
@@ -120,91 +128,95 @@ def fetch_sitemap_urls():
         return []
 
 
-async def fetch_and_process_page(session, url, semaphore, queue, visited_lock):
-    """Fetch a page, extract content, and enqueue any new links — all in one async step.
+async def _fetch_html(session, url, semaphore):
+    """Fetch a URL with retry logic, returning the HTML or None.
+
+    Args:
+        session: An aiohttp ClientSession.
+        url: The URL to fetch.
+        semaphore: An asyncio.Semaphore to limit concurrency.
+
+    Returns:
+        The HTML string on success, or None on failure.
+    """
+    async with semaphore:
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status == 200:
+                        return await response.text()
+
+                    if response.status in RETRYABLE_STATUSES and attempt < MAX_RETRIES:
+                        delay = BACKOFF_FACTOR * (2 ** attempt)
+                        logger.warning(
+                            "HTTP %d for %s (attempt %d/%d), retrying in %ds",
+                            response.status, url, attempt + 1, MAX_RETRIES, delay
+                        )
+                        await asyncio.sleep(delay)
+                        continue
+
+                    logger.warning("HTTP %d for %s - skipping", response.status, url)
+                    return None
+
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                if attempt < MAX_RETRIES:
+                    delay = BACKOFF_FACTOR * (2 ** attempt)
+                    logger.warning(
+                        "Error fetching %s (attempt %d/%d): %s, retrying in %ds",
+                        url, attempt + 1, MAX_RETRIES, e, delay
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error("Failed to fetch %s after %d retries: %s", url, MAX_RETRIES, e)
+                    return None
+    return None
+
+
+async def fetch_and_process_page(session, url, semaphore, queue, state):
+    """Fetch a page, extract content, and enqueue any new links.
 
     Args:
         session: An aiohttp ClientSession.
         url: The URL to fetch.
         semaphore: An asyncio.Semaphore to limit concurrency.
         queue: An asyncio.Queue to push newly discovered URLs into.
-        visited_lock: An asyncio.Lock.
+        state: CrawlState holding visited URLs, page content, etc.
     """
-    retries = 3
-    backoff_factor = 1  # 1s, 2s, 4s between retries
-    retryable_statuses = {429, 500, 502, 503, 504}
-    html = None
-
-    async with semaphore:
-        for attempt in range(retries + 1):
-            try:
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                    if response.status == 200:
-                        html = await response.text()
-                        break
-
-                    if response.status in retryable_statuses and attempt < retries:
-                        delay = backoff_factor * (2 ** attempt)
-                        logger.warning(
-                            "HTTP %d for %s (attempt %d/%d), retrying in %ds",
-                            response.status, url, attempt + 1, retries, delay
-                        )
-                        await asyncio.sleep(delay)
-                        continue
-
-                    logger.warning("HTTP %d for %s — skipping", response.status, url)
-                    return
-
-            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-                if attempt < retries:
-                    delay = backoff_factor * (2 ** attempt)
-                    logger.warning(
-                        "Error fetching %s (attempt %d/%d): %s, retrying in %ds",
-                        url, attempt + 1, retries, e, delay
-                    )
-                    await asyncio.sleep(delay)
-                else:
-                    logger.error("Failed to fetch %s after %d retries: %s", url, retries, e)
-                    return
-
+    html = await _fetch_html(session, url, semaphore)
     if html is None:
         return
 
-    # Process the page: extract content and discover new links
     logger.info("Visiting: %s", url)
     soup = BeautifulSoup(html, "html.parser")
 
     content = extract_page_content_container(soup)
     if content:
-        page_content[url] = content
+        state.page_content[url] = content
     else:
-        non_canonic_content_urls.add(url)
+        state.non_canonic_content_urls.add(url)
 
     # Find all links in the page and enqueue new ones
-    links = soup.find_all("a", href=True)
-    for link in links:
-        href = link['href']
-        full_url = urljoin(url, href)
-        full_url = normalize_url(full_url)
+    for link in soup.find_all("a", href=True):
+        full_url = normalize_url(urljoin(url, link['href']))
         if not is_valid_url(full_url):
             continue
 
-        async with visited_lock:
-            if full_url in visited_urls:
+        async with state.visited_lock:
+            if full_url in state.visited_urls:
                 continue
-            visited_urls.add(full_url)
+            state.visited_urls.add(full_url)
 
         await queue.put(full_url)
 
 
-async def worker(session, semaphore, queue, visited_lock):
+async def worker(session, semaphore, queue, state):
     """Worker that pulls URLs from the queue and processes them.
 
     Args:
         session: An aiohttp ClientSession.
         semaphore: An asyncio.Semaphore to limit concurrency.
         queue: An asyncio.Queue of URLs to process.
-        visited_lock: An asyncio.Lock.
+        state: CrawlState holding visited URLs, page content, etc.
     """
     while True:
         url = await queue.get()
@@ -213,14 +225,14 @@ async def worker(session, semaphore, queue, visited_lock):
             queue.task_done()
             break
         try:
-            await fetch_and_process_page(session, url, semaphore, queue, visited_lock)
-        except Exception as exc:
+            await fetch_and_process_page(session, url, semaphore, queue, state)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.error("Unexpected error processing %s: %s", url, exc)
         finally:
             queue.task_done()
 
 
-async def crawl(start_url):
+async def crawl(start_url, state):
     """Crawl documentation pages using async parallel fetching.
 
     Seeds the queue from the sitemap first, then follows in-page links
@@ -229,6 +241,7 @@ async def crawl(start_url):
 
     Args:
         start_url: The base URL to include in the initial queue.
+        state: CrawlState holding visited URLs, page content, etc.
     """
     # Phase 1: Seed with sitemap URLs
     sitemap_urls = fetch_sitemap_urls()
@@ -238,8 +251,8 @@ async def crawl(start_url):
 
     # Mark all seeds as visited and enqueue them
     for url in all_seed_urls:
-        if url not in visited_urls:
-            visited_urls.add(url)
+        if url not in state.visited_urls:
+            state.visited_urls.add(url)
             queue.put_nowait(url)
 
     logger.info("Queue seeded with %d sitemap URLs", len(sitemap_urls))
@@ -248,11 +261,10 @@ async def crawl(start_url):
     semaphore = asyncio.Semaphore(MAX_CONCURRENT)
     connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT)
     timeout = aiohttp.ClientTimeout(total=30)
-    visited_lock = asyncio.Lock()
 
     async with aiohttp.ClientSession(connector=connector,timeout=timeout) as session:
         workers = [
-            asyncio.create_task(worker(session, semaphore, queue, visited_lock))
+            asyncio.create_task(worker(session, semaphore, queue, state))
             for _ in range(MAX_CONCURRENT)
         ]
 
@@ -265,16 +277,17 @@ async def crawl(start_url):
 
 def start_crawl():
     """Start the crawling process from the base URL."""
+    state = CrawlState()
     logger.info("Crawling started")
-    asyncio.run(crawl(BASE_URL))
-    logger.info("Total pages found: %d", len(visited_urls))
-    logger.info("Total pages with content: %d", len(page_content))
-    logger.info("Non canonic content page structure links: %s", non_canonic_content_urls)
+    asyncio.run(crawl(BASE_URL, state))
+    logger.info("Total pages found: %d", len(state.visited_urls))
+    logger.info("Total pages with content: %d", len(state.page_content))
+    logger.info("Non canonic content page structure links: %s", state.non_canonic_content_urls)
     logger.info("Crawling ended")
 
     logger.info("Saving results in json")
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        json.dump(page_content, f, ensure_ascii=False, indent=2)
+        json.dump(state.page_content, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
     start_crawl()
