@@ -2,8 +2,14 @@
 
 import logging
 from unittest.mock import MagicMock
+import inspect
 import pytest
-from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
+from api.services.chat_service import (
+    _execute_search_tools,
+    generate_answer,
+    get_chatbot_reply,
+    retrieve_context,
+)
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse
 
@@ -237,10 +243,10 @@ def get_mock_documents(doc_type: str):
 
 
 # Tests for _execute_search_tools — Bug fix #241
-from api.services.chat_service import _execute_search_tools
 
 
 def test_execute_search_tools_unknown_tool_name_is_skipped(mocker):
+    """Test that unknown tool names are skipped gracefully without crashing."""
     mock_logger = mocker.patch("api.services.chat_service.logger")
     mock_registry = {}
     mocker.patch("api.services.chat_service.TOOL_REGISTRY", mock_registry)
@@ -253,7 +259,7 @@ def test_execute_search_tools_unknown_tool_name_is_skipped(mocker):
 
 
 def test_execute_search_tools_logger_injected_automatically(mocker):
-    import inspect
+    """Test that logger is automatically injected into tools that require it."""
     mock_tool = mocker.MagicMock(return_value="tool result")
     mocker.patch("api.services.chat_service.TOOL_REGISTRY", {"mock_tool": mock_tool})
     mocker.patch(
@@ -265,7 +271,7 @@ def test_execute_search_tools_logger_injected_automatically(mocker):
 
 
 def test_execute_search_tools_no_logger_not_injected(mocker):
-    import inspect
+    """Test that logger is NOT injected into tools that do not require it."""
     mock_tool = mocker.MagicMock(return_value="result")
     mocker.patch("api.services.chat_service.TOOL_REGISTRY", {"mock_tool": mock_tool})
     mocker.patch(
@@ -277,7 +283,7 @@ def test_execute_search_tools_no_logger_not_injected(mocker):
 
 
 def test_execute_search_tools_returns_combined_results(mocker):
-    import inspect
+    """Test that results from multiple tools are combined correctly."""
     mock_a = mocker.MagicMock(return_value="result A")
     mock_b = mocker.MagicMock(return_value="result B")
     mocker.patch("api.services.chat_service.TOOL_REGISTRY", {"tool_a": mock_a, "tool_b": mock_b})
@@ -294,7 +300,7 @@ def test_execute_search_tools_returns_combined_results(mocker):
 
 
 def test_execute_search_tools_mixed_valid_and_invalid(mocker):
-    import inspect
+    """Test that valid tools still execute when mixed with unknown tool names."""
     mock_logger = mocker.patch("api.services.chat_service.logger")
     mock_tool = mocker.MagicMock(return_value="valid result")
     mocker.patch("api.services.chat_service.TOOL_REGISTRY", {"valid_tool": mock_tool})
