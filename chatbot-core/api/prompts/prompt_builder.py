@@ -6,6 +6,7 @@ from typing import Optional
 from langchain.memory import ConversationBufferMemory
 from api.prompts.prompts import SYSTEM_INSTRUCTION, LOG_ANALYSIS_INSTRUCTION
 
+
 def build_prompt(
     user_query: str,
     context: str,
