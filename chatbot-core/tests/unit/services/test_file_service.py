@@ -313,6 +313,21 @@ class TestProcessUploadedFile:
             process_uploaded_file(png_content, "fake.jpg")
         assert "content does not match" in str(exc_info.value)
 
+    def test_process_uploaded_file_logs_without_raw_filename(self, mocker):
+        """Test that info logs do not emit the raw uploaded filename."""
+        filename = "ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.txt"
+        content = b"hello world"
+        info_spy = mocker.patch("api.services.file_service.logger.info")
+
+        process_uploaded_file(content, filename)
+
+        info_spy.assert_any_call(
+            "Processing uploaded file (size_bytes=%d, extension=%s)",
+            len(content),
+            ".txt",
+        )
+        assert filename not in str(info_spy.call_args_list)
+
 
 class TestFormatFileContext:
     """Tests for format_file_context function."""
