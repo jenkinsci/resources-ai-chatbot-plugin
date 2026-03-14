@@ -16,7 +16,7 @@ Below is a brief explanation of the key subdirectories:
   - `rag/`: Core logic of the RAG
     - `embedding/`: Scripts to embed the chunks.
     - `vectorstore/`: Scripts to store the embeddings into a vector database.
-    - `retrieval/`: Scripts to perform the semantic research across the vector database.
+    - `retriever/`: Scripts to perform the semantic search across the vector database.
   - `api/`: FastAPI application that exposes the chatbot via a REST API.
     - `main.py`: Entry point to run the FastAPI app.
     - `routes/`: Defines the HTTP endpoints.
@@ -62,14 +62,14 @@ make run-data-pipeline
 
 ## API
 
-Another key component in this repo is the backend, that allows to run the API that serves the chabot funcionalities. Also for the API there is a specific target in the `Makefile`, that does all the setup, installing the correct dependencies in the virtual environment, and runs the API.
+Another key component in this repo is the backend, that allows to run the API that serves the chatbot functionalities. Also for the API there is a specific target in the `Makefile`, that does all the setup, installing the correct dependencies in the virtual environment, and runs the API.
 
 To run it you can use the `api` target:
 ```bash
 make api
 ```
 
-> **Note:** for more details on the API and on the architectual overview you can visit the docs under `docs/chatbot-core/api/`.
+> **Note:** for more details on the API and on the architectural overview you can visit the docs under `docs/chatbot-core/api/`.
 
 ## User Interface
 
