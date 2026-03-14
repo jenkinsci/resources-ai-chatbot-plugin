@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
-from api.models.schemas import ChatResponse
+from api.models.schemas import ChatResponse, FileAttachment, FileType
 
 def test_get_chatbot_reply_success(
     mock_get_session,
@@ -242,7 +242,6 @@ def test_get_chatbot_reply_with_file_attachment(
 ):
     """Test get_chatbot_reply with file attachments exercises
     _process_file_context and _format_user_message_for_memory."""
-    from api.models.schemas import FileAttachment, FileType
     mock_chat_memory = mocker.MagicMock()
     mock_session = mock_get_session.return_value
     mock_session.chat_memory = mock_chat_memory
@@ -341,7 +340,6 @@ def test_get_chatbot_reply_multiple_file_attachments(
     mocker
 ):
     """Test get_chatbot_reply with multiple file attachments."""
-    from api.models.schemas import FileAttachment, FileType
     mock_chat_memory = mocker.MagicMock()
     mock_session = mock_get_session.return_value
     mock_session.chat_memory = mock_chat_memory
