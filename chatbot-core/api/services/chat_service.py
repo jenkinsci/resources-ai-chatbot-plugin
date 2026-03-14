@@ -398,9 +398,11 @@ def retrieve_context(user_input: str) -> str:
         return "No context available."
 
     context_texts = []
+    seen_texts = set()
     for item in data_retrieved:
         item_id = item.get("id", "")
         text = item.get("chunk_text", "")
+        item_metadata = item.get("metadata") or {}
         if not item_id:
             logger.warning(
                 "Id of retrieved context not found. Skipping element.")
@@ -410,6 +412,31 @@ def retrieve_context(user_input: str) -> str:
             replace = make_placeholder_replacer(code_iter, item_id, logger)
             text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
 
+            # adding light metadata header when present (docs/discourse).
+            if item_metadata:
+                header_parts = []
+                data_source = item_metadata.get("data_source")
+                title = item_metadata.get("title")
+                source_url = item_metadata.get("source_url")
+                topic_id = item_metadata.get("topic_id")
+
+                if data_source:
+                    header_parts.append(str(data_source))
+                if title:
+                    header_parts.append(str(title))
+                if source_url:
+                    header_parts.append(str(source_url))
+                elif topic_id is not None:
+                    header_parts.append(f"topic_id={topic_id}")
+
+                if header_parts:
+                    text = f"[{' | '.join(header_parts)}]\n{text}"
+
+            # Deduplicate repeated chunks
+            dedupe_key = " ".join(text.split())
+            if dedupe_key in seen_texts:
+                continue
+            seen_texts.add(dedupe_key)
             context_texts.append(text)
         else:
             logger.warning("Text of chunk with ID %s is missing", item_id)
