@@ -2,8 +2,14 @@
 
 import logging
 from unittest.mock import MagicMock
+import inspect
 import pytest
-from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
+from api.services.chat_service import (
+    _execute_search_tools,
+    generate_answer,
+    get_chatbot_reply,
+    retrieve_context,
+)
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse
 
@@ -233,3 +239,80 @@ def get_mock_documents(doc_type: str):
             }
         ]
     return []
+
+
+
+# Tests for _execute_search_tools — Bug fix #241
+
+
+def test_execute_search_tools_unknown_tool_name_is_skipped(mocker):
+    """Test that unknown tool names are skipped gracefully without crashing."""
+    mock_logger = mocker.patch("api.services.chat_service.logger")
+    mock_registry = {}
+    mocker.patch("api.services.chat_service.TOOL_REGISTRY", mock_registry)
+    tool_calls = [{"tool": "nonexistent_tool", "params": {"query": "test"}}]
+    result = _execute_search_tools(tool_calls)
+    assert result == ""
+    mock_logger.warning.assert_called_once_with(
+        "Unknown tool name '%s'. Skipping.", "nonexistent_tool"
+    )
+
+
+def test_execute_search_tools_logger_injected_automatically(mocker):
+    """Test that logger is automatically injected into tools that require it."""
+    mock_tool = mocker.MagicMock(return_value="tool result")
+    mocker.patch("api.services.chat_service.TOOL_REGISTRY", {"mock_tool": mock_tool})
+    mocker.patch(
+        "api.services.chat_service.inspect.signature",
+        return_value=inspect.signature(lambda query, logger: None)
+    )
+    _execute_search_tools([{"tool": "mock_tool", "params": {"query": "test"}}])
+    assert "logger" in mock_tool.call_args[1]
+
+
+def test_execute_search_tools_no_logger_not_injected(mocker):
+    """Test that logger is NOT injected into tools that do not require it."""
+    mock_tool = mocker.MagicMock(return_value="result")
+    mocker.patch("api.services.chat_service.TOOL_REGISTRY", {"mock_tool": mock_tool})
+    mocker.patch(
+        "api.services.chat_service.inspect.signature",
+        return_value=inspect.signature(lambda query: None)
+    )
+    _execute_search_tools([{"tool": "mock_tool", "params": {"query": "test"}}])
+    assert "logger" not in mock_tool.call_args[1]
+
+
+def test_execute_search_tools_returns_combined_results(mocker):
+    """Test that results from multiple tools are combined correctly."""
+    mock_a = mocker.MagicMock(return_value="result A")
+    mock_b = mocker.MagicMock(return_value="result B")
+    mocker.patch("api.services.chat_service.TOOL_REGISTRY", {"tool_a": mock_a, "tool_b": mock_b})
+    mocker.patch(
+        "api.services.chat_service.inspect.signature",
+        return_value=inspect.signature(lambda query: None)
+    )
+    result = _execute_search_tools([
+        {"tool": "tool_a", "params": {"query": "test"}},
+        {"tool": "tool_b", "params": {"query": "test"}},
+    ])
+    assert "result A" in result
+    assert "result B" in result
+
+
+def test_execute_search_tools_mixed_valid_and_invalid(mocker):
+    """Test that valid tools still execute when mixed with unknown tool names."""
+    mock_logger = mocker.patch("api.services.chat_service.logger")
+    mock_tool = mocker.MagicMock(return_value="valid result")
+    mocker.patch("api.services.chat_service.TOOL_REGISTRY", {"valid_tool": mock_tool})
+    mocker.patch(
+        "api.services.chat_service.inspect.signature",
+        return_value=inspect.signature(lambda query: None)
+    )
+    result = _execute_search_tools([
+        {"tool": "unknown_tool", "params": {"query": "test"}},
+        {"tool": "valid_tool", "params": {"query": "test"}},
+    ])
+    assert "valid result" in result
+    mock_logger.warning.assert_called_once_with(
+        "Unknown tool name '%s'. Skipping.", "unknown_tool"
+    )

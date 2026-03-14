@@ -1,6 +1,7 @@
 """Chat service layer responsible for processing the requests forwarded by the controller."""
 
 import ast
+import inspect
 import json
 import re
 from typing import AsyncGenerator, List, Optional
@@ -333,6 +334,13 @@ def _execute_search_tools(tool_calls) -> str:
     for call in tool_calls:
         tool_name, params = call.get("tool"), call.get("params")
         tool_fn = TOOL_REGISTRY.get(tool_name)
+
+        if tool_fn is None:
+            logger.warning("Unknown tool name '%s'. Skipping.", tool_name)
+            continue
+
+        if "logger" in inspect.signature(tool_fn).parameters:
+            params = {**params, "logger": logger}
 
         result = tool_fn(**params)
         retrieved_results.append({
