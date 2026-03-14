@@ -1,8 +1,9 @@
 """Shared utilities for reading/writing JSON and standardizing chunk format."""
-
+import os
 import json
 import uuid
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
 
 def save_chunks(output_path, all_chunks, logger):
     """Save chunk list to JSON file and log the outcome."""
@@ -13,16 +14,22 @@ def save_chunks(output_path, all_chunks, logger):
     except OSError as e:
         logger.error("File error while writing %s: %s", output_path, e)
 
+
 def read_json_file(input_path, logger):
     """Load JSON file and return data, with proper error handling."""
+    if not os.path.exists(input_path):
+        logger.warning("File not found, skipping: %s", input_path)
+        return []
+
     try:
         with open(input_path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except (FileNotFoundError, OSError) as e:
+    except OSError as e:
         logger.error("File error while reading %s: %s", input_path, e)
     except json.JSONDecodeError as e:
         logger.error("JSON decode error in %s: %s", input_path, e)
     return []
+
 
 def build_chunk_dict(chunk_text, metadata, code_blocks):
     """Create a standardized chunk dictionary."""
@@ -32,6 +39,7 @@ def build_chunk_dict(chunk_text, metadata, code_blocks):
         "metadata": metadata,
         "code_blocks": code_blocks
     }
+
 
 def get_text_splitter(chunk_size, chunk_overlap, separators=None):
     """
