@@ -19,18 +19,6 @@ N_PROBE = 20
 
 
 def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
-    """
-    Build and return a FAISS IndexIVFFlat index from the given vectors.
-
-    Args:
-        vectors (np.ndarray): 2D array of shape (n_samples, dim) with float32 vectors.
-        nlist (int): Number of clusters (centroids) to use in the index.
-        nprobe (int): Number of clusters to probe during a search.
-        logger (logging.Logger): Logger for status messages.
-
-    Returns:
-        faiss.IndexIVFFlat: A trained FAISS IVF index with added vectors.
-    """
     if not isinstance(vectors, np.ndarray):
         raise TypeError("Vectors must be an instance of numpy.ndarray.")
     if vectors.ndim != 2:
@@ -39,15 +27,24 @@ def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
         raise TypeError(f"Vectors must be float32, got dtype {vectors.dtype}.")
 
     d = vectors.shape[1]
-    quantizer = faiss.IndexFlatL2(d)
-    index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_L2)
+    n_samples = vectors.shape[0]
 
-    logger.info("FAISS index training started...")
-    index.train(vectors)  # pylint: disable=no-value-for-parameter
-    logger.info("FAISS index training completed.")
-    index.nprobe = nprobe
+    # --- ARCHITECTURAL FIX START ---
+    # We check if we have enough data points to satisfy the cluster requirement.
+    # Typically, FAISS needs at least 'nlist' points to train.
+    if n_samples < nlist:
+        logger.warning(f"Dataset size ({n_samples}) is smaller than nlist ({nlist}). Falling back to IndexFlatL2.")
+        index = faiss.IndexFlatL2(d)
+    else:
+        quantizer = faiss.IndexFlatL2(d)
+        index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_L2)
+        logger.info("FAISS index training started...")
+        index.train(vectors)
+        logger.info("FAISS index training completed.")
+        index.nprobe = nprobe
+    # --- ARCHITECTURAL FIX END ---
+
     index.add(vectors)  # pylint: disable=no-value-for-parameter
-
     return index
 
 

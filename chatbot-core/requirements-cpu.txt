@@ -26,7 +26,7 @@ torchvision==0.22.1
 # Vector Store & Retrieval
 faiss-cpu==1.13.2
 # Optional retriever extras; comment out if build tools unavailable
-retriv @ git+https://github.com/giovanni-vaccarino/retriv.git@remove-pystemmer
+# retriv @ git+https://github.com/giovanni-vaccarino/retriv.git@remove-pystemmer
 
 # Data Processing
 numpy==2.2.6
@@ -95,8 +95,8 @@ pylint==3.3.7
 isort==6.0.1
 
 # Numba JIT (required by vendored retriv dense retriever)
-numba==0.63.1
-llvmlite==0.46.0
+# numba==0.63.1
+# llvmlite==0.46.0
 
 # System utilities
 psutil==7.1.3

@@ -91,7 +91,10 @@ def extract_chunks(docs):
     text_splitter = get_text_splitter(CHUNK_SIZE, CHUNK_OVERLAP)
 
     for url, html in docs.items():
-        page_chunks = process_page(url, html, text_splitter)
+        ########## We take the first (and only) value inside that nested dictionary
+        actual_html_string = list(html.values())[0] 
+        page_chunks = process_page(url, actual_html_string, text_splitter)
+        ###########
         all_chunks.extend(page_chunks)
 
     return all_chunks
