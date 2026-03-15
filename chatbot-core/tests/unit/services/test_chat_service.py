@@ -244,7 +244,6 @@ def get_mock_documents(doc_type: str):
 
 def test_execute_search_tools_skips_unknown_tool(caplog):
     """Test that unknown/hallucinated tool names do not crash the pipeline."""
-    import logging
     tool_calls = [
         {"tool": "hallucinated_tool_name", "params": {"query": "test"}}]
 
@@ -259,11 +258,11 @@ def test_execute_search_tools_injects_logger_conditionally(mocker):
     """Test that logger is only injected into tools that declare it in their signature."""
 
     # Dummy tools to simulate registry behavior
-    def tool_needs_logger(query, logger):
+    def tool_needs_logger(query, logger):  # pylint: disable=unused-argument
         assert logger is not None
         return "logged result"
 
-    def tool_no_logger(query):
+    def tool_no_logger(query):  # pylint: disable=unused-argument
         return "unlogged result"
 
     mocker.patch(
