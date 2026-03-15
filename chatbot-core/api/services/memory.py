@@ -15,7 +15,6 @@ from api.services.sessionmanager import (
     delete_session_file,
     load_session,
     session_exists_in_json,
-    append_message,
     get_persisted_session_ids
 )
 
@@ -39,10 +38,12 @@ class BoundedChatMessageHistory(ChatMessageHistory):
             del self.messages[:-2]
 
     def add_message(self, message):
+        """Add a single message and enforce limit."""
         super().add_message(message)
         self._enforce_limit()
 
     def add_messages(self, messages):
+        """Add a single messages and enforce limit."""
         super().add_messages(messages)
         self._enforce_limit()
 
@@ -129,7 +130,7 @@ async def get_session_async(session_id: str) -> Optional[ConversationBufferWindo
     return await asyncio.to_thread(get_session, session_id)
 
 
-def persist_session(session_id: str) -> None:
+def persist_session(session_id: str) -> None:  # pylint: disable=unused-argument
     """
     Persist the current session messages to disk.
     """

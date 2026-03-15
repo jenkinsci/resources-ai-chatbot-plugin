@@ -1,4 +1,5 @@
 """Unit Tests for vectorstore_utils."""
+# pylint: disable=redefined-outer-name
 
 import pickle
 import pytest
@@ -85,8 +86,10 @@ def test_save_metadata_success(mocker, tmp_path):
     local_mock_logger.info.assert_called_once_with(
         "Metadata saved to %s", str(path))
 
+# NOTE: Removed `mocker` from the remaining functions below
 
-def test_load_metadata_success(mocker, tmp_path, mock_logger):
+
+def test_load_metadata_success(tmp_path, mock_logger):
     """Test loading metadata successfully, returning the metadata."""
     data = [{"chunk_text": "Jenkins on the moon"}]
     path = tmp_path / "metadata.pkl"
@@ -100,7 +103,7 @@ def test_load_metadata_success(mocker, tmp_path, mock_logger):
     assert result == data
 
 
-def test_load_metadata_file_not_found(mocker, tmp_path, mock_logger):
+def test_load_metadata_file_not_found(tmp_path, mock_logger):
     """Testing FileNotFoundError during metadata load."""
     path = tmp_path / "no_metadata.pkl"
 
@@ -111,7 +114,7 @@ def test_load_metadata_file_not_found(mocker, tmp_path, mock_logger):
     assert result is None
 
 
-def test_load_metadata_deserializing_error(mocker, tmp_path, mock_logger):
+def test_load_metadata_deserializing_error(tmp_path, mock_logger):
     """Test unpickling error during metadata load."""
     path = tmp_path / "corrupt_metadata.pkl"
     with open(path, "wb") as f:
