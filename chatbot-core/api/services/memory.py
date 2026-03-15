@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timedelta
 from threading import Lock
 from typing import Optional
+from langchain.schema import HumanMessage, AIMessage, SystemMessage
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.memory.chat_message_histories.in_memory import ChatMessageHistory
 from api.config.loader import CONFIG
