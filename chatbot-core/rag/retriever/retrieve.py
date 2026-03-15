@@ -8,6 +8,7 @@ from api.config.loader import CONFIG
 
 
 def get_relevant_documents(query, model, logger, source_name, top_k=5):
+    """Retrieve the most relevant documents for a given query."""
     if not query.strip():
         logger.warning("Empty query received.")
         return [], []

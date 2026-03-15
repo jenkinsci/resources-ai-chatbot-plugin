@@ -11,6 +11,9 @@ os.makedirs(_SESSION_DIRECTORY, mode=0o755, exist_ok=True)
 
 _FILE_LOCK = Lock()
 
+MAX_HISTORY_LENGTH = 20
+MAX_MESSAGE_CHARS = 4000
+
 
 def _get_session_file_path(session_id: str) -> str:
     """
@@ -81,8 +84,6 @@ def append_message(session_id: str, messages: list) -> None:
     Safely appends new messages to a session's JSON file.
     Enforces strict size and count limits to prevent Disk Exhaustion DoS.
     """
-    MAX_HISTORY_LENGTH = 20
-    MAX_MESSAGE_CHARS = 4000  # ~1000 words max per message
 
     # 1. Load the existing history from the disk
     current_history = load_session(session_id)

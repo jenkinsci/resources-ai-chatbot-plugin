@@ -5,8 +5,8 @@ Handles persistence and logging for vector search storage.
 
 import os
 import pickle
-import faiss
 from functools import lru_cache
+import faiss
 from utils import LoggerFactory
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(

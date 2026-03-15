@@ -14,6 +14,8 @@ from api.services.sessionmanager import (
     delete_session_file,
     load_session,
     session_exists_in_json,
+    append_message,
+    get_persisted_session_ids
 )
 
 
@@ -22,6 +24,8 @@ _lock = Lock()
 
 
 class BoundedChatMessageHistory(ChatMessageHistory):
+    """A bounded chat message history that keeps only the last N messages."""
+
     def _enforce_limit(self):
         if len(self.messages) > 2:
             del self.messages[:-2]
@@ -113,7 +117,6 @@ def persist_session(session_id: str) -> None:
     """
     Persist the current session messages to disk.
     """
-    pass
 
 
 def delete_session(session_id: str) -> bool:
@@ -155,6 +158,7 @@ def reset_sessions():
     """Helper function to clear all sessions. Useful for testing."""
     with _lock:
         _sessions.clear()
+
 
 def get_last_accessed(session_id: str) -> datetime | None:
     """
