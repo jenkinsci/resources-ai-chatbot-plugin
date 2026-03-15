@@ -29,7 +29,7 @@ def test_reply_to_existing_session(client, mock_llm_provider, mock_get_relevant_
     mock_get_relevant_documents.return_value = get_relevant_documents_output()
 
     payload = {"message": "Hello"}
-    response = client.post(f"/sessions/{session_id}/message", json=payload)
+    response = client.post(f"/sessions/{session_id}/message", data=payload)
 
     assert response.status_code == 200
     try:
@@ -41,7 +41,7 @@ def test_reply_to_existing_session(client, mock_llm_provider, mock_get_relevant_
 def test_reply_to_nonexistent_session(client):
     """Should return 404 when replying to a non-existent session."""
     payload = {"message": "Hello"}
-    response = client.post("/sessions/nonexistent-session/message", json=payload)
+    response = client.post("/sessions/nonexistent-session/message", data=payload)
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Session not found."}
@@ -72,7 +72,7 @@ def test_reply_after_session_deleted(client):
     client.delete(f"/sessions/{session_id}")
 
     payload = {"message": "Is anyone there?"}
-    response = client.post(f"/sessions/{session_id}/message", json=payload)
+    response = client.post(f"/sessions/{session_id}/message", data=payload)
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Session not found."}
@@ -84,11 +84,10 @@ def test_reply_with_empty_message(client):
     session_id = create_resp.json()["session_id"]
 
     payload = {"message": "   "}
-    response = client.post(f"/sessions/{session_id}/message", json=payload)
+    response = client.post(f"/sessions/{session_id}/message", data=payload)
 
     assert response.status_code == 422
-    errors = response.json()["detail"]
-    assert any("Message cannot be empty." in e["msg"] for e in errors)
+    assert response.json()["detail"] == "Either a message or at least one file must be provided."
 
 
 def test_full_chat_lifecycle(client, mock_llm_provider, mock_get_relevant_documents):
@@ -101,7 +100,7 @@ def test_full_chat_lifecycle(client, mock_llm_provider, mock_get_relevant_docume
     session_id = create_resp.json()["session_id"]
 
     payload = {"message": "Hello"}
-    reply_resp = client.post(f"/sessions/{session_id}/message", json=payload)
+    reply_resp = client.post(f"/sessions/{session_id}/message", data=payload)
     assert reply_resp.status_code == 200
     assert reply_resp.json()["reply"] == "Hello from the bot!"
 
@@ -122,7 +121,7 @@ def test_multiple_messages_in_session(client, mock_llm_provider, mock_get_releva
     ]
     session_id = client.post("/sessions").json()["session_id"]
     for i in range(3):
-        resp = client.post(f"/sessions/{session_id}/message", json={"message": f"Msg {i+1}"})
+        resp = client.post(f"/sessions/{session_id}/message", data={"message": f"Msg {i+1}"})
         assert resp.status_code == 200
         assert resp.json()["reply"] == f"Reply {i+1}"
 
@@ -135,14 +134,14 @@ def test_multiple_sessions_are_isolated(client, mock_llm_provider, mock_get_rele
     active_session = client.post("/sessions").json()["session_id"]
     deleted_session = client.post("/sessions").json()["session_id"]
 
-    client.post(f"/sessions/{active_session}/message", json={"message": "Hi A"})
-    client.post(f"/sessions/{deleted_session}/message", json={"message": "Hi B"})
+    client.post(f"/sessions/{active_session}/message", data={"message": "Hi A"})
+    client.post(f"/sessions/{deleted_session}/message", data={"message": "Hi B"})
 
     client.delete(f"/sessions/{deleted_session}")
     response_active_session = client.post(f"/sessions/{active_session}/message",
-                                json={"message": "Message again"})
+                                data={"message": "Message again"})
     response_deleted_session = client.post(f"/sessions/{deleted_session}/message",
-                                json={"message": "Should be off"})
+                                data={"message": "Should be off"})
 
     assert response_active_session.status_code == 200
     assert response_deleted_session.status_code == 404
@@ -166,7 +165,7 @@ def test_get_history_with_messages(client, mock_llm_provider, mock_get_relevant_
     mock_get_relevant_documents.return_value = get_relevant_documents_output()
 
     session_id = client.post("/sessions").json()["session_id"]
-    client.post(f"/sessions/{session_id}/message", json={"message": "Hello"})
+    client.post(f"/sessions/{session_id}/message", data={"message": "Hello"})
 
     response = client.get(f"/sessions/{session_id}/message")
     assert response.status_code == 200
