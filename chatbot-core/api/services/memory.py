@@ -22,6 +22,13 @@ from api.services.sessionmanager import (
 
 _sessions = {}
 _lock = Lock()
+_ROLE_TO_MESSAGE_CLASS = {
+    "human": HumanMessage,
+    "user": HumanMessage,
+    "ai": AIMessage,
+    "assistant": AIMessage,
+    "system": SystemMessage,
+}
 
 
 class BoundedChatMessageHistory(ChatMessageHistory):
@@ -67,7 +74,7 @@ def get_session(session_id: str) -> Optional[ConversationBufferWindowMemory]:
         session_id (str): The session identifier.
 
     Returns:
-        ConversationBufferMemory | None: The memory object if found, else None.
+        Optional[ConversationBufferMemory]: The memory object if found, else None.
     """
 
     with _lock:
@@ -177,7 +184,7 @@ def get_last_accessed(session_id: str) -> datetime | None:
         session_id (str): The session identifier.
 
     Returns:
-        datetime | None: The last accessed timestamp if session exists, else None.
+        Optional[datetime]: The last accessed timestamp if session exists, else None.
     """
     with _lock:
         session_data = _sessions.get(session_id)
