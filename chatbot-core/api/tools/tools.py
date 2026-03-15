@@ -86,15 +86,39 @@ def search_jenkins_docs(query: str, keywords: str, logger) -> str:
         top_k=retrieval_config["top_k_docs"],
         logger=logger
     )
-
-def search_stackoverflow_threads(query: str) -> str:
+#-> third change
+def search_stackoverflow_threads(query: str, keywords: str, logger) -> str:
     """
-    Stackoverflow Search tool
-    """
-    if query:
-        pass
-    return "Nothing relevant"
+    Search tool for Stack Overflow threads. Exploits both a sparse and dense
+    search, resulting in a hybrid search.
 
+    Args:
+        query (str): The user query.
+        keywords (str): Keywords extracted from the user query.
+        logger: Logger object.
+
+    Returns:
+        str: The result of the Stack Overflow search tool.
+    """
+    source_name = CONFIG["tool_names"]["stackoverflow"]
+    data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
+        retrieve_documents(
+            query=query,
+            keywords=keywords,
+            logger=logger,
+            source_name=source_name,
+            embedding_model=EMBEDDING_MODEL
+        )
+    )
+
+    return extract_top_chunks(
+        data_retrieved_semantic,
+        scores_semantic,
+        data_retrieved_keyword,
+        scores_keyword,
+        top_k=retrieval_config["top_k_stackoverflow"],
+        logger=logger
+    )
 def search_community_threads(query: str, keywords: str, logger) -> str:
     """
     Search tool for the community discourse threads. Exploits both a sparse and 
