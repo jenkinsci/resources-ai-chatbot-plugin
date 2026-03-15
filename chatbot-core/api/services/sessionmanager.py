@@ -4,11 +4,12 @@ import json
 import uuid
 from threading import Lock, get_ident
 
-
+MAX_HISTORY_LENGTH = 20
+MAX_MESSAGE_CHARS = 4000
 
 _SESSION_DIRECTORY = os.getenv("SESSION_FILE_PATH", "data/sessions")
 
-os.makedirs(_SESSION_DIRECTORY,mode = 0o755, exist_ok=True)
+os.makedirs(_SESSION_DIRECTORY, mode=0o755, exist_ok=True)
 
 _FILE_LOCK = Lock()
 
@@ -38,7 +39,7 @@ def _load_session_from_json(session_id: str) -> list:
         return json.load(f)
 
 
-def _append_message_to_json(session_id: str, messages:list) -> None:
+def _append_message_to_json(session_id: str, messages: list) -> None:
     """
     Persist the current session messages as a full snapshot using atomic write.
     """
@@ -55,7 +56,6 @@ def _append_message_to_json(session_id: str, messages:list) -> None:
         os.replace(tmp_path, path)
 
 
-
 def _delete_session(session_id: str) -> bool:
     """
     Delete the persisted session file.
@@ -68,6 +68,7 @@ def _delete_session(session_id: str) -> bool:
             return True
     return False
 
+
 def session_exists_in_json(session_id: str) -> bool:
     """
     Check if a session file exists on disk.
@@ -77,17 +78,57 @@ def session_exists_in_json(session_id: str) -> bool:
 
 # Public API functions
 
+
 def append_message(session_id: str, messages: list) -> None:
     """
-    Public function to append messages to a session's JSON file.
+    Safely appends new messages to a session's JSON file.
+    Enforces strict size and count limits to prevent Disk Exhaustion DoS.
     """
-    _append_message_to_json(session_id, messages)
+
+    # 1. Load the existing history from the disk
+    current_history = load_session(session_id)
+    if not current_history:
+        current_history = []
+
+    # 2. Sanitize and append the new messages
+    for msg in messages:
+        content = str(msg.get("content", ""))
+
+        # ARMOR LAYER 1: Truncate massive malicious payloads
+        if len(content) > MAX_MESSAGE_CHARS:
+            content = content[:MAX_MESSAGE_CHARS] + \
+                "\n...[Content Truncated by System]"
+
+        safe_msg = {
+            "role": msg.get("role", "unknown"),
+            "content": content
+        }
+        current_history.append(safe_msg)
+
+    # 3. ARMOR LAYER 2: Enforce the sliding window (keep last N messages)
+    if len(current_history) > MAX_HISTORY_LENGTH:
+        current_history = current_history[-MAX_HISTORY_LENGTH:]
+
+    # 4. Perform an atomic write to prevent file corruption
+    path = _get_session_file_path(session_id)
+    if not path:
+        return  # Invalid session ID
+
+    tmp_path = f"{path}.tmp"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    with _FILE_LOCK:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(current_history, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, path)
+
 
 def load_session(session_id: str) -> list:
     """
     Public function to load a session's history from its JSON file.
     """
     return _load_session_from_json(session_id)
+
 
 def delete_session_file(session_id: str) -> bool:
     """

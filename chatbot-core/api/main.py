@@ -19,8 +19,10 @@ async def periodic_session_cleanup():
     """
     Background task that periodically cleans up expired sessions.
     """
-    cleanup_interval = CONFIG.get("session", {}).get("cleanup_interval_seconds", 3600)
-    logger.info("Starting periodic session cleanup task (interval: %ss)", cleanup_interval)
+    cleanup_interval = CONFIG.get("session", {}).get(
+        "cleanup_interval_seconds", 3600)
+    logger.info(
+        "Starting periodic session cleanup task (interval: %ss)", cleanup_interval)
 
     while True:
         await asyncio.sleep(cleanup_interval)

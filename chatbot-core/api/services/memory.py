@@ -7,17 +7,16 @@ import uuid
 from datetime import datetime, timedelta
 from threading import Lock
 from typing import Optional
-from langchain.memory import ConversationBufferMemory
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain.schema import HumanMessage, AIMessage, SystemMessage
+from langchain.memory import ConversationBufferWindowMemory
+from langchain.memory.chat_message_histories.in_memory import ChatMessageHistory
 from api.config.loader import CONFIG
-from api.services.sessionmanager import(
+from api.services.sessionmanager import (
     delete_session_file,
     load_session,
     session_exists_in_json,
-    append_message,
     get_persisted_session_ids
 )
-# sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
 
 
 _sessions = {}
@@ -31,47 +30,43 @@ _ROLE_TO_MESSAGE_CLASS = {
 }
 
 
+class BoundedChatMessageHistory(ChatMessageHistory):
+    """A bounded chat message history that keeps only the last N messages."""
+
+    def _enforce_limit(self):
+        if len(self.messages) > 2:
+            del self.messages[:-2]
+
+    def add_message(self, message):
+        """Add a single message and enforce limit."""
+        super().add_message(message)
+        self._enforce_limit()
+
+    def add_messages(self, messages):
+        """Add a single messages and enforce limit."""
+        super().add_messages(messages)
+        self._enforce_limit()
+
+
 def init_session() -> str:
     """
     Initialize a new chat session and store its memory object.
-
-    Returns:
-    str: A newly generated UUID representing the session ID.
+    ...
     """
     session_id = str(uuid.uuid4())
     with _lock:
         _sessions[session_id] = {
-            "memory": ConversationBufferMemory(return_messages=True),
+            "memory": ConversationBufferWindowMemory(
+                k=10,
+                return_messages=True,
+                chat_memory=BoundedChatMessageHistory()  # Injecting the hard limit
+            ),
             "last_accessed": datetime.now()
         }
     return session_id
 
 
-def _restore_persisted_message(memory: ConversationBufferMemory, message: object) -> None:
-    """
-    Restore one persisted message into LangChain memory.
-
-    Persisted snapshots are dicts with {"role": ..., "content": ...}.
-    We convert them back to message objects so downstream code can safely
-    rely on attributes like msg.type and msg.content.
-    """
-    if not isinstance(message, dict):
-        return
-
-    role = message.get("role", "human")
-    normalized_role = role.lower() if isinstance(role, str) else "human"
-
-    content = message.get("content", "")
-    if content is None:
-        content = ""
-    elif not isinstance(content, str):
-        content = str(content)
-
-    message_class = _ROLE_TO_MESSAGE_CLASS.get(normalized_role, HumanMessage)
-    memory.chat_memory.add_message(message_class(content=content))
-
-
-def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
+def get_session(session_id: str) -> Optional[ConversationBufferWindowMemory]:
     """
     Retrieve the chat session memory for the given session ID.
     Lazily restores from disk if missing in memory.
@@ -87,7 +82,7 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
 
         session_data = _sessions.get(session_id)
 
-        if session_data :
+        if session_data:
             session_data["last_accessed"] = datetime.now()
             return session_data["memory"]
 
@@ -95,9 +90,30 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
         if not history:
             return None
 
-        memory = ConversationBufferMemory(return_messages=True)
+        # PATCH: Use bounded window memory for restored sessions too
+        memory = ConversationBufferWindowMemory(
+            k=10,
+            return_messages=True,
+            chat_memory=BoundedChatMessageHistory()  # <-- You MUST inject it here too!
+        )
+
+        # When we load history from disk, LangChain's window memory will
+        # automatically truncate older messages as we add them here.
+        # When we load history from disk, we handle both dicts and LangChain objects
         for msg in history:
-            _restore_persisted_message(memory, msg)
+            # Handle dictionary format (JSON) or LangChain object format
+            if isinstance(msg, dict):
+                content = msg.get("content", "")
+                role = msg.get("role", "human")
+            else:
+                content = getattr(msg, "content", "")
+                role = "human" if msg.type == "human" else "ai"
+
+            # Add to the bounded memory
+            if role == "human":
+                memory.chat_memory.add_user_message(content)
+            else:
+                memory.chat_memory.add_ai_message(content)
 
         _sessions[session_id] = {
             "memory": memory,
@@ -106,28 +122,18 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
 
         return memory
 
-async def get_session_async(session_id: str) -> Optional[ConversationBufferMemory]:
+
+async def get_session_async(session_id: str) -> Optional[ConversationBufferWindowMemory]:
     """
     Async wrapper for get_session to prevent event loop blocking.
     """
     return await asyncio.to_thread(get_session, session_id)
 
 
-def persist_session(session_id: str)-> None:
+def persist_session(session_id: str) -> None:  # pylint: disable=unused-argument
     """
     Persist the current session messages to disk.
-
-    Args:
-        session_id (str): The session identifier.
     """
-    session_data = get_session(session_id)
-    if session_data:
-        messages = [
-            {"role": msg.type, "content": msg.content}
-            for msg in session_data.chat_memory.messages
-        ]
-        append_message(session_id, messages)
-
 
 
 def delete_session(session_id: str) -> bool:
@@ -171,24 +177,7 @@ def reset_sessions():
         _sessions.clear()
 
 
-def reload_persisted_sessions() -> int:
-    """
-    Load all persisted sessions from disk into memory.
-    Called once at application startup so that session_exists()
-    can remain a fast, memory-only check.
-
-    Returns:
-        int: The number of sessions restored.
-    """
-    session_ids = get_persisted_session_ids()
-    loaded = 0
-    for session_id in session_ids:
-        if get_session(session_id) is not None:
-            loaded += 1
-    return loaded
-
-
-def get_last_accessed(session_id: str) -> Optional[datetime]:
+def get_last_accessed(session_id: str) -> datetime | None:
     """
     Get the last accessed timestamp for a given session.
 
@@ -207,8 +196,8 @@ def get_last_accessed(session_id: str) -> Optional[datetime]:
         if not history:
             return None
 
-
     return history["last_accessed"]
+
 
 def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
     """
@@ -236,6 +225,7 @@ def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
 
     return False
 
+
 def get_session_count() -> int:
     """
     Get the total number of active sessions (for testing purposes).
@@ -245,6 +235,7 @@ def get_session_count() -> int:
     """
     with _lock:
         return len(_sessions)
+
 
 def cleanup_expired_sessions() -> int:
     """
@@ -270,3 +261,16 @@ def cleanup_expired_sessions() -> int:
                 delete_session_file(session_id)
 
     return len(expired_session_ids)
+
+
+def reload_persisted_sessions() -> int:
+    """
+    Load all persisted sessions from disk into memory.
+    Called once at application startup.
+    """
+    session_ids = get_persisted_session_ids()
+    loaded = 0
+    for session_id in session_ids:
+        if get_session(session_id) is not None:
+            loaded += 1
+    return loaded
