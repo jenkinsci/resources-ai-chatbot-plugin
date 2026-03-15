@@ -19,6 +19,20 @@ N_PROBE = 20
 
 
 def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
+
+    """
+    Build and return a FAISS IndexIVFFlat index from the given vectors.
+
+    Args:
+        vectors (np.ndarray): 2D array of shape (n_samples, dim) with float32 vectors.
+        nlist (int): Number of clusters (centroids) to use in the index.
+        nprobe (int): Number of clusters to probe during a search.
+        logger (logging.Logger): Logger for status messages.
+
+    Returns:
+        faiss.IndexIVFFlat: A trained FAISS IVF index with added vectors.
+    """
+
     if not isinstance(vectors, np.ndarray):
         raise TypeError("Vectors must be an instance of numpy.ndarray.")
     if vectors.ndim != 2:
