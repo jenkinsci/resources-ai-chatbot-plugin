@@ -47,8 +47,10 @@ def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
     # We check if we have enough data points to satisfy the cluster requirement.
     # Typically, FAISS needs at least 'nlist' points to train.
     if n_samples < nlist:
-        logger.warning(f"Dataset size ({n_samples}) is smaller than nlist ({nlist}). Falling back to IndexFlatL2.")
-        index = faiss.IndexFlatL2(d)
+         logger.warning(
+            "Dataset size (%d) is smaller than nlist (%d). Falling back to IndexFlatL2.",
+            n_samples, nlist
+        )
     else:
         quantizer = faiss.IndexFlatL2(d)
         index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_L2)
