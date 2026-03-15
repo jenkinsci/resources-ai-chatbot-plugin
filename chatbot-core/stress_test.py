@@ -1,3 +1,4 @@
+# pylint: skip-file
 import threading
 import requests
 import sys
@@ -10,6 +11,7 @@ session_id = sys.argv[1]
 url = f"http://127.0.0.1:8000/api/chatbot/sessions/{session_id}/message"
 headers = {"Content-Type": "application/json"}
 
+
 def fire_payload(thread_id):
     payload = {"message": f"Concurrency Test {thread_id}"}
     try:
@@ -17,6 +19,7 @@ def fire_payload(thread_id):
         print(f"Thread {thread_id} returned HTTP {response.status_code}")
     except Exception as e:
         print(f"Thread {thread_id} failed: {e}")
+
 
 threads = []
 for i in range(1, 4):

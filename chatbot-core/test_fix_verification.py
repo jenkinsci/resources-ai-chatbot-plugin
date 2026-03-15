@@ -1,3 +1,4 @@
+# pylint: skip-file
 from api.prompts.prompt_builder import build_prompt
 from langchain.memory import ConversationBufferMemory
 

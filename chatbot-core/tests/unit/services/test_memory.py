@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 import pytest
 from langchain.memory import ConversationBufferWindowMemory
 
-from api.prompts.prompt_builder import build_prompt
 from api.services import memory
 
 
