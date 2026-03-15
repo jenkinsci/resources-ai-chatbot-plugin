@@ -91,13 +91,21 @@ def get_session(session_id: str) -> Optional[ConversationBufferWindowMemory]:
 
         # When we load history from disk, LangChain's window memory will
         # automatically truncate older messages as we add them here.
+        # When we load history from disk, we handle both dicts and LangChain objects
         for msg in history:
-            memory.chat_memory.add_message(
-                {
-                    "role": msg["role"],
-                    "content": msg["content"],
-                }
-            )
+            # Handle dictionary format (JSON) or LangChain object format
+            if isinstance(msg, dict):
+                content = msg.get("content", "")
+                role = msg.get("role", "human")
+            else:
+                content = getattr(msg, "content", "")
+                role = "human" if msg.type == "human" else "ai"
+
+            # Add to the bounded memory
+            if role == "human":
+                memory.chat_memory.add_user_message(content)
+            else:
+                memory.chat_memory.add_ai_message(content)
 
         _sessions[session_id] = {
             "memory": memory,
@@ -245,3 +253,16 @@ def cleanup_expired_sessions() -> int:
                 delete_session_file(session_id)
 
     return len(expired_session_ids)
+
+
+def reload_persisted_sessions() -> int:
+    """
+    Load all persisted sessions from disk into memory.
+    Called once at application startup.
+    """
+    session_ids = get_persisted_session_ids()
+    loaded = 0
+    for session_id in session_ids:
+        if get_session(session_id) is not None:
+            loaded += 1
+    return loaded

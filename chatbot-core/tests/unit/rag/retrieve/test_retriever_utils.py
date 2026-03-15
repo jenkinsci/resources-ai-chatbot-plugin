@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from rag.retriever.retriever_utils import load_vector_index, search_index, VECTOR_STORE_DIR
 
+
 def test_load_vector_index_returns_index_and_metadata(mocker):
     """Test load_vector_index loads index and metadata correctly."""
     mock_logger = mocker.Mock()
@@ -22,11 +23,13 @@ def test_load_vector_index_returns_index_and_metadata(mocker):
 
     index, metadata = load_vector_index(mock_logger, source_name)
 
-    expected_index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
-    expected_metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+    expected_index_path = os.path.join(
+        VECTOR_STORE_DIR, f"{source_name}_index.idx")
+    expected_metadata_path = os.path.join(
+        VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
 
-    mock_load_index.assert_called_once_with(expected_index_path, mock_logger)
-    mock_load_metadata.assert_called_once_with(expected_metadata_path, mock_logger)
+    mock_load_index.assert_called_once_with(expected_index_path)
+    mock_load_metadata.assert_called_once_with(expected_metadata_path)
     assert index == mock_index
     assert metadata == mock_metadata
 
@@ -141,7 +144,7 @@ def test_search_index_warns_when_metadata_longer_than_index(mocker):
     )
 
     mock_logger.warning.assert_any_call(
-        "Index contains %d vectors but metadata has %d entries." \
+        "Index contains %d vectors but metadata has %d entries."
         " Some results may be missing or inconsistent.",
         1,
         2

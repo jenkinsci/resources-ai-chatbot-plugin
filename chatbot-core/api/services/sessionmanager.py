@@ -4,15 +4,14 @@ import json
 import uuid
 from threading import Lock
 
+MAX_HISTORY_LENGTH = 20
+MAX_MESSAGE_CHARS = 4000
 
 _SESSION_DIRECTORY = os.getenv("SESSION_FILE_PATH", "data/sessions")
 
 os.makedirs(_SESSION_DIRECTORY, mode=0o755, exist_ok=True)
 
 _FILE_LOCK = Lock()
-
-MAX_HISTORY_LENGTH = 20
-MAX_MESSAGE_CHARS = 4000
 
 
 def _get_session_file_path(session_id: str) -> str:

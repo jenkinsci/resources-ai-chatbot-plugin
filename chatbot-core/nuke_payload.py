@@ -1,3 +1,4 @@
+# pylint: skip-file
 import requests
 import sys
 
@@ -10,7 +11,7 @@ url = f"http://127.0.0.1:8000/api/chatbot/sessions/{session_id}/message"
 headers = {"Content-Type": "application/json"}
 
 print("Generating 500,000 character payload...")
-massive_string = "A" * 500000 
+massive_string = "A" * 500000
 payload = {"message": massive_string}
 
 print("Firing payload...")
