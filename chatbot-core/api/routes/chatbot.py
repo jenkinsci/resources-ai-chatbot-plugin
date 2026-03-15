@@ -34,7 +34,6 @@ from fastapi import (
 # Local application imports
 # =========================
 from api.models.schemas import (
-    ChatRequest,
     ChatResponse,
     DeleteResponse,
     MessageHistoryResponse,

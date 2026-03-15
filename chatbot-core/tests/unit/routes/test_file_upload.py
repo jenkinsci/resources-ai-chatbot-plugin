@@ -20,7 +20,7 @@ def test_get_supported_extensions(client, mock_session_exists):  # pylint: disab
 
 
 def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chatbot_reply):
-    """Test POST /sessions/{session_id}/message/upload with text file."""
+    """Test POST /sessions/{session_id}/message with text file."""
     mock_session_exists.return_value = True
     mock_get_chatbot_reply.return_value = {"reply": "I analyzed the file."}
 
@@ -31,7 +31,7 @@ def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chat
     ]
 
     response = client.post(
-        "/sessions/test-session-id/message/upload",
+        "/sessions/test-session-id/message",
         data={"message": "What does this code do?"},
         files=files
     )
@@ -59,7 +59,7 @@ def test_chatbot_reply_with_files_persists_session(
 
     with patch("api.routes.chatbot.persist_session") as mock_persist_session:
         response = client.post(
-            "/sessions/test-session-id/message/upload",
+            "/sessions/test-session-id/message",
             data={"message": "What does this code do?"},
             files=files
         )
@@ -69,7 +69,7 @@ def test_chatbot_reply_with_files_persists_session(
 
 
 def test_chatbot_reply_with_image_file(client, mock_session_exists, mock_get_chatbot_reply):
-    """Test POST /sessions/{session_id}/message/upload with image file."""
+    """Test POST /sessions/{session_id}/message with image file."""
     mock_session_exists.return_value = True
     mock_get_chatbot_reply.return_value = {"reply": "I see an image."}
 
@@ -80,7 +80,7 @@ def test_chatbot_reply_with_image_file(client, mock_session_exists, mock_get_cha
     ]
 
     response = client.post(
-        "/sessions/test-session-id/message/upload",
+        "/sessions/test-session-id/message",
         data={"message": "What's in this image?"},
         files=files
     )
@@ -91,7 +91,7 @@ def test_chatbot_reply_with_image_file(client, mock_session_exists, mock_get_cha
 
 
 def test_chatbot_reply_with_multiple_files(client, mock_session_exists, mock_get_chatbot_reply):
-    """Test POST /sessions/{session_id}/message/upload with multiple files."""
+    """Test POST /sessions/{session_id}/message with multiple files."""
     mock_session_exists.return_value = True
     mock_get_chatbot_reply.return_value = {"reply": "I analyzed the files."}
 
@@ -101,7 +101,7 @@ def test_chatbot_reply_with_multiple_files(client, mock_session_exists, mock_get
     ]
 
     response = client.post(
-        "/sessions/test-session-id/message/upload",
+        "/sessions/test-session-id/message",
         data={"message": "Analyze these logs."},
         files=files
     )
@@ -126,7 +126,7 @@ def test_chatbot_reply_upload_invalid_session(client, mock_session_exists):
     ]
 
     response = client.post(
-        "/sessions/invalid-session/message/upload",
+        "/sessions/invalid-session/message",
         data={"message": "Test message"},
         files=files
     )
@@ -144,7 +144,7 @@ def test_chatbot_reply_upload_unsupported_file_type(client, mock_session_exists)
     ]
 
     response = client.post(
-        "/sessions/test-session-id/message/upload",
+        "/sessions/test-session-id/message",
         data={"message": "Extract this archive."},
         files=files
     )
@@ -165,7 +165,7 @@ def test_chatbot_reply_upload_empty_message_with_files(
     ]
 
     response = client.post(
-        "/sessions/test-session-id/message/upload",
+        "/sessions/test-session-id/message",
         data={"message": ""},
         files=files
     )
@@ -178,7 +178,7 @@ def test_chatbot_reply_upload_no_message_no_files(client, mock_session_exists):
     mock_session_exists.return_value = True
 
     response = client.post(
-        "/sessions/test-session-id/message/upload",
+        "/sessions/test-session-id/message",
         data={"message": ""}
     )
 
@@ -198,7 +198,7 @@ def test_chatbot_reply_upload_only_files_no_message(
 
     # Send with whitespace-only message
     response = client.post(
-        "/sessions/test-session-id/message/upload",
+        "/sessions/test-session-id/message",
         data={"message": "   "},
         files=files
     )
@@ -217,7 +217,7 @@ def test_chatbot_reply_upload_file_too_large(client, mock_session_exists):
     ]
 
     response = client.post(
-        "/sessions/test-session-id/message/upload",
+        "/sessions/test-session-id/message",
         data={"message": "Process this file"},
         files=files
     )
@@ -240,7 +240,7 @@ def test_chatbot_reply_text_truncation(
     ]
 
     response = client.post(
-        "/sessions/test-session-id/message/upload",
+        "/sessions/test-session-id/message",
         data={"message": "Analyze this"},
         files=files
     )

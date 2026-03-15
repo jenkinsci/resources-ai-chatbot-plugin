@@ -16,9 +16,9 @@ def test_chatbot_reply_success(client, mock_session_exists, mock_get_chatbot_rep
     mock_session_exists.return_value = True
     mock_get_chatbot_reply.return_value = {"reply": "This is a valid response"}
     data = {"message": "This is a valid query"}
+ 
 
-    response = client.post("/sessions/test-session-id/message", json=data)
-
+    response = client.post("/sessions/test-session-id/message", data=data)
     assert response.status_code == 200
     assert response.json() == {"reply": "This is a valid response"}
 
@@ -28,7 +28,8 @@ def test_chatbot_reply_invalid_session(client, mock_session_exists):
     mock_session_exists.return_value = False
     data = {"message": "This is a valid query"}
 
-    response = client.post("/sessions/invalid-session-id/message", json=data)
+
+    response = client.post("/sessions/invalid-session-id/message", data=data)
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Session not found."}
@@ -38,12 +39,13 @@ def test_chatbot_reply_empty_message_returns_422(client, mock_session_exists):
     """Testing that if sending an empty message returns 422 validation error."""
     mock_session_exists.return_value = True
     data = {"message": "   "}
-    response = client.post("/sessions/test-session-id/message", json=data)
 
-    errors = response.json()["detail"]
-
+    response = client.post("/sessions/test-session-id/message", data=data)
+ 
+    detail = response.json()["detail"]
+ 
     assert response.status_code == 422
-    assert "Message cannot be empty." in errors[0]["msg"]
+    assert detail == "Either a message or at least one file must be provided."
 
 
 def test_delete_chat_success(client, mock_delete_session):
