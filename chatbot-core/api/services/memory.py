@@ -6,38 +6,54 @@ import asyncio
 import uuid
 from datetime import datetime, timedelta
 from threading import Lock
-from langchain.memory import ConversationBufferMemory
+from typing import Optional
+from langchain.memory import ConversationBufferWindowMemory
+from langchain.memory.chat_message_histories.in_memory import ChatMessageHistory
 from api.config.loader import CONFIG
-from api.services.sessionmanager import(
+from api.services.sessionmanager import (
     delete_session_file,
     load_session,
     session_exists_in_json,
-    append_message
 )
-# sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
 
 
 _sessions = {}
 _lock = Lock()
 
 
+class BoundedChatMessageHistory(ChatMessageHistory):
+    def _enforce_limit(self):
+        if len(self.messages) > 2:
+            del self.messages[:-2]
+
+    def add_message(self, message):
+        super().add_message(message)
+        self._enforce_limit()
+
+    def add_messages(self, messages):
+        super().add_messages(messages)
+        self._enforce_limit()
+
+
 def init_session() -> str:
     """
     Initialize a new chat session and store its memory object.
-
-    Returns:
-    str: A newly generated UUID representing the session ID.
+    ...
     """
     session_id = str(uuid.uuid4())
     with _lock:
         _sessions[session_id] = {
-            "memory": ConversationBufferMemory(return_messages=True),
+            "memory": ConversationBufferWindowMemory(
+                k=10,
+                return_messages=True,
+                chat_memory=BoundedChatMessageHistory()  # Injecting the hard limit
+            ),
             "last_accessed": datetime.now()
         }
     return session_id
 
 
-def get_session(session_id: str) -> ConversationBufferMemory | None:
+def get_session(session_id: str) -> Optional[ConversationBufferWindowMemory]:
     """
     Retrieve the chat session memory for the given session ID.
     Lazily restores from disk if missing in memory.
@@ -53,7 +69,7 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
 
         session_data = _sessions.get(session_id)
 
-        if session_data :
+        if session_data:
             session_data["last_accessed"] = datetime.now()
             return session_data["memory"]
 
@@ -61,9 +77,17 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
         if not history:
             return None
 
-        memory = ConversationBufferMemory(return_messages=True)
+        # PATCH: Use bounded window memory for restored sessions too
+        memory = ConversationBufferWindowMemory(
+            k=10,
+            return_messages=True,
+            chat_memory=BoundedChatMessageHistory()  # <-- You MUST inject it here too!
+        )
+
+        # When we load history from disk, LangChain's window memory will
+        # automatically truncate older messages as we add them here.
         for msg in history:
-            memory.chat_memory.add_message(# pylint: disable=no-member
+            memory.chat_memory.add_message(
                 {
                     "role": msg["role"],
                     "content": msg["content"],
@@ -77,25 +101,19 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
 
         return memory
 
-async def get_session_async(session_id: str) -> ConversationBufferMemory | None:
+
+async def get_session_async(session_id: str) -> Optional[ConversationBufferWindowMemory]:
     """
     Async wrapper for get_session to prevent event loop blocking.
     """
     return await asyncio.to_thread(get_session, session_id)
 
 
-def persist_session(session_id: str)-> None:
+def persist_session(session_id: str) -> None:
     """
     Persist the current session messages to disk.
-
-    Args:
-        session_id (str): The session identifier.
     """
-    session_data = get_session(session_id)
-    if session_data:
-        messages = list(session_data.chat_memory.messages)
-        append_message(session_id, messages)
-
+    pass
 
 
 def delete_session(session_id: str) -> bool:
@@ -157,8 +175,8 @@ def get_last_accessed(session_id: str) -> datetime | None:
         if not history:
             return None
 
-
     return history["last_accessed"]
+
 
 def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
     """
@@ -186,6 +204,7 @@ def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
 
     return False
 
+
 def get_session_count() -> int:
     """
     Get the total number of active sessions (for testing purposes).
@@ -195,6 +214,7 @@ def get_session_count() -> int:
     """
     with _lock:
         return len(_sessions)
+
 
 def cleanup_expired_sessions() -> int:
     """

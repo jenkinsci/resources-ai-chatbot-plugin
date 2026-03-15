@@ -7,42 +7,32 @@ import os
 import numpy as np
 from rag.vectorstore.vectorstore_utils import load_faiss_index, load_metadata
 
-VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
+VECTOR_STORE_DIR = os.path.join(os.path.dirname(
+    __file__), "..", "..", "data", "embeddings")
+
 
 def load_vector_index(logger, source_name):
     """
     Load the FAISS index and associated metadata from disk.
-
-    Args:
-        logger (logging.Logger): Logger for status and error messages.
-        source_name (str): The source name that we want to consider.
-
-    Returns:
-        Tuple[faiss.Index, list]: The FAISS index and corresponding metadata list.
     """
     if not source_name.strip():
         logger.warning("No source name provided. Returning empty results.")
-        return [], []
-    index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
-    metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+        return None, None
 
-    index = load_faiss_index(index_path, logger)
-    metadata = load_metadata(metadata_path, logger)
+    index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
+    metadata_path = os.path.join(
+        VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+
+    # This triggers our @lru_cache perfectly!
+    index = load_faiss_index(index_path)
+    metadata = load_metadata(metadata_path)
 
     return index, metadata
+
 
 def search_index(query_vector, index, metadata, logger, top_k):
     """
     Search the FAISS index with a query vector and return the top-k closest metadata results.
-
-    Args:
-        query_vector (np.ndarray): A single embedding vector.
-        index (faiss.Index): A trained and populated FAISS index.
-        metadata (List[dict]): Metadata entries associated with each stored vector.
-        top_k (int): Number of nearest neighbors to retrieve.
-
-    Returns:
-        List[dict]: A list of metadata entries with similarity scores.
     """
     if query_vector is None or not isinstance(query_vector, np.ndarray):
         logger.error("Invalid query vector received.")
@@ -54,7 +44,7 @@ def search_index(query_vector, index, metadata, logger, top_k):
 
     if index.ntotal != len(metadata):
         logger.warning(
-            "Index contains %d vectors but metadata has %d entries." \
+            "Index contains %d vectors but metadata has %d entries."
             " Some results may be missing or inconsistent.",
             index.ntotal,
             len(metadata)
@@ -73,9 +63,9 @@ def search_index(query_vector, index, metadata, logger, top_k):
             })
         else:
             logger.error("FAISS returned index %d out of range (metadata size: %d)",
-                idx,
-                len(metadata)
-            )
+                         idx,
+                         len(metadata)
+                         )
 
     data = []
     scores = []
