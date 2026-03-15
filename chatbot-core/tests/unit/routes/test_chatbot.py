@@ -16,7 +16,6 @@ def test_chatbot_reply_success(client, mock_session_exists, mock_get_chatbot_rep
     mock_session_exists.return_value = True
     mock_get_chatbot_reply.return_value = {"reply": "This is a valid response"}
     data = {"message": "This is a valid query"}
- 
 
     response = client.post("/sessions/test-session-id/message", data=data)
     assert response.status_code == 200
@@ -41,9 +40,7 @@ def test_chatbot_reply_empty_message_returns_422(client, mock_session_exists):
     data = {"message": "   "}
 
     response = client.post("/sessions/test-session-id/message", data=data)
- 
     detail = response.json()["detail"]
- 
     assert response.status_code == 422
     assert detail == "Either a message or at least one file must be provided."
 
