@@ -97,6 +97,13 @@ def persist_session(session_id: str)-> None:
         append_message(session_id, messages)
 
 
+async def persist_session_async(session_id: str) -> None:
+    """
+    Async wrapper for persist_session to prevent event loop blocking.
+    """
+    await asyncio.to_thread(persist_session, session_id)
+
+
 
 def delete_session(session_id: str) -> bool:
     """

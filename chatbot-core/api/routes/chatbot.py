@@ -48,6 +48,7 @@ from api.services.memory import (
     delete_session,
     session_exists,
     persist_session,
+    persist_session_async,
     init_session,
 )
 from api.services.file_service import (
@@ -120,11 +121,14 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
                 json.dumps({"end": True})
             )
 
+            await persist_session_async(session_id)
+
     except WebSocketDisconnect:
         logger.info(
             "WebSocket disconnected for session %s",
             session_id,
         )
+        await persist_session_async(session_id)
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.error(
