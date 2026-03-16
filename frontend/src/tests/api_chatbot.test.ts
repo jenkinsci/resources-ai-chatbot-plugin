@@ -22,12 +22,12 @@ jest.mock("../data/chatbotTexts", () => ({
 }));
 
 // Mock global fetch for the sendMessage function tests
-global.fetch = jest.fn();
+globalThis.fetch = jest.fn();
 
 describe("chatbotApi", () => {
   beforeEach(() => {
     (callChatbotApi as jest.Mock).mockClear();
-    (global.fetch as jest.Mock).mockClear();
+    (globalThis.fetch as jest.Mock).mockClear();
     (getChatbotText as jest.Mock).mockClear();
   });
 
@@ -73,7 +73,7 @@ describe("chatbotApi", () => {
   describe("sendMessage", () => {
     beforeEach(() => {
       jest.useFakeTimers();
-      (global.fetch as jest.Mock).mockResolvedValue({
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({ reply: "Success" }),
       } as unknown as Response);
@@ -85,11 +85,11 @@ describe("chatbotApi", () => {
 
     it("sends a text-only message", async () => {
       const result = await sendMessage("session-123", "Hello world");
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         `${API_BASE_URL}/api/chatbot/sessions/session-123/message`,
         expect.any(Object),
       );
-      const fetchOptions = (global.fetch as jest.Mock).mock.calls[0][1];
+      const fetchOptions = (globalThis.fetch as jest.Mock).mock.calls[0][1];
       expect(fetchOptions.method).toBe("POST");
       const formData = fetchOptions.body as FormData;
       expect(formData.get("message")).toBe("Hello world");
@@ -100,7 +100,7 @@ describe("chatbotApi", () => {
     it("sends a message with files", async () => {
       const file = new File(["content"], "test.txt");
       await sendMessage("session-123", "Check file", [file]);
-      const fetchOptions = (global.fetch as jest.Mock).mock.calls[0][1];
+      const fetchOptions = (globalThis.fetch as jest.Mock).mock.calls[0][1];
       const formData = fetchOptions.body as FormData;
       expect(formData.get("message")).toBe("Check file");
       expect(formData.get("files")).toBe(file);
@@ -109,14 +109,14 @@ describe("chatbotApi", () => {
     it("sends a file-only message", async () => {
       const file = new File(["content"], "test.txt");
       await sendMessage("session-123", undefined, [file]);
-      const fetchOptions = (global.fetch as jest.Mock).mock.calls[0][1];
+      const fetchOptions = (globalThis.fetch as jest.Mock).mock.calls[0][1];
       const formData = fetchOptions.body as FormData;
       expect(formData.has("message")).toBe(false);
       expect(formData.get("files")).toBe(file);
     });
 
     it("returns fallback message on API error", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({ detail: "Server Error" }),
@@ -132,7 +132,7 @@ describe("chatbotApi", () => {
     });
 
     it("returns an empty message on user cancellation", async () => {
-      (global.fetch as jest.Mock).mockImplementation(
+      (globalThis.fetch as jest.Mock).mockImplementation(
         (_url, options) =>
           new Promise((_, reject) =>
             options?.signal?.addEventListener("abort", () =>
@@ -153,8 +153,13 @@ describe("chatbotApi", () => {
     });
 
     it("handles timeout", async () => {
-      (global.fetch as jest.Mock).mockImplementation(
-        () => new Promise(() => {}), // Never resolves
+      (globalThis.fetch as jest.Mock).mockImplementation(
+        (_url, options) =>
+          new Promise((_, reject) => {
+            options?.signal?.addEventListener("abort", () => {
+              reject(new DOMException("Timeout", "AbortError"));
+            });
+          }),
       );
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
       const promise = sendMessage("session-123", "Hi");
