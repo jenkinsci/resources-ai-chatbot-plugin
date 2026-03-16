@@ -36,7 +36,7 @@ tool_names:
   plugins: "plugins"
   jenkins_docs: "docs"
   community_threads: "discourse"
-  stackoverflow: "stackoverflow" #-> first change 
+  stackoverflow: "stackoverflow" 
 
 cors:
   allowed_origins:
