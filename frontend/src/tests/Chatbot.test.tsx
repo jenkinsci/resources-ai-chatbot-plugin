@@ -8,15 +8,10 @@ import type { InputProps } from "../components/Input";
 import type { MessagesProps } from "../components/Messages";
 
 jest.mock("../api/chatbot", () => ({
-  fetchChatbotReply: jest.fn().mockResolvedValue({
+  sendMessage: jest.fn().mockResolvedValue({
     id: "bot-msg-1",
     sender: "jenkins-bot",
     text: "Bot reply",
-  }),
-  fetchChatbotReplyWithFiles: jest.fn().mockResolvedValue({
-    id: "bot-msg-1",
-    sender: "jenkins-bot",
-    text: "Bot reply with files",
   }),
   createChatSession: jest.fn().mockResolvedValue("new-session-id"),
   deleteChatSession: jest.fn().mockResolvedValue(undefined),
@@ -182,9 +177,10 @@ describe("Chatbot component", () => {
     fireEvent.click(screen.getByText("Send Message"));
 
     await waitFor(() => {
-      expect(chatbotApi.fetchChatbotReply).toHaveBeenCalledWith(
+      expect(chatbotApi.sendMessage).toHaveBeenCalledWith(
         "session-1",
         "Hello bot",
+        [],
         expect.anything(),
       );
     });
