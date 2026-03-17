@@ -17,6 +17,7 @@ import asyncio
 # Third-party imports
 # =========================
 from typing import List, Optional
+from urllib import request
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -106,6 +107,11 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
             message_data = json.loads(data)
             user_message = message_data.get("message", "")
 
+            if len(user_message) > 2000:
+                logger.warning(
+                    f"Truncated massive WebSocket payload from session {session_id}")
+                user_message = user_message[:2000]
+
             if not user_message:
                 continue
 
@@ -113,6 +119,7 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
                 session_id,
                 user_message,
             ):
+
                 await websocket.send_text(
                     json.dumps({"token": token})
                 )
@@ -166,6 +173,7 @@ def start_chat(response: Response):
     )
     return SessionResponse(session_id=session_id)
 
+
 @router.delete(
     "/sessions/{session_id}",
     response_model=DeleteResponse,
@@ -191,7 +199,6 @@ def delete_chat(session_id: str):
 # Chat Endpoint
 @router.post("/sessions/{session_id}/message", response_model=ChatResponse)
 def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: BackgroundTasks):
-
     """
     POST endpoint to handle chatbot replies.
 
@@ -210,11 +217,16 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
             status_code=404,
             detail="Session not found.",
         )
-    reply =  get_chatbot_reply(session_id, request.message)
+
+    if len(request.message) > 2000:
+        logger.warning(f"Truncated massive payload from session {session_id}")
+        request.message = request.message[:2000]
+
+    reply = get_chatbot_reply(session_id, request.message)
     _background_tasks.add_task(
         persist_session,
         session_id,
-        )
+    )
 
     return reply
 
@@ -263,6 +275,10 @@ async def chatbot_reply_with_files(
             status_code=422,
             detail="Either message or files must be provided.",
         )
+    if has_message and len(message) > 2000:
+        logger.warning(
+            f"Truncated massive file upload message from session {session_id}")
+        message = message[:2000]
 
     # Process uploaded files
     processed_files: List[FileAttachment] = []

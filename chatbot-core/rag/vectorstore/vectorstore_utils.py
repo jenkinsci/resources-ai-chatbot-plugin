@@ -3,14 +3,22 @@ Utility functions for saving and loading FAISS indices and associated metadata.
 Handles persistence and logging for vector search storage.
 """
 
+
 import os
 import pickle
 import faiss
+from functools import lru_cache
+import logging
 
-VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
+VECTOR_STORE_DIR = os.path.join(os.path.dirname(
+    __file__), "..", "..", "data", "embeddings")
 os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
 
-def save_faiss_index(index, path, logger):
+logger = logging.getLogger(__name__)
+
+
+@lru_cache
+def save_faiss_index(index, path):
     """
     Save a FAISS index to the specified path.
 
@@ -25,7 +33,8 @@ def save_faiss_index(index, path, logger):
     except (OSError) as e:
         logger.error("Failed to save FAISS index to %s: %s", path, e)
 
-def load_faiss_index(path, logger):
+
+def load_faiss_index(path):
     """
     Load a FAISS index from a specified path.
 
@@ -42,10 +51,12 @@ def load_faiss_index(path, logger):
         logger.info("FAISS index loaded successfully.")
         return index
     except (OSError, FileNotFoundError) as e:
-        logger.error("File error while loading FAISS index from %s: %s", path, e)
+        logger.error(
+            "File error while loading FAISS index from %s: %s", path, e)
     return None
 
-def save_metadata(metadata, path, logger):
+
+def save_metadata(metadata, path):
     """
     Save metadata to a pickle file.
 
@@ -61,7 +72,8 @@ def save_metadata(metadata, path, logger):
     except (OSError, pickle.PickleError) as e:
         logger.error("Failed to save metadata to %s: %s", path, e)
 
-def load_metadata(path, logger):
+
+def load_metadata(path):
     """
     Load metadata from a pickle file.
 

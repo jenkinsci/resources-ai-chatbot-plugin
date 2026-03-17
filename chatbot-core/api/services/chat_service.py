@@ -62,7 +62,8 @@ def get_chatbot_reply(
 
     memory = get_session(session_id)
     if memory is None:
-        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
+        raise RuntimeError(
+            f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
     logger.info("Context retrieved: %s", context)
@@ -333,7 +334,8 @@ def _execute_search_tools(tool_calls) -> str:
         })
 
     return "\n\n".join(
-        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip()
+        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip(
+        )
         for res in retrieved_results
     )
 
@@ -381,7 +383,6 @@ def retrieve_context(user_input: str) -> str:
     data_retrieved, _ = get_relevant_documents(
         user_input,
         EMBEDDING_MODEL,
-        logger=logger,
         source_name="plugins",
         top_k=retrieval_config["top_k"]
     )
@@ -434,10 +435,12 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
         logger.error("LLM provider unavailable: %s", e)
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     except (ValueError, RuntimeError) as exc:
-        logger.error("LLM generation failed for prompt: %r. Error: %r", prompt, exc)
+        logger.error(
+            "LLM generation failed for prompt: %r. Error: %r", prompt, exc)
         return "Sorry, I'm having trouble generating a response right now."
     except Exception:  # pylint: disable=broad-except
-        logger.exception("Unexpected error during LLM generation for prompt: %r", prompt)
+        logger.exception(
+            "Unexpected error during LLM generation for prompt: %r", prompt)
         return "Sorry, an unexpected error occurred. Please contact support."
 
 
@@ -531,6 +534,7 @@ def _extract_relevance_score(response: str) -> str:
         relevance_score = 0
 
     return relevance_score
+
 
 def _generate_search_query_from_logs(log_text: str) -> str:
     """

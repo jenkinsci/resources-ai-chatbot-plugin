@@ -2,15 +2,15 @@
 
 from rag.retriever import retrieve
 
+
 def test_get_relevant_documents_empty_query(mocker):
     """Test that empty query returns empty results."""
-    mock_logger = mocker.Mock()
+    mock_logger = mocker.patch("rag.retriever.retrieve.logger")
     model = mocker.Mock()
 
     data, scores = retrieve.get_relevant_documents(
         query="   ",
         model=model,
-        logger=mock_logger,
         source_name="plugins",
         top_k=3
     )
@@ -33,7 +33,6 @@ def test_get_relevant_documents_no_index(mocker):
     data, scores = retrieve.get_relevant_documents(
         query="some valid query",
         model=model,
-        logger=mock_logger,
         source_name="plugins",
         top_k=3
     )
@@ -55,7 +54,6 @@ def test_get_relevant_documents_no_metadata(mocker):
     data, scores = retrieve.get_relevant_documents(
         query="some valid query",
         model=model,
-        logger=mock_logger,
         source_name="plugins",
         top_k=3
     )
@@ -91,17 +89,15 @@ def test_get_relevant_documents_success(mocker):
     data, scores = retrieve.get_relevant_documents(
         query=query,
         model=model,
-        logger=mock_logger,
         source_name="plugins",
         top_k=1
     )
 
-    mock_embed_documents.assert_called_once_with([query], model, mock_logger)
+    mock_embed_documents.assert_called_once_with([query], model)
     mock_search_index.assert_called_once_with(
         [0.1, 0.2],
         mock_index,
         mock_metadata,
-        mock_logger,
         1
     )
 

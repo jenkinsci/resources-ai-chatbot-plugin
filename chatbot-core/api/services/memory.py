@@ -6,9 +6,10 @@ import asyncio
 import uuid
 from datetime import datetime, timedelta
 from threading import Lock
-from langchain.memory import ConversationBufferMemory
+from typing import Optional
+from langchain.memory import ConversationBufferWindowMemory
 from api.config.loader import CONFIG
-from api.services.sessionmanager import(
+from api.services.sessionmanager import (
     delete_session_file,
     load_session,
     session_exists_in_json,
@@ -31,13 +32,13 @@ def init_session() -> str:
     session_id = str(uuid.uuid4())
     with _lock:
         _sessions[session_id] = {
-            "memory": ConversationBufferMemory(return_messages=True),
+            "memory": ConversationBufferWindowMemory(k=10, return_messages=True),
             "last_accessed": datetime.now()
         }
     return session_id
 
 
-def get_session(session_id: str) -> ConversationBufferMemory | None:
+def get_session(session_id: str) -> Optional[ConversationBufferWindowMemory]:
     """
     Retrieve the chat session memory for the given session ID.
     Lazily restores from disk if missing in memory.
@@ -46,14 +47,14 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
         session_id (str): The session identifier.
 
     Returns:
-        ConversationBufferMemory | None: The memory object if found, else None.
+        Optional[ConversationBufferWindowMemory]: The memory object if found, else None.
     """
 
     with _lock:
 
         session_data = _sessions.get(session_id)
 
-        if session_data :
+        if session_data:
             session_data["last_accessed"] = datetime.now()
             return session_data["memory"]
 
@@ -61,9 +62,9 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
         if not history:
             return None
 
-        memory = ConversationBufferMemory(return_messages=True)
+        memory = ConversationBufferWindowMemory(k=10, return_messages=True)
         for msg in history:
-            memory.chat_memory.add_message(# pylint: disable=no-member
+            memory.chat_memory.add_message(  # pylint: disable=no-member
                 {
                     "role": msg["role"],
                     "content": msg["content"],
@@ -77,14 +78,15 @@ def get_session(session_id: str) -> ConversationBufferMemory | None:
 
         return memory
 
-async def get_session_async(session_id: str) -> ConversationBufferMemory | None:
+
+async def get_session_async(session_id: str) -> Optional[ConversationBufferWindowMemory]:
     """
     Async wrapper for get_session to prevent event loop blocking.
     """
     return await asyncio.to_thread(get_session, session_id)
 
 
-def persist_session(session_id: str)-> None:
+def persist_session(session_id: str) -> None:
     """
     Persist the current session messages to disk.
 
@@ -95,7 +97,6 @@ def persist_session(session_id: str)-> None:
     if session_data:
         messages = list(session_data.chat_memory.messages)
         append_message(session_id, messages)
-
 
 
 def delete_session(session_id: str) -> bool:
@@ -138,7 +139,8 @@ def reset_sessions():
     with _lock:
         _sessions.clear()
 
-def get_last_accessed(session_id: str) -> datetime | None:
+
+def get_last_accessed(session_id: str) -> Optional[datetime]:
     """
     Get the last accessed timestamp for a given session.
 
@@ -157,8 +159,8 @@ def get_last_accessed(session_id: str) -> datetime | None:
         if not history:
             return None
 
-
     return history["last_accessed"]
+
 
 def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
     """
@@ -186,6 +188,7 @@ def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
 
     return False
 
+
 def get_session_count() -> int:
     """
     Get the total number of active sessions (for testing purposes).
@@ -195,6 +198,7 @@ def get_session_count() -> int:
     """
     with _lock:
         return len(_sessions)
+
 
 def cleanup_expired_sessions() -> int:
     """
