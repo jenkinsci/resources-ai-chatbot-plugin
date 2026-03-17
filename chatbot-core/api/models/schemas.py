@@ -159,6 +159,37 @@ class MessageHistoryResponse(BaseModel):
     session_id: str
     messages: List[MessageItem]
 
+
+class SessionInfo(BaseModel):
+    """
+    Basic metadata for a single active session.
+
+    Fields:
+        session_id (str): The session identifier.
+        message_count (int): Number of messages exchanged in the session.
+        last_accessed (str): ISO-8601 timestamp of last activity.
+    """
+    session_id: str
+    message_count: int
+    last_accessed: str
+
+
+class SessionListResponse(BaseModel):
+    """
+    Response model for listing all active sessions.
+
+    Fields:
+        sessions (List[SessionInfo]): Ordered list of active sessions.
+        total (int): Total number of active sessions returned.
+        page (int): Current page number (1-indexed).
+        page_size (int): Number of sessions per page.
+    """
+    sessions: List[SessionInfo]
+    total: int
+    page: int
+    page_size: int
+
+
 class QueryType(Enum):
     """
     Enum that represents the possible query types:

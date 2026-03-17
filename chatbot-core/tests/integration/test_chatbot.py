@@ -203,3 +203,99 @@ def get_relevant_documents_output():
             "id": "docid",
             "chunk_text": "Relevant chunk text."
         }],[0.84])
+
+
+# =========================
+# GET /sessions integration tests
+# =========================
+def test_list_sessions_empty(client):
+    """Should return an empty session list when no sessions have been created."""
+    response = client.get("/sessions")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["sessions"] == []
+    assert data["total"] == 0
+    assert data["page"] == 1
+    assert data["page_size"] == 20
+
+
+def test_list_sessions_after_create(client):
+    """Should include a newly created session in the list."""
+    create_resp = client.post("/sessions")
+    session_id = create_resp.json()["session_id"]
+
+    response = client.get("/sessions")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    ids = [s["session_id"] for s in data["sessions"]]
+    assert session_id in ids
+
+
+def test_list_sessions_message_count(client, mock_llm_provider, mock_get_relevant_documents):
+    """Should report accurate message_count after exchanging messages."""
+    mock_llm_provider.generate.return_value = "Hello!"
+    mock_get_relevant_documents.return_value = get_relevant_documents_output()
+
+    session_id = client.post("/sessions").json()["session_id"]
+    client.post(f"/sessions/{session_id}/message", json={"message": "Hi"})
+
+    data = client.get("/sessions").json()
+
+    session = next(s for s in data["sessions"] if s["session_id"] == session_id)
+    # 1 human + 1 ai message = 2
+    assert session["message_count"] == 2
+
+
+def test_list_sessions_multiple_sessions(client):
+    """Should list all active sessions."""
+    id_a = client.post("/sessions").json()["session_id"]
+    id_b = client.post("/sessions").json()["session_id"]
+
+    data = client.get("/sessions").json()
+
+    assert data["total"] == 2
+    ids = {s["session_id"] for s in data["sessions"]}
+    assert id_a in ids
+    assert id_b in ids
+
+
+def test_list_sessions_excludes_deleted(client):
+    """Should not include sessions that have been deleted."""
+    keep_id = client.post("/sessions").json()["session_id"]
+    drop_id = client.post("/sessions").json()["session_id"]
+    client.delete(f"/sessions/{drop_id}")
+
+    data = client.get("/sessions").json()
+
+    ids = [s["session_id"] for s in data["sessions"]]
+    assert keep_id in ids
+    assert drop_id not in ids
+    assert data["total"] == 1
+
+
+def test_list_sessions_pagination(client):
+    """Should respect page and page_size query parameters."""
+    for _ in range(3):
+        client.post("/sessions")
+
+    page1 = client.get("/sessions?page=1&page_size=2").json()
+    page2 = client.get("/sessions?page=2&page_size=2").json()
+
+    assert len(page1["sessions"]) == 2
+    assert len(page2["sessions"]) == 1
+    assert page1["total"] == 3
+    assert page2["total"] == 3
+
+
+def test_list_sessions_response_has_last_accessed(client):
+    """Each session entry should include a non-empty last_accessed ISO timestamp."""
+    client.post("/sessions")
+
+    session = client.get("/sessions").json()["sessions"][0]
+
+    assert "last_accessed" in session
+    assert len(session["last_accessed"]) > 0
+

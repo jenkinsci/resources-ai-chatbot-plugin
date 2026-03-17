@@ -38,6 +38,8 @@ from api.models.schemas import (
     ChatResponse,
     DeleteResponse,
     MessageHistoryResponse,
+    SessionInfo,
+    SessionListResponse,
     SessionResponse,
     FileAttachment,
     SupportedExtensionsResponse,
@@ -49,6 +51,7 @@ from api.services.chat_service import (
 from api.services.memory import (
     delete_session,
     get_session,
+    list_sessions,
     session_exists,
     persist_session,
     init_session,
@@ -150,6 +153,47 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
 # =========================
 # Session Management
 # =========================
+@router.get(
+    "/sessions",
+    response_model=SessionListResponse,
+)
+def get_sessions(
+    page: int = 1,
+    page_size: int = 20,
+):
+    """
+    List all active chat sessions.
+
+    Returns a paginated list of currently active sessions with basic
+    metadata (ID, message count, and last-accessed timestamp).
+
+    Query Parameters:
+        page (int): 1-indexed page number (default: 1, min: 1).
+        page_size (int): Sessions per page (default: 20, range: 1-100).
+
+    Returns:
+        SessionListResponse: Paginated session list with total count.
+    """
+    page = max(1, page)
+    page_size = max(1, min(page_size, 100))
+
+    result = list_sessions(page=page, page_size=page_size)
+    sessions = [
+        SessionInfo(
+            session_id=s["session_id"],
+            message_count=s["message_count"],
+            last_accessed=s["last_accessed"],
+        )
+        for s in result["sessions"]
+    ]
+    return SessionListResponse(
+        sessions=sessions,
+        total=result["total"],
+        page=result["page"],
+        page_size=result["page_size"],
+    )
+
+
 @router.post(
     "/sessions",
     response_model=SessionResponse,

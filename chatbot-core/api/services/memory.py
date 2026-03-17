@@ -236,6 +236,50 @@ def set_last_accessed(session_id: str, timestamp: datetime) -> bool:
 
     return False
 
+def list_sessions(page: int = 1, page_size: int = 20) -> dict:
+    """
+    Return a paginated list of all active in-memory sessions with basic metadata.
+
+    Each entry includes the session ID, number of messages exchanged, and the
+    ISO-8601 last-accessed timestamp.
+
+    Args:
+    page (int): 1-indexed page number. Defaults to 1.
+    page_size (int): Maximum sessions per page. Defaults to 20.
+
+    Returns:
+        dict: Contains ``sessions`` (list of metadata dicts), ``total`` (total
+        count before pagination), ``page``, and ``page_size``.
+    """
+    with _lock:
+        all_ids = sorted(_sessions.keys())
+        total = len(all_ids)
+
+        start = (page - 1) * page_size
+        end = start + page_size
+        page_ids = all_ids[start:end]
+
+        sessions = []
+        for session_id in page_ids:
+            session_data = _sessions.get(session_id)
+            if session_data is None:
+                continue
+            message_count = len(session_data["memory"].chat_memory.messages)
+            last_accessed: datetime = session_data["last_accessed"]
+            sessions.append({
+                "session_id": session_id,
+                "message_count": message_count,
+                "last_accessed": last_accessed.isoformat(),
+            })
+
+    return {
+        "sessions": sessions,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
 def get_session_count() -> int:
     """
     Get the total number of active sessions (for testing purposes).

@@ -53,6 +53,11 @@ def mock_delete_session(mocker):
     return mocker.patch("api.routes.chatbot.delete_session")
 
 @pytest.fixture
+def mock_list_sessions(mocker):
+    """Mock the list_sessions function."""
+    return mocker.patch("api.routes.chatbot.list_sessions")
+
+@pytest.fixture
 def mock_get_chatbot_reply(mocker):
     """Mock the get_chatbot_reply function."""
     return mocker.patch("api.routes.chatbot.get_chatbot_reply")
