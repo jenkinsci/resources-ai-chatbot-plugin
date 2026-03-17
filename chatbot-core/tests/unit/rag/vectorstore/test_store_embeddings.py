@@ -121,11 +121,9 @@ def test_run_indexing_successful(
     mock_save_faiss_index.assert_called_once_with(
         mock_index,
         store_embeddings.INDEX_PATH,
-        mock_logger
     )
     mock_save_metadata.assert_called_once_with(
         metadata,
         store_embeddings.METADATA_PATH,
-        mock_logger
     )
     assert mock_logger.info.call_count >= 1

@@ -14,8 +14,8 @@ def test_load_embedding_model_logs_loading_message(mock_sentence_transformer, mo
 
     assert model is not None
     assert model == mock_sentence_transformer.return_value
-    mock_logger.info.assert_called_once_with(
-        f"Loading embedding model: {model_name}")
+    mock_logger.info.assert_called_with(
+        'Loading embedding model: %s', 'embedding-model-name')
 
 
 def test_embed_documents_success(mock_model_encode, mocker):
@@ -33,7 +33,7 @@ def test_embed_documents_success(mock_model_encode, mocker):
         batch_size=16,
         show_progress_bar=True
     )
-    mock_logger.info.assert_called_once_with("Embedding 2 documents")
+    mock_logger.info.assert_called_with('Embedding %d documents', 2)
 
 
 def test_embed_documents_raises_typeerror_on_invalid_model():
