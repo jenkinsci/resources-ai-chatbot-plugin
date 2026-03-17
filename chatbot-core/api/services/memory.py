@@ -8,18 +8,27 @@ from datetime import datetime, timedelta
 from threading import Lock
 from typing import Optional
 from langchain.memory import ConversationBufferWindowMemory
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from api.config.loader import CONFIG
 from api.services.sessionmanager import (
     delete_session_file,
     load_session,
     session_exists_in_json,
-    append_message
+    append_message,
+    get_persisted_session_ids
 )
 # sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
 
 
 _sessions = {}
 _lock = Lock()
+_ROLE_TO_MESSAGE_CLASS = {
+    "human": HumanMessage,
+    "user": HumanMessage,
+    "ai": AIMessage,
+    "assistant": AIMessage,
+    "system": SystemMessage,
+}
 
 
 def init_session() -> str:
@@ -36,6 +45,30 @@ def init_session() -> str:
             "last_accessed": datetime.now()
         }
     return session_id
+
+
+def _restore_persisted_message(memory: ConversationBufferWindowMemory, message: object) -> None:
+    """
+    Restore one persisted message into LangChain memory.
+
+    Persisted snapshots are dicts with {"role": ..., "content": ...}.
+    We convert them back to message objects so downstream code can safely
+    rely on attributes like msg.type and msg.content.
+    """
+    if not isinstance(message, dict):
+        return
+
+    role = message.get("role", "human")
+    normalized_role = role.lower() if isinstance(role, str) else "human"
+
+    content = message.get("content", "")
+    if content is None:
+        content = ""
+    elif not isinstance(content, str):
+        content = str(content)
+
+    message_class = _ROLE_TO_MESSAGE_CLASS.get(normalized_role, HumanMessage)
+    memory.chat_memory.add_message(message_class(content=content))
 
 
 def get_session(session_id: str) -> Optional[ConversationBufferWindowMemory]:
@@ -64,12 +97,7 @@ def get_session(session_id: str) -> Optional[ConversationBufferWindowMemory]:
 
         memory = ConversationBufferWindowMemory(k=10, return_messages=True)
         for msg in history:
-            memory.chat_memory.add_message(  # pylint: disable=no-member
-                {
-                    "role": msg["role"],
-                    "content": msg["content"],
-                }
-            )
+            _restore_persisted_message(memory, msg)
 
         _sessions[session_id] = {
             "memory": memory,
@@ -95,7 +123,10 @@ def persist_session(session_id: str) -> None:
     """
     session_data = get_session(session_id)
     if session_data:
-        messages = list(session_data.chat_memory.messages)
+        messages = [
+            {"role": msg.type, "content": msg.content}
+            for msg in session_data.chat_memory.messages
+        ]
         append_message(session_id, messages)
 
 
@@ -140,6 +171,23 @@ def reset_sessions():
         _sessions.clear()
 
 
+def reload_persisted_sessions() -> int:
+    """
+    Load all persisted sessions from disk into memory.
+    Called once at application startup so that session_exists()
+    can remain a fast, memory-only check.
+
+    Returns:
+        int: The number of sessions restored.
+    """
+    session_ids = get_persisted_session_ids()
+    loaded = 0
+    for session_id in session_ids:
+        if get_session(session_id) is not None:
+            loaded += 1
+    return loaded
+
+
 def get_last_accessed(session_id: str) -> Optional[datetime]:
     """
     Get the last accessed timestamp for a given session.
@@ -148,7 +196,7 @@ def get_last_accessed(session_id: str) -> Optional[datetime]:
         session_id (str): The session identifier.
 
     Returns:
-        datetime | None: The last accessed timestamp if session exists, else None.
+        Optional[datetime]: The last accessed timestamp if session exists, else None.
     """
     with _lock:
         session_data = _sessions.get(session_id)
