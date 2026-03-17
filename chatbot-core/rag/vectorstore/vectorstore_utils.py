@@ -5,10 +5,11 @@ Handles persistence and logging for vector search storage.
 
 
 import os
+import logging
+from functools import lru_cache
 import pickle
 import faiss
-from functools import lru_cache
-import logging
+
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(
     __file__), "..", "..", "data", "embeddings")

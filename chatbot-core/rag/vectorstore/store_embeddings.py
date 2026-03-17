@@ -10,7 +10,8 @@ from rag.embedding import embed_chunks
 from rag.vectorstore.vectorstore_utils import save_faiss_index, save_metadata
 from utils import LoggerFactory
 
-VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
+VECTOR_STORE_DIR = os.path.join(os.path.dirname(
+    __file__), "..", "..", "data", "embeddings")
 INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "plugins_index.idx")
 METADATA_PATH = os.path.join(VECTOR_STORE_DIR, "plugins_metadata.pkl")
 
@@ -63,12 +64,14 @@ def run_indexing(nlist, nprobe, logger):
     vectors, metadata = embed_chunks(logger)
     vectors_np = np.array(vectors).astype("float32")
 
-    index = build_faiss_ivf_index(vectors_np, nlist=nlist, nprobe=nprobe, logger=logger)
+    index = build_faiss_ivf_index(
+        vectors_np, nlist=nlist, nprobe=nprobe, logger=logger)
 
-    save_faiss_index(index, INDEX_PATH, logger)
-    save_metadata(metadata, METADATA_PATH, logger)
+    save_faiss_index(index, INDEX_PATH)
+    save_metadata(metadata, METADATA_PATH)
 
-    logger.info(f"Stored {len(vectors)} vectors to FAISS (IVFFlat) at {INDEX_PATH}")
+    logger.info(
+        f"Stored {len(vectors)} vectors to FAISS (IVFFlat) at {INDEX_PATH}")
 
 
 def main():
@@ -77,6 +80,7 @@ def main():
     logger = logger_factory.get_logger("embedding-storage")
 
     run_indexing(nlist=N_LIST, nprobe=N_PROBE, logger=logger)
+
 
 if __name__ == "__main__":
     main()

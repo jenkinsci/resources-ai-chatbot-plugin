@@ -22,7 +22,6 @@ def test_get_relevant_documents_empty_query(mocker):
 
 def test_get_relevant_documents_no_index(mocker):
     """Test that missing index returns empty results."""
-    mock_logger = mocker.Mock()
     model = mocker.Mock()
 
     mocker.patch(
@@ -43,7 +42,6 @@ def test_get_relevant_documents_no_index(mocker):
 
 def test_get_relevant_documents_no_metadata(mocker):
     """Test that missing metadata returns empty."""
-    mock_logger = mocker.Mock()
     model = mocker.Mock()
 
     mocker.patch(
@@ -64,7 +62,6 @@ def test_get_relevant_documents_no_metadata(mocker):
 
 def test_get_relevant_documents_success(mocker):
     """Test successful retrieval pipeline."""
-    mock_logger = mocker.Mock()
     model = mocker.Mock()
 
     mock_index = mocker.Mock()

@@ -8,7 +8,6 @@ from rag.retriever.retriever_utils import load_vector_index, search_index, VECTO
 
 def test_load_vector_index_returns_index_and_metadata(mocker):
     """Test load_vector_index loads index and metadata correctly."""
-    mock_logger = mocker.patch("rag.retriever.retriever_utils.logger")
     mock_index = mocker.Mock()
     mock_metadata = [{"id": 1}]
     mock_load_index = mocker.patch(
@@ -72,7 +71,6 @@ def test_search_index_empty_index(mocker):
 
 def test_search_index_successful(mocker):
     """Test search_index returns top-k results correctly."""
-    mock_logger = mocker.patch("rag.retriever.retriever_utils.logger")
     index = mocker.Mock()
     index.ntotal = 2
     index.search.return_value = (

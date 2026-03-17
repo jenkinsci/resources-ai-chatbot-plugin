@@ -1,11 +1,11 @@
 """
 Query interface for retrieving the most relevant embedded text chunks using a FAISS vector index.
 """
-
+import logging
 from rag.embedding.embedding_utils import embed_documents
 from rag.retriever.retriever_utils import load_vector_index, search_index
 from api.config.loader import CONFIG
-import logging
+
 
 logger = logging.getLogger(__name__)
 

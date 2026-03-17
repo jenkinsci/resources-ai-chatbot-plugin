@@ -17,7 +17,6 @@ import asyncio
 # Third-party imports
 # =========================
 from typing import List, Optional
-from urllib import request
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -111,7 +110,7 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
 
             if len(user_message) > 2000:
                 logger.warning(
-                    f"Truncated massive WebSocket payload from session {session_id}")
+                    "Truncated massive payload from session %s", session_id)
                 user_message = user_message[:2000]
 
             if not user_message:
@@ -256,7 +255,7 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
         )
 
     if len(request.message) > 2000:
-        logger.warning(f"Truncated massive payload from session {session_id}")
+        logger.warning("Truncated massive payload from session %s", session_id)
         request.message = request.message[:2000]
 
     reply = get_chatbot_reply(session_id, request.message)
@@ -314,8 +313,7 @@ async def chatbot_reply_with_files(
             detail="Either message or files must be provided.",
         )
     if has_message and len(message) > 2000:
-        logger.warning(
-            f"Truncated massive file upload message from session {session_id}")
+        logger.warning("Truncated massive payload from session %s", session_id)
         message = message[:2000]
 
     # Process uploaded files

@@ -5,9 +5,9 @@ to retrieve relevant document chunks based on a query vector.
 
 
 import os
-import numpy as np
-from functools import lru_cache
 import logging
+from functools import lru_cache
+import numpy as np
 from rag.vectorstore.vectorstore_utils import load_faiss_index, load_metadata
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(

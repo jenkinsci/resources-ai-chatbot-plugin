@@ -11,11 +11,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROCESSED_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "processed")
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 CHUNK_FILES = [
-    #"chunks_docs.json",
+    # "chunks_docs.json",
     "chunks_plugin_docs.json",
-    #"chunks_discourse_docs.json",
-    #"chunks_stackoverflow_threads.json"
+    # "chunks_discourse_docs.json",
+    # "chunks_stackoverflow_threads.json"
 ]
+
 
 def load_chunks_from_file(path, logger):
     """Load JSON file and return data, with proper error handling."""
@@ -27,6 +28,7 @@ def load_chunks_from_file(path, logger):
     except json.JSONDecodeError as e:
         logger.error("JSON decode error in %s: %s", path, e)
     return []
+
 
 def collect_all_chunks(logger):
     """
@@ -47,6 +49,7 @@ def collect_all_chunks(logger):
             continue
         all_chunks.extend(chunks)
     return all_chunks
+
 
 def embed_chunks(logger):
     """
@@ -83,7 +86,7 @@ def embed_chunks(logger):
         })
 
     texts = [el["chunk_text"] for el in metadata]
-    model = load_embedding_model(MODEL_NAME, logger)
-    vectors = embed_documents(texts, model, logger)
+    model = load_embedding_model(MODEL_NAME)
+    vectors = embed_documents(texts, model)
 
     return vectors, metadata

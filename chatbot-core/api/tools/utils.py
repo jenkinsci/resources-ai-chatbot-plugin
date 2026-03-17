@@ -23,6 +23,7 @@ TOOL_SIGNATURES = MappingProxyType({
     "search_community_threads": {"query": str},
 })
 
+
 def get_default_tools_call(query: str):
     """
     Returns a default list of tool calls using the user query,
@@ -62,6 +63,7 @@ def get_default_tools_call(query: str):
         }
     ]
 
+
 def validate_tool_calls(tool_calls_parsed: list, logger) -> bool:
     """
     Validates that each tool call has a valid tool name and matching params.
@@ -85,16 +87,19 @@ def validate_tool_calls(tool_calls_parsed: list, logger) -> bool:
 
             for param_name, param_type in expected_params.items():
                 if param_name not in params:
-                    logger.warning("Tool: %s: Param %s is not expected.", tool, param_name)
+                    logger.warning(
+                        "Tool: %s: Param %s is not expected.", tool, param_name)
                     valid = False
                 if not isinstance(params[param_name], param_type):
                     logger.warning("Tool: %s: Param %s is not of the expected type %s.",
-                                tool, param_name, param_type.__name__)
+                                   tool, param_name, param_type.__name__)
                     valid = False
 
     return valid
 
 # pylint: disable=too-many-locals
+
+
 def get_inverted_scores(
     semantic_chunk_ids: List[str],
     semantic_scores: List[float],
@@ -122,9 +127,9 @@ def get_inverted_scores(
     """
     if not 0 <= semantic_weight <= 1:
         semantic_weight = 0.5
-    semantic_map = {semantic_chunk_ids[i]:semantic_scores[i]
+    semantic_map = {semantic_chunk_ids[i]: semantic_scores[i]
                     for i in range(len(semantic_chunk_ids))}
-    keyword_map = {keyword_chunk_ids[i]:keyword_scores[i]
+    keyword_map = {keyword_chunk_ids[i]: keyword_scores[i]
                    for i in range(len(keyword_chunk_ids))}
 
     all_chunk_ids = set(semantic_map.keys()).union(keyword_map.keys())
@@ -132,8 +137,10 @@ def get_inverted_scores(
     default_keyword = min(keyword_map.values()) if keyword_map else 0
     default_semantic = max(semantic_map.values()) if semantic_map else 1.5
 
-    keyword_vals = [keyword_map.get(cid, default_keyword) for cid in all_chunk_ids]
-    semantic_vals = [semantic_map.get(cid, default_semantic) for cid in all_chunk_ids]
+    keyword_vals = [keyword_map.get(cid, default_keyword)
+                    for cid in all_chunk_ids]
+    semantic_vals = [semantic_map.get(cid, default_semantic)
+                     for cid in all_chunk_ids]
 
     keyword_norm = _min_max_normalize(keyword_vals)
     sem_max = max(semantic_vals) if semantic_vals else 1.0
@@ -145,6 +152,7 @@ def get_inverted_scores(
                      semantic_weight * semantic_norm[i])), cid]
         for i, cid in enumerate(all_chunk_ids)
     ]
+
 
 def _min_max_normalize(values: List[float]) -> List[float]:
     """
@@ -159,6 +167,7 @@ def _min_max_normalize(values: List[float]) -> List[float]:
         return [0.5 for _ in values]
     rng = vmax - vmin
     return [(v - vmin) / rng for v in values]
+
 
 def extract_chunks_content(chunks: List[Dict], logger) -> str:
     """
@@ -177,7 +186,8 @@ def extract_chunks_content(chunks: List[Dict], logger) -> str:
         item_id = item.get("id", "")
         text = item.get("chunk_text", "")
         if not item_id:
-            logger.warning("Id of retrieved context not found. Skipping element.")
+            logger.warning(
+                "Id of retrieved context not found. Skipping element.")
             continue
         if text:
             code_iter = iter(item.get("code_blocks", []))
@@ -192,6 +202,7 @@ def extract_chunks_content(chunks: List[Dict], logger) -> str:
         if context_texts
         else retrieval_config["empty_context_message"]
     )
+
 
 def is_valid_plugin(plugin_name: str) -> bool:
     """
@@ -216,6 +227,7 @@ def is_valid_plugin(plugin_name: str) -> bool:
             return True
 
     return False
+
 
 def filter_retrieved_data(
     semantic_data: List[Dict],
@@ -245,6 +257,7 @@ def filter_retrieved_data(
 
     return semantic_filtered_data, keyword_filtered_data
 
+
 def make_placeholder_replacer(code_iter, item_id, logger):
     """
     Returns a function to replace code block placeholders in retrieved text
@@ -261,9 +274,11 @@ def make_placeholder_replacer(code_iter, item_id, logger):
         try:
             return next(code_iter)
         except StopIteration:
-            logger.warning("More placeholders than code blocks in chunk with ID %s", item_id)
+            logger.warning(
+                "More placeholders than code blocks in chunk with ID %s", item_id)
             return "[MISSING_CODE]"
     return replace
+
 
 def retrieve_documents(query: str, keywords: str, logger, source_name: str, embedding_model):
     """
@@ -282,7 +297,6 @@ def retrieve_documents(query: str, keywords: str, logger, source_name: str, embe
     data_retrieved_semantic, scores_semantic = get_relevant_documents(
         query,
         embedding_model,
-        logger=logger,
         source_name=source_name,
         top_k=retrieval_config["top_k_semantic"]
     )
@@ -302,6 +316,8 @@ def retrieve_documents(query: str, keywords: str, logger, source_name: str, embe
 
 # pylint: disable=too-many-arguments
 # pylint: disable=too-many-positional-arguments
+
+
 def extract_top_chunks(
     data_retrieved_semantic,
     scores_semantic,

@@ -36,7 +36,7 @@ def test_embed_documents_success(mock_model_encode, mocker):
     mock_logger.info.assert_called_once_with("Embedding 2 documents")
 
 
-def test_embed_documents_raises_typeerror_on_invalid_model(mocker):
+def test_embed_documents_raises_typeerror_on_invalid_model():
     """Testing that embed_documents raises TypeError if model type is invalid."""
     invalid_model = "I am not a model instance"
 
