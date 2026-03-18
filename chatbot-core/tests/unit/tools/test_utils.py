@@ -60,6 +60,18 @@ def test_validate_tool_calls_rejects_missing_keywords_without_crashing():
     )
 
 
+def test_validate_tool_calls_rejects_non_dict_call_payload():
+    """A malformed call payload should be rejected without raising."""
+    logger = MagicMock()
+    tool_calls = ["invalid-call-shape"]
+
+    assert validate_tool_calls(tool_calls, logger) is False
+    logger.warning.assert_called_once_with(
+        "Tool call payload is not a dict: %s",
+        "invalid-call-shape"
+    )
+
+
 def test_validate_tool_calls_handles_non_dict_params():
     """Non-dict params payload must fail validation gracefully."""
     logger = MagicMock()
@@ -73,4 +85,27 @@ def test_validate_tool_calls_handles_non_dict_params():
     assert validate_tool_calls(tool_calls, logger) is False
     logger.warning.assert_called_with(
         "Params for tool %s is not a dict.", "search_community_threads"
+    )
+
+
+def test_validate_tool_calls_rejects_wrong_param_type():
+    """Wrong parameter types should be rejected."""
+    logger = MagicMock()
+    tool_calls = [
+        {
+            "tool": "search_plugin_docs",
+            "params": {
+                "query": "plugin setup",
+                "keywords": "plugin setup",
+                "plugin_name": 123,
+            }
+        }
+    ]
+
+    assert validate_tool_calls(tool_calls, logger) is False
+    logger.warning.assert_called_once_with(
+        "Tool: %s: Param %s is not of the expected type %s.",
+        "search_plugin_docs",
+        "plugin_name",
+        "str or NoneType"
     )

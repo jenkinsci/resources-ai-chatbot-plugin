@@ -77,6 +77,11 @@ def validate_tool_calls(tool_calls_parsed: list, logger) -> bool:
     """
     valid = True
     for call in tool_calls_parsed:
+        if not isinstance(call, dict):
+            logger.warning("Tool call payload is not a dict: %s", call)
+            valid = False
+            continue
+
         tool = call.get("tool")
         params = call.get("params")
 
@@ -104,6 +109,7 @@ def validate_tool_calls(tool_calls_parsed: list, logger) -> bool:
                         else param_type.__name__
                     )
                     logger.warning("Tool: %s: Param %s is not of the expected type %s.",
+                                   tool, param_name, expected_type_name)
                                    tool, param_name, expected_type_name)
                     valid = False
 
