@@ -110,7 +110,6 @@ def validate_tool_calls(tool_calls_parsed: list, logger) -> bool:
                     )
                     logger.warning("Tool: %s: Param %s is not of the expected type %s.",
                                    tool, param_name, expected_type_name)
-                                   tool, param_name, expected_type_name)
                     valid = False
 
     return valid
