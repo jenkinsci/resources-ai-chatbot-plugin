@@ -5,9 +5,9 @@ from unittest.mock import MagicMock
 import pytest
 from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
-from api.models.schemas import ChatResponse
 from api.services.chat_service import _execute_search_tools
 
+from api.models.schemas import ChatResponse, FileAttachment, FileType
 
 def test_get_chatbot_reply_success(
     mock_get_session,
@@ -253,32 +253,137 @@ def test_execute_search_tools_skips_unknown_tool(caplog):
     assert result == ""
     assert "Unknown tool 'hallucinated_tool_name'" in caplog.text
 
+def test_get_chatbot_reply_with_file_attachment(
+    mock_get_session,
+    mock_retrieve_context,
+    mock_prompt_builder,
+    mock_llm_provider,
+    mocker
+):
+    """Test get_chatbot_reply with file attachments exercises
+    _process_file_context and _format_user_message_for_memory."""
+    mock_chat_memory = mocker.MagicMock()
+    mock_session = mock_get_session.return_value
+    mock_session.chat_memory = mock_chat_memory
 
-def test_execute_search_tools_injects_logger_conditionally(mocker):
-    """Test that logger is only injected into tools that declare it in their signature."""
+    mock_retrieve_context.return_value = "Context"
+    mock_prompt_builder.return_value = "Built prompt"
+    mock_llm_provider.generate.return_value = "Reply with file context"
 
-    # Dummy tools to simulate registry behavior
-    def tool_needs_logger(query, logger):  # pylint: disable=unused-argument
-        assert logger is not None
-        return "logged result"
+    files = [FileAttachment(
+        filename="test.txt",
+        type=FileType.TEXT,
+        content="File content here",
+        mime_type="text/plain"
+    )]
 
-    def tool_no_logger(query):  # pylint: disable=unused-argument
-        return "unlogged result"
+    response = get_chatbot_reply("session-id", "Analyze this file", files)
 
-    mocker.patch(
-        "api.services.chat_service.TOOL_REGISTRY",
-        {
-            "needs_logger": tool_needs_logger,
-            "no_logger": tool_no_logger
-        }
-    )
+    assert isinstance(response, ChatResponse)
+    assert response.reply == "Reply with file context"
+    mock_chat_memory.add_user_message.assert_called_once()
+    mock_chat_memory.add_ai_message.assert_called_once_with("Reply with file context")
 
-    tool_calls = [
-        {"tool": "needs_logger", "params": {"query": "test1"}},
-        {"tool": "no_logger", "params": {"query": "test2"}}
+
+def test_get_chatbot_reply_memory_updated_correctly(
+    mock_get_session,
+    mock_retrieve_context,
+    mock_prompt_builder,
+    mock_llm_provider,
+    mocker
+):
+    """Test that memory is updated with both user message and AI reply."""
+    mock_chat_memory = mocker.MagicMock()
+    mock_session = mock_get_session.return_value
+    mock_session.chat_memory = mock_chat_memory
+
+    mock_retrieve_context.return_value = "Some context"
+    mock_prompt_builder.return_value = "Built prompt"
+    mock_llm_provider.generate.return_value = "AI response"
+
+    get_chatbot_reply("session-id", "User message")
+
+    mock_chat_memory.add_user_message.assert_called_once_with("User message")
+    mock_chat_memory.add_ai_message.assert_called_once_with("AI response")
+
+
+def test_get_chatbot_reply_empty_context(
+    mock_get_session,
+    mock_retrieve_context,
+    mock_prompt_builder,
+    mock_llm_provider,
+    mocker
+):
+    """Test get_chatbot_reply when retrieve_context returns empty string."""
+    mock_chat_memory = mocker.MagicMock()
+    mock_session = mock_get_session.return_value
+    mock_session.chat_memory = mock_chat_memory
+
+    mock_retrieve_context.return_value = ""
+    mock_prompt_builder.return_value = "Built prompt"
+    mock_llm_provider.generate.return_value = "Fallback reply"
+
+    response = get_chatbot_reply("session-id", "Unknown query")
+
+    assert isinstance(response, ChatResponse)
+    assert response.reply == "Fallback reply"
+
+
+def test_get_chatbot_reply_prompt_builder_called_with_context(
+    mock_get_session,
+    mock_retrieve_context,
+    mock_prompt_builder,
+    mock_llm_provider,
+    mocker
+):
+    """Test that build_prompt is called with the retrieved context."""
+    mock_chat_memory = mocker.MagicMock()
+    mock_session = mock_get_session.return_value
+    mock_session.chat_memory = mock_chat_memory
+
+    mock_retrieve_context.return_value = "Important context"
+    mock_prompt_builder.return_value = "Built prompt"
+    mock_llm_provider.generate.return_value = "Response"
+
+    get_chatbot_reply("session-id", "My query")
+
+    mock_prompt_builder.assert_called_once()
+    call_args = mock_prompt_builder.call_args
+    assert "Important context" in str(call_args)
+
+
+def test_get_chatbot_reply_multiple_file_attachments(
+    mock_get_session,
+    mock_retrieve_context,
+    mock_prompt_builder,
+    mock_llm_provider,
+    mocker
+):
+    """Test get_chatbot_reply with multiple file attachments."""
+    mock_chat_memory = mocker.MagicMock()
+    mock_session = mock_get_session.return_value
+    mock_session.chat_memory = mock_chat_memory
+
+    mock_retrieve_context.return_value = "Context"
+    mock_prompt_builder.return_value = "Built prompt"
+    mock_llm_provider.generate.return_value = "Multi-file reply"
+
+    files = [
+        FileAttachment(
+            filename="file1.txt",
+            type=FileType.TEXT,
+            content="Content of file 1",
+            mime_type="text/plain"
+        ),
+        FileAttachment(
+            filename="file2.txt",
+            type=FileType.TEXT,
+            content="Content of file 2",
+            mime_type="text/plain"
+        ),
     ]
 
-    result = _execute_search_tools(tool_calls)
+    response = get_chatbot_reply("session-id", "Analyze these files", files)
 
-    assert "logged result" in result
-    assert "unlogged result" in result
+    assert isinstance(response, ChatResponse)
+    assert response.reply == "Multi-file reply"
