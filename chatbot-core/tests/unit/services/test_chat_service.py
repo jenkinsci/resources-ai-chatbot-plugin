@@ -3,11 +3,13 @@
 import logging
 from unittest.mock import MagicMock
 import pytest
+from api.services import chat_service
 from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
-from api.services.chat_service import _execute_search_tools
+
 
 from api.models.schemas import ChatResponse, FileAttachment, FileType
+
 
 def test_get_chatbot_reply_success(
     mock_get_session,
@@ -244,14 +246,21 @@ def get_mock_documents(doc_type: str):
 
 def test_execute_search_tools_skips_unknown_tool(caplog):
     """Test that unknown/hallucinated tool names do not crash the pipeline."""
-    tool_calls = [
-        {"tool": "hallucinated_tool_name", "params": {"query": "test"}}]
+    # Enable Pytest to capture the custom 'API' logger warnings
+    logging.getLogger("API").propagate = True
 
+    tool_calls = [
+        {"tool": "hallucinated_tool_name", "params": {"query": "test"}}
+    ]
+
+    # Call via the module namespace to avoid "private import" linter errors
     with caplog.at_level(logging.WARNING):
-        result = _execute_search_tools(tool_calls)
+        # pylint: disable=protected-access
+        result = chat_service._execute_search_tools(tool_calls)
 
     assert result == ""
     assert "Unknown tool 'hallucinated_tool_name'" in caplog.text
+
 
 def test_get_chatbot_reply_with_file_attachment(
     mock_get_session,
@@ -282,7 +291,8 @@ def test_get_chatbot_reply_with_file_attachment(
     assert isinstance(response, ChatResponse)
     assert response.reply == "Reply with file context"
     mock_chat_memory.add_user_message.assert_called_once()
-    mock_chat_memory.add_ai_message.assert_called_once_with("Reply with file context")
+    mock_chat_memory.add_ai_message.assert_called_once_with(
+        "Reply with file context")
 
 
 def test_get_chatbot_reply_memory_updated_correctly(
