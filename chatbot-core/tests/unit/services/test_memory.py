@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import pytest
 from langchain.memory import ConversationBufferMemory
 
+from api.prompts.prompt_builder import build_prompt
 from api.services import memory
 
 
@@ -30,6 +31,29 @@ def test_get_session_returns_existing_session():
 
     assert isinstance(session, ConversationBufferMemory)
     assert session is memory.get_session(session_id)
+
+
+def test_get_session_restores_disk_messages_as_langchain_messages(mocker):
+    """Test disk-restored sessions keep message object shape used by prompts/routes."""
+    session_id = str(uuid.uuid4())
+    mocker.patch(
+        "api.services.memory.load_session",
+        return_value=[
+            {"role": "human", "content": "hi"},
+            {"role": "ai", "content": "hello"},
+        ],
+    )
+
+    session = memory.get_session(session_id)
+
+    assert session is not None
+    assert [msg.type for msg in session.chat_memory.messages] == ["human", "ai"]
+    assert [msg.content for msg in session.chat_memory.messages] == ["hi", "hello"]
+
+    prompt = build_prompt("How are you?", "context", session)
+    assert "User: hi" in prompt
+    assert "Jenkins Assistant: hello" in prompt
+
 
 def test_get_session_returns_none_for_invalid_id():
     """Test that get_session returns None when the session ID does not exist."""
