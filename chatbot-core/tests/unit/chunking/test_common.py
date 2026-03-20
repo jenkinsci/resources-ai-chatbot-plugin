@@ -1,7 +1,9 @@
 """Unit Test for common chunking module."""
+# pylint: disable=import-error
 
 import json
 import uuid
+from unittest.mock import Mock, patch
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from data.chunking.chunking_utils import (
     save_chunks,
@@ -11,11 +13,11 @@ from data.chunking.chunking_utils import (
 )
 
 
-def test_save_chunks_writes_file(mocker, tmp_path):
+def test_save_chunks_writes_file(tmp_path):
     """Test save_chunks writes JSON file and logs info."""
     output_file = tmp_path / "output.json"
     data = [{"id": "1", "chunk_text": "Chuk text"}]
-    logger = mocker.Mock()
+    logger = Mock()
 
     save_chunks(str(output_file), data, logger)
 
@@ -26,38 +28,36 @@ def test_save_chunks_writes_file(mocker, tmp_path):
     assert "Written" in logger.info.call_args[0][0]
 
 
-def test_save_chunks_handles_error(mocker):
+@patch("builtins.open")
+def test_save_chunks_handles_error(mock_open):
     """Test save_chunks logs error on OSError."""
-    logger = mocker.Mock()
+    logger = Mock()
     fake_path = "/nonexistent/output.json"
     data = [{"id": "1", "chunk_text": "Test"}]
+    mock_open.side_effect = OSError("Disk full")
 
-    def raise_oserror(*args, **kwargs):
-        raise OSError("Disk full")
-
-    mocker.patch("builtins.open", side_effect=raise_oserror)
     save_chunks(fake_path, data, logger)
 
     logger.error.assert_called_once()
     assert "File error while writing" in logger.error.call_args[0][0]
 
 
-def test_read_json_file_returns_data(mocker, tmp_path):
+def test_read_json_file_returns_data(tmp_path):
     """Test read_json_file loads JSON data."""
     input_file = tmp_path / "input.json"
     test_data = {"key": "value"}
     input_file.write_text(json.dumps(test_data), encoding="utf-8")
-    logger = mocker.Mock()
+    logger = Mock()
 
     result = read_json_file(str(input_file), logger)
     assert result == test_data
     logger.error.assert_not_called()
 
 
-def test_read_json_file_handles_file_not_found(mocker, tmp_path):
+def test_read_json_file_handles_file_not_found(tmp_path):
     """Test read_json_file returns [] if file missing."""
     nonexistent_file = tmp_path / "missing.json"
-    logger = mocker.Mock()
+    logger = Mock()
 
     result = read_json_file(str(nonexistent_file), logger)
     assert result == []
@@ -65,11 +65,11 @@ def test_read_json_file_handles_file_not_found(mocker, tmp_path):
     assert "File error while reading" in logger.error.call_args[0][0]
 
 
-def test_read_json_file_handles_json_decode_error(mocker, tmp_path):
+def test_read_json_file_handles_json_decode_error(tmp_path):
     """Test read_json_file returns [] on JSON decode error."""
     input_file = tmp_path / "bad.json"
     input_file.write_text("{ invalid json }", encoding="utf-8")
-    logger = mocker.Mock()
+    logger = Mock()
 
     result = read_json_file(str(input_file), logger)
     assert result == []
