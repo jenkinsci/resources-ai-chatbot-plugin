@@ -106,7 +106,18 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
     try:
         while True:
             data = await websocket.receive_text()
-            message_data = json.loads(data)
+
+            try:
+                message_data = json.loads(data)
+            except json.JSONDecodeError:
+                logger.warning(
+                    "Malformed JSON from session %s", session_id
+                )
+                await websocket.send_text(
+                    json.dumps({"error": "Invalid JSON format."})
+                )
+                continue
+
             user_message = message_data.get("message", "")
 
             if not user_message:
