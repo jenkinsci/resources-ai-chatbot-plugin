@@ -286,8 +286,8 @@ def test_get_chatbot_reply_sanitizes_secrets_at_entry(
     # Also prove it doesn't leak into the chat history!
     mock_memory.chat_memory.add_user_message.assert_called_once_with(
         expected_safe_input)
-    
-    
+
+
 def test_get_chatbot_reply_with_file_attachment(
     mock_get_session,
     mock_retrieve_context,
@@ -317,7 +317,8 @@ def test_get_chatbot_reply_with_file_attachment(
     assert isinstance(response, ChatResponse)
     assert response.reply == "Reply with file context"
     mock_chat_memory.add_user_message.assert_called_once()
-    mock_chat_memory.add_ai_message.assert_called_once_with("Reply with file context")
+    mock_chat_memory.add_ai_message.assert_called_once_with(
+        "Reply with file context")
 
 
 def test_get_chatbot_reply_memory_updated_correctly(
