@@ -105,7 +105,7 @@ Future improvements may include:
 
 The API uses an abstract base class (`LLMProvider`) to decouple the chatbot logic from the underlying language model.
 
-Currently, it is implemented by `llama_cpp__provider` that runs a local GGUF model(Mistral 7B Instruct)
+Currently, it is implemented by `llama_cpp_provider` that runs a local GGUF model (Mistral 7B Instruct).
 
 **Future provider options could include:**
 - OpenAI's `gpt-3.5` or `gpt-4` via API
