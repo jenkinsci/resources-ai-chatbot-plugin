@@ -27,6 +27,7 @@ from api.tools.utils import (
     make_placeholder_replacer,
     validate_tool_calls,
 )
+from api.services.agent_service import AgentOrchestrator
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
 
@@ -75,8 +76,8 @@ def get_chatbot_reply(
     if memory is None:
         raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
 
-    context = retrieve_context(user_input)
-    logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
+    context = AgentOrchestrator.synthesize_context(user_input)
+    logger.debug("Context retrieved via Agent Orchestrator: %s", _sanitize_log_payload(context))
 
     # Process file context if files are provided
     context = _process_file_context(context, files)
@@ -505,8 +506,8 @@ async def get_chatbot_reply_stream(
         raise RuntimeError(
             f"Session '{session_id}' not found in memory store.")
 
-    context = retrieve_context(user_input)
-    logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
+    context = AgentOrchestrator.synthesize_context(user_input)
+    logger.debug("Context retrieved via Agent Orchestrator: %s", _sanitize_log_payload(context))
 
     prompt = build_prompt(user_input, context, memory)
     logger.debug(
