@@ -1,4 +1,8 @@
 <?jelly escape-by-default='true'?>
 <div>
-    TODO
+  <h2>Resources AI Chatbot Plugin</h2>
+  <p>
+    This plugin integrates an AI-powered chatbot into Jenkins to help users
+    quickly find answers, navigate documentation, and troubleshoot issues.
+  </p>
 </div>
