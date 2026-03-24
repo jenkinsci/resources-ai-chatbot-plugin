@@ -3,6 +3,19 @@ Embeds document chunks, builds a FAISS IVF index,
 and stores both the index and associated metadata to disk.
 """
 
+import sys
+
+# --- ENVIRONMENT GUARD START ---
+if sys.version_info >= (3, 14):
+    print("=" * 60, file=sys.stderr)
+    print("ERROR: UNSUPPORTED PYTHON VERSION FOR FAISS", file=sys.stderr)
+    print("-" * 60, file=sys.stderr)
+    print("Python 3.14+ detected. FAISS and ONNX are currently unstable", file=sys.stderr)
+    print("on this version. Please use Python 3.9 - 3.13.", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    sys.exit(1)
+# --- ENVIRONMENT GUARD END ---
+
 import os
 import numpy as np
 import faiss

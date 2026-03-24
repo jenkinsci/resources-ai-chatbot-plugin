@@ -2,6 +2,27 @@
 Main entry point for the FastAPI application.
 """
 
+import sys
+
+def check_python_compatibility():
+    """
+    Prevents the application from running on unsupported Python versions 
+    that cause cryptic C-level crashes in FAISS or ONNX.
+    """
+    # Python 3.14+ is currently unstable for our core C-extensions
+    if sys.version_info >= (3, 14):
+        print("=" * 60, file=sys.stderr)
+        print("ERROR: UNSUPPORTED PYTHON VERSION", file=sys.stderr)
+        print("-" * 60, file=sys.stderr)
+        print("Python 3.14+ detected. This version is currently unsupported", file=sys.stderr)
+        print("due to internal C-API changes affecting FAISS and ONNX.", file=sys.stderr)
+        print("Please use Python 3.9 - 3.13 to ensure stability.", file=sys.stderr)
+        print("=" * 60, file=sys.stderr)
+        sys.exit(1)
+
+# Run the check immediately
+check_python_compatibility()
+
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
