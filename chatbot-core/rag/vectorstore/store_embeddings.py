@@ -44,23 +44,29 @@ def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
     n_samples = vectors.shape[0]
 
     # --- ARCHITECTURAL FIX START ---
-    # We check if we have enough data points to satisfy the cluster requirement.
-    # Typically, FAISS needs at least 'nlist' points to train.
+    # Determine the index type based on dataset size
     if n_samples < nlist:
-         logger.warning(
-            "Dataset size (%d) is smaller than nlist (%d). Falling back to IndexFlatL2.",
-            n_samples, nlist
+        logger.warning(
+        "Dataset size (%d) is smaller than nlist (%d). Falling back to IndexFlatL2.",
+        n_samples, nlist
         )
+        # Flat index doesn't need training
+        index = faiss.IndexFlatL2(d)
     else:
         quantizer = faiss.IndexFlatL2(d)
         index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_L2)
-        logger.info("FAISS index training started...")
-        index.train(vectors)
-        logger.info("FAISS index training completed.")
+        
+        # Only train if the index requires it and isn't trained yet
+        if not index.is_trained:
+            logger.info("FAISS index training started...")
+            index.train(vectors)
+            logger.info("FAISS index training completed.")
+        
+        # Set nprobe only for IVF indices
         index.nprobe = nprobe
     # --- ARCHITECTURAL FIX END ---
 
-    index.add(vectors)  # pylint: disable=no-value-for-parameter
+    index.add(vectors) 
     return index
 
 
