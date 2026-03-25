@@ -148,6 +148,19 @@ def test_retrieve_context_no_documents(mock_get_relevant_documents):
 
     assert result == CONFIG["retrieval"]["empty_context_message"]
 
+
+def test_retrieve_context_embedding_unavailable_returns_empty_message(
+    mock_get_relevant_documents,
+    mocker
+):
+    """Test retrieve_context degrades gracefully when embedding model is unavailable."""
+    mocker.patch("api.services.chat_service.get_embedding_model", return_value=None)
+
+    result = retrieve_context("This is a relevant query")
+
+    assert result == CONFIG["retrieval"]["empty_context_message"]
+    mock_get_relevant_documents.assert_not_called()
+
 def test_retrieve_context_missing_id(mock_get_relevant_documents, caplog):
     """Test retrieve_context skips chunks missing an ID and logs a warning."""
     mock_get_relevant_documents.return_value = (get_mock_documents("missing_id"), None)

@@ -4,7 +4,7 @@ Definition of the tools avaialable to the Agent.
 
 from typing import Optional
 from types import MappingProxyType
-from api.models.embedding_model import EMBEDDING_MODEL
+from api.models.embedding_model import get_embedding_model
 from api.tools.utils import (
     filter_retrieved_data,
     is_valid_plugin,
@@ -14,6 +14,25 @@ from api.tools.utils import (
 from api.config.loader import CONFIG
 
 retrieval_config = CONFIG["retrieval"]
+
+
+def _retrieve_documents_with_embedding(query: str, keywords: str, logger, source_name: str):
+    """Retrieve documents when embedding model is available, otherwise return empty results."""
+    embedding_model = get_embedding_model()
+    if embedding_model is None:
+        logger.warning(
+            "Embedding model unavailable - skipping semantic retrieval for source '%s'.",
+            source_name
+        )
+        return [], [], [], []
+
+    return retrieve_documents(
+        query=query,
+        keywords=keywords,
+        logger=logger,
+        source_name=source_name,
+        embedding_model=embedding_model
+    )
 
 def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[str] = None) -> str:
     """
@@ -30,12 +49,11 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
     """
     source_name = CONFIG["tool_names"]["plugins"]
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
-        retrieve_documents(
+        _retrieve_documents_with_embedding(
             query=query,
             keywords=keywords,
             logger=logger,
-            source_name=source_name,
-            embedding_model=EMBEDDING_MODEL
+            source_name=source_name
         )
     )
 
@@ -69,12 +87,11 @@ def search_jenkins_docs(query: str, keywords: str, logger) -> str:
     """
     source_name = CONFIG["tool_names"]["jenkins_docs"]
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
-        retrieve_documents(
+        _retrieve_documents_with_embedding(
             query=query,
             keywords=keywords,
             logger=logger,
-            source_name=source_name,
-            embedding_model=EMBEDDING_MODEL
+            source_name=source_name
         )
     )
 
@@ -110,12 +127,11 @@ def search_community_threads(query: str, keywords: str, logger) -> str:
     """
     source_name = CONFIG["tool_names"]["community_threads"]
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
-        retrieve_documents(
+        _retrieve_documents_with_embedding(
             query=query,
             keywords=keywords,
             logger=logger,
-            source_name=source_name,
-            embedding_model=EMBEDDING_MODEL
+            source_name=source_name
         )
     )
 

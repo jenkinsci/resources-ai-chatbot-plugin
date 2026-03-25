@@ -6,7 +6,7 @@ import re
 from typing import AsyncGenerator, List, Optional
 
 from api.config.loader import CONFIG
-from api.models.embedding_model import EMBEDDING_MODEL
+from api.models.embedding_model import get_embedding_model
 from api.models.llama_cpp_provider import llm_provider
 from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type, FileAttachment
 from api.prompts.prompt_builder import build_prompt
@@ -386,9 +386,16 @@ def retrieve_context(user_input: str) -> str:
             "Dev mode enabled - skipping RAG retrieval. Build indices to enable full RAG.")
         return "Dev mode: RAG indices not built. This is a placeholder context for testing."
 
+    embedding_model = get_embedding_model()
+    if embedding_model is None:
+        logger.warning(
+            "Embedding model unavailable - skipping semantic retrieval and returning empty context."
+        )
+        return retrieval_config["empty_context_message"]
+
     data_retrieved, _ = get_relevant_documents(
         user_input,
-        EMBEDDING_MODEL,
+        embedding_model,
         logger=logger,
         source_name="plugins",
         top_k=retrieval_config["top_k"]
