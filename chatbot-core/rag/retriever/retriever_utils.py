@@ -28,6 +28,9 @@ def load_vector_index(logger, source_name):
 
     index = load_faiss_index(index_path, logger)
     metadata = load_metadata(metadata_path, logger)
+    if index is None or metadata is None:
+        logger.warning("Failed to load index or metadata for source '%s'. Returning empty results.", source_name)
+        return [], []
 
     return index, metadata
 
