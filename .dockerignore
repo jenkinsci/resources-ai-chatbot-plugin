@@ -1,0 +1,33 @@
+# Version control
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Python
+chatbot-core/venv/
+chatbot-core/__pycache__/
+chatbot-core/**/__pycache__/
+chatbot-core/*.pyc
+chatbot-core/.pytest_cache/
+
+# Models (large files, mount separately)
+chatbot-core/api/models/mistral/*.gguf
+
+# Node
+frontend/node_modules/
+
+# Java build artifacts
+target/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

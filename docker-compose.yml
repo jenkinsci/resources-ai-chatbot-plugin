@@ -1,0 +1,51 @@
+services:
+  # =========================
+  # Chatbot API Backend
+  # =========================
+  chatbot-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.chatbot
+    container_name: jenkins-chatbot-api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount chatbot-core source for live reload during development
+      - ./chatbot-core:/app/chatbot-core
+      # Persist session data across container restarts
+      - chatbot-sessions:/app/chatbot-core/sessions
+    environment:
+      - PYTHONPATH=/app/chatbot-core
+      # Lite mode by default (no LLM model needed)
+      # To run with a local LLM, comment out PYTEST_VERSION
+      # and mount your model directory (see full-mode override below)
+      - PYTEST_VERSION=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  # =========================
+  # Jenkins (optional, for integration testing)
+  # =========================
+  # Uncomment the section below if you want a local Jenkins instance
+  # for testing the plugin alongside the chatbot API.
+  #
+  # jenkins:
+  #   image: jenkins/jenkins:lts
+  #   container_name: jenkins-server
+  #   ports:
+  #     - "8080:8080"
+  #     - "50000:50000"
+  #   volumes:
+  #     - jenkins-data:/var/jenkins_home
+  #   environment:
+  #     - JAVA_OPTS=-Djenkins.install.runSetupWizard=true
+  #   restart: unless-stopped
+
+volumes:
+  chatbot-sessions:
+  # jenkins-data:

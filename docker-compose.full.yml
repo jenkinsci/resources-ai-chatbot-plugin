@@ -1,0 +1,18 @@
+services:
+  chatbot-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.chatbot
+      args:
+        # Use full requirements with GPU/ML dependencies
+        REQUIREMENTS: requirements.txt
+    environment:
+      # Remove PYTEST_VERSION to enable local LLM loading
+      - PYTHONPATH=/app/chatbot-core
+    volumes:
+      - ./chatbot-core:/app/chatbot-core
+      - chatbot-sessions:/app/chatbot-core/sessions
+      # Mount the directory containing your downloaded GGUF model
+      # Download from: https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
+      # Place the .gguf file in chatbot-core/api/models/mistral/
+      - ./chatbot-core/api/models:/app/chatbot-core/api/models

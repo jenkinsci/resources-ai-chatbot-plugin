@@ -1,0 +1,44 @@
+FROM python:3.12-slim AS base
+
+# System dependencies for all native packages in requirements-cpu.txt:
+# - build-essential, gcc, g++: General C/C++ compilation (krovetzstemmer, zlib-state, cbor)
+# - cmake: Required by llama-cpp-python (if used in full mode)
+# - git: Required by retriv (installed from GitHub repo)
+# - zlib1g-dev: Required by zlib-state (transitive dep of ir-datasets via ranx)
+# - libxml2-dev, libxslt1-dev: Required by lxml (used by beautifulsoup4)
+# - libmagic1: Required by python-magic (file type detection)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    gcc \
+    g++ \
+    git \
+    zlib1g-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/chatbot-core
+
+# Copy requirements first for better layer caching
+COPY chatbot-core/requirements-cpu.txt requirements-cpu.txt
+COPY chatbot-core/requirements.txt requirements.txt
+
+# Default to CPU requirements (avoids NVIDIA dependency issues in containers)
+ARG REQUIREMENTS=requirements-cpu.txt
+RUN pip install --no-cache-dir -r ${REQUIREMENTS} && \
+    pip install --no-cache-dir python-multipart
+
+# Copy the rest of the chatbot-core source
+COPY chatbot-core/ .
+
+ENV PYTHONPATH=/app/chatbot-core
+
+EXPOSE 8000
+
+# Default: run in lite mode (no LLM model required)
+# Override PYTEST_VERSION to empty string and provide a model for full mode
+ENV PYTEST_VERSION=1
+
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
