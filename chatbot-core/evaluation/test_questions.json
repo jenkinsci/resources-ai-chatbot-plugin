@@ -1,0 +1,107 @@
+[
+  {
+    "id": "doc_01",
+    "question": "How do I install Jenkins on Ubuntu?",
+    "category": "documentation",
+    "expected_topics": ["apt", "package", "install", "ubuntu", "debian", "repository"],
+    "difficulty": "easy"
+  },
+  {
+    "id": "doc_02",
+    "question": "What is a Jenkinsfile and how do I create one?",
+    "category": "documentation",
+    "expected_topics": ["pipeline", "declarative", "scripted", "stages", "steps"],
+    "difficulty": "easy"
+  },
+  {
+    "id": "doc_03",
+    "question": "How do I set up a multibranch pipeline in Jenkins?",
+    "category": "documentation",
+    "expected_topics": ["multibranch", "branch", "source", "scan", "SCM"],
+    "difficulty": "medium"
+  },
+  {
+    "id": "doc_04",
+    "question": "How do I configure Jenkins to use GitHub webhooks?",
+    "category": "documentation",
+    "expected_topics": ["webhook", "GitHub", "trigger", "push", "payload"],
+    "difficulty": "medium"
+  },
+  {
+    "id": "doc_05",
+    "question": "What is the difference between declarative and scripted pipelines?",
+    "category": "documentation",
+    "expected_topics": ["declarative", "scripted", "syntax", "pipeline", "Groovy"],
+    "difficulty": "medium"
+  },
+  {
+    "id": "plugin_01",
+    "question": "What does the Blue Ocean plugin do?",
+    "category": "plugin",
+    "expected_topics": ["Blue Ocean", "UI", "visualization", "pipeline", "editor"],
+    "difficulty": "easy"
+  },
+  {
+    "id": "plugin_02",
+    "question": "How do I use the credentials plugin to store secrets?",
+    "category": "plugin",
+    "expected_topics": ["credentials", "secret", "binding", "store", "global"],
+    "difficulty": "medium"
+  },
+  {
+    "id": "plugin_03",
+    "question": "What plugin should I use for Docker-based build agents?",
+    "category": "plugin",
+    "expected_topics": ["docker", "agent", "cloud", "container", "plugin"],
+    "difficulty": "medium"
+  },
+  {
+    "id": "troubleshoot_01",
+    "question": "My Jenkins build fails with 'permission denied' when running shell scripts. How do I fix this?",
+    "category": "troubleshooting",
+    "expected_topics": ["permission", "chmod", "execute", "shell", "agent"],
+    "difficulty": "medium"
+  },
+  {
+    "id": "troubleshoot_02",
+    "question": "Jenkins is running out of disk space. What should I do?",
+    "category": "troubleshooting",
+    "expected_topics": ["disk", "cleanup", "workspace", "build", "discard"],
+    "difficulty": "easy"
+  },
+  {
+    "id": "troubleshoot_03",
+    "question": "How do I fix 'java.lang.OutOfMemoryError' in Jenkins?",
+    "category": "troubleshooting",
+    "expected_topics": ["memory", "heap", "JVM", "JAVA_OPTS", "Xmx"],
+    "difficulty": "hard"
+  },
+  {
+    "id": "config_01",
+    "question": "How do I configure email notifications for failed builds?",
+    "category": "configuration",
+    "expected_topics": ["email", "notification", "SMTP", "mailer", "post"],
+    "difficulty": "medium"
+  },
+  {
+    "id": "config_02",
+    "question": "How do I set up role-based access control in Jenkins?",
+    "category": "configuration",
+    "expected_topics": ["role", "access", "security", "authorization", "matrix"],
+    "difficulty": "hard"
+  },
+  {
+    "id": "config_03",
+    "question": "How do I back up my Jenkins configuration?",
+    "category": "configuration",
+    "expected_topics": ["backup", "JENKINS_HOME", "configuration", "restore", "plugin"],
+    "difficulty": "easy"
+  },
+  {
+    "id": "advanced_01",
+    "question": "How do I use shared libraries in Jenkins pipelines?",
+    "category": "advanced",
+    "expected_topics": ["shared", "library", "global", "pipeline", "vars"],
+    "difficulty": "hard"
+  }
+]
