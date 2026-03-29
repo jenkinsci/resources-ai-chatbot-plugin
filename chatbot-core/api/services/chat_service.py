@@ -19,7 +19,7 @@ from api.prompts.prompts import (
 )
 
 from api.services.memory import get_session, get_session_async
-from api.services.file_service import format_file_context
+from api.services.file_service import format_file_context, safe_filename_for_prompt
 from api.tools.sanitizer import sanitize_logs
 from api.tools.tools import TOOL_REGISTRY
 from api.tools.utils import (
@@ -121,7 +121,7 @@ def _format_user_message_for_memory(user_input: str, files: Optional[List[FileAt
     if not files:
         return user_input
 
-    file_names = [f.filename for f in files]
+    file_names = [safe_filename_for_prompt(f.filename) for f in files]
     return f"{user_input}\n[Attached files: {', '.join(file_names)}]"
 
 

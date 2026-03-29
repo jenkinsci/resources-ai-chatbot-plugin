@@ -8,7 +8,9 @@ Handles extraction of text content from various file types including:
 """
 
 import base64
+import html
 import mimetypes
+import re
 from typing import Tuple, Optional
 from pathlib import Path
 
@@ -390,6 +392,19 @@ def process_uploaded_file(content: bytes, filename: str) -> dict:
     raise FileProcessingError(f"Unknown file type for '{filename}'")
 
 
+def safe_filename_for_prompt(filename: str) -> str:
+    """
+    Sanitize a user-controlled filename before embedding it into prompt context.
+
+    - keep only basename (drop path hints)
+    - collapse control characters/new lines
+    - escape XML/HTML-sensitive characters
+    """
+    base_name = Path(str(filename or "unknown")).name
+    normalized = re.sub(r"[\r\n\t]+", " ", base_name).strip() or "unknown"
+    return html.escape(normalized, quote=True)
+
+
 def format_file_context(processed_files: list) -> str:
     """
     Formats processed files into context string for the LLM.
@@ -409,7 +424,7 @@ def format_file_context(processed_files: list) -> str:
     context_parts = []
 
     for file_info in processed_files:
-        filename = file_info.get("filename", "unknown")
+        filename = safe_filename_for_prompt(file_info.get("filename", "unknown"))
         file_type = file_info.get("type", "unknown")
         content = file_info.get("content", "")
 
