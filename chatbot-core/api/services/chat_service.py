@@ -28,6 +28,9 @@ from api.tools.utils import (
 )
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
+from api.models.runtime_models import get_llm_provider
+
+llm_provider = get_llm_provider()
 
 logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
@@ -435,8 +438,8 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
     Returns:
         str: The model's generated text response.
     """
-    # Lazily load LLM provider on first use
-    provider = get_llm_provider()
+    # Use the global llm_provider instance
+    provider = llm_provider
     if provider is None:
         logger.warning(
             "LLM provider not available - returning fallback response")
@@ -471,8 +474,8 @@ async def generate_answer_stream(
     Yields:
         str: Individual tokens
     """
-    # Lazily load LLM provider on first use
-    provider = get_llm_provider()
+    # Use the global llm_provider instance
+    provider = llm_provider
     if provider is None:
         logger.warning(
             "LLM provider not available - returning fallback response")
