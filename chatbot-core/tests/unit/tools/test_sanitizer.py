@@ -31,5 +31,46 @@ class TestLogSanitizer(unittest.TestCase):
         log = "Build step 'Execute Windows batch command' marked build as failure"
         self.assertEqual(sanitize_logs(log), log)
 
+    # The patterns below exist in sanitizer.py but had no tests.
+
+    def test_sanitize_bearer_token(self):
+        """Bearer tokens should be replaced with [REDACTED_TOKEN]."""
+        log = "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.sig"
+        result = sanitize_logs(log)
+        self.assertNotIn("eyJhbGciOiJIUzI1NiJ9", result)
+        self.assertIn("[REDACTED_TOKEN]", result)
+
+    def test_sanitize_github_token(self):
+        """GitHub PATs (ghp_...) should be replaced with [REDACTED_GITHUB_TOKEN]."""
+        log = "GITHUB_TOKEN=ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"
+        result = sanitize_logs(log)
+        self.assertNotIn("ghp_ABCDEF", result)
+        self.assertIn("[REDACTED_GITHUB_TOKEN]", result)
+
+    def test_sanitize_private_key_block(self):
+        """PEM private key blocks should be replaced with [REDACTED_PRIVATE_KEY]."""
+        log = (
+            "-----BEGIN RSA PRIVATE KEY-----\n"
+            "MIIBogIBAAJBAKxL\n"
+            "-----END RSA PRIVATE KEY-----"
+        )
+        result = sanitize_logs(log)
+        self.assertNotIn("MIIBogIBAAJBAKxL", result)
+        self.assertIn("[REDACTED_PRIVATE_KEY]", result)
+
+    def test_sanitize_client_secret(self):
+        """client_secret=... should be redacted like other password-style keys."""
+        log = "client_secret=superSecretOAuthValue"
+        result = sanitize_logs(log)
+        self.assertNotIn("superSecretOAuthValue", result)
+        self.assertIn("[REDACTED]", result)
+
+    def test_sanitize_api_key_with_colon(self):
+        """api_key: ... (colon separator) should also be caught."""
+        log = "api_key: sk-proj-1234567890abcdef"
+        result = sanitize_logs(log)
+        self.assertNotIn("sk-proj-1234567890abcdef", result)
+        self.assertIn("[REDACTED]", result)
+
 if __name__ == '__main__':
     unittest.main()
