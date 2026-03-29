@@ -6,8 +6,7 @@ import re
 from typing import AsyncGenerator, List, Optional
 
 from api.config.loader import CONFIG
-from api.models.embedding_model import EMBEDDING_MODEL
-from api.models.llama_cpp_provider import llm_provider
+from api.models.runtime_models import get_embedding_model, get_llm_provider
 from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type, FileAttachment
 from api.prompts.prompt_builder import build_prompt
 from api.prompts.prompts import (
@@ -386,9 +385,15 @@ def retrieve_context(user_input: str) -> str:
             "Dev mode enabled - skipping RAG retrieval. Build indices to enable full RAG.")
         return "Dev mode: RAG indices not built. This is a placeholder context for testing."
 
+    # Lazily load embedding model on first use
+    embedding_model = get_embedding_model()
+    if embedding_model is None:
+        logger.warning("Embedding model unavailable - RAG retrieval disabled")
+        return retrieval_config["empty_context_message"]
+
     data_retrieved, _ = get_relevant_documents(
         user_input,
-        EMBEDDING_MODEL,
+        embedding_model,
         logger=logger,
         source_name="plugins",
         top_k=retrieval_config["top_k"]
@@ -430,12 +435,14 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
     Returns:
         str: The model's generated text response.
     """
-    if llm_provider is None:
+    # Lazily load LLM provider on first use
+    provider = get_llm_provider()
+    if provider is None:
         logger.warning(
             "LLM provider not available - returning fallback response")
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     try:
-        return llm_provider.generate(
+        return provider.generate(
             prompt=prompt,
             max_tokens=max_tokens or llm_config["max_tokens"])
     except (ImportError, AttributeError) as e:
@@ -464,13 +471,15 @@ async def generate_answer_stream(
     Yields:
         str: Individual tokens
     """
-    if llm_provider is None:
+    # Lazily load LLM provider on first use
+    provider = get_llm_provider()
+    if provider is None:
         logger.warning(
             "LLM provider not available - returning fallback response")
         yield "LLM is not available. Please install llama-cpp-python and configure a model."
         return
     try:
-        async for token in llm_provider.generate_stream(
+        async for token in provider.generate_stream(
             prompt=prompt,
             max_tokens=max_tokens or llm_config["max_tokens"]
         ):
