@@ -35,6 +35,7 @@ def load_vector_index(logger, source_name):
         source_name
         )
         return [], []
+    return index, metadata
 
 def search_index(query_vector, index, metadata, logger, top_k):
     """

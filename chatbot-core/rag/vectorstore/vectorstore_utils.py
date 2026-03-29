@@ -45,7 +45,7 @@ def load_faiss_index(path, logger):
     try:
         logger.info("Loading FAISS index from %s...", path)
         index = faiss.read_index(path)
-        
+
         logger.info("FAISS index loaded successfully.")
         return index
     except (OSError, FileNotFoundError) as e:
