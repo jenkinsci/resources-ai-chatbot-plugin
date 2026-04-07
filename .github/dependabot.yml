@@ -10,3 +10,11 @@ updates:
     directory: /
     schedule:
       interval: monthly
+  - package-ecosystem: npm
+    directory: /frontend/
+    schedule:
+      interval: monthly
+  - package-ecosystem: pip
+    directory: /chatbot-core/
+    schedule:
+      interval: monthly
