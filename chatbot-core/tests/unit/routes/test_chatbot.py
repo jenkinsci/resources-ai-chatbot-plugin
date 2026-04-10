@@ -93,7 +93,7 @@ def test_websocket_malformed_json_returns_error_and_stays_alive(
         error_response = ws.receive_json()
         assert error_response == {"error": "Invalid JSON format."}
 
-        # Connection is still alive — send a valid message
+        # Connection is still alive â€” send a valid message
         ws.send_json({"message": "Hello"})
         token_response = ws.receive_json()
         assert "token" in token_response
@@ -136,13 +136,36 @@ def test_websocket_empty_message_is_skipped(
     mock_get_chatbot_reply_stream.side_effect = fake_stream
 
     with client.websocket_connect("/sessions/test-session-id/stream") as ws:
-        # Send valid JSON with empty message — should be skipped
+        # Send valid JSON with empty message â€” should be skipped
         ws.send_json({"message": ""})
 
         # Send a real message to prove connection is still alive
         ws.send_json({"message": "Real question"})
         token = ws.receive_json()
         assert token == {"token": "response"}
+        end = ws.receive_json()
+        assert end == {"end": True}
+
+
+def test_websocket_non_object_json_returns_error_and_stays_alive(
+    client, mock_session_exists, mock_get_chatbot_reply_stream
+):
+    """Non-object JSON payloads should return a validation error and keep socket open."""
+    mock_session_exists.return_value = True
+
+    async def fake_stream(_session_id, _message):
+        yield "ok"
+
+    mock_get_chatbot_reply_stream.side_effect = fake_stream
+
+    with client.websocket_connect("/sessions/test-session-id/stream") as ws:
+        ws.send_text("[\"not\", \"an\", \"object\"]")
+        error_response = ws.receive_json()
+        assert error_response == {"error": "Invalid message payload. Expected JSON object."}
+
+        ws.send_json({"message": "Real question"})
+        token = ws.receive_json()
+        assert token == {"token": "ok"}
         end = ws.receive_json()
         assert end == {"end": True}
 
