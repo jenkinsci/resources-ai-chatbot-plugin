@@ -24,8 +24,6 @@ sudo apt install -y make cmake gcc g++ python3.11 python3.11-venv python3.11-dev
 brew install cmake python@3.11 && xcode-select --install
 ```
 
-
-
 ## Getting Started
 
 There are two ways to run the API locally, depending on your use case:
@@ -39,6 +37,7 @@ make dev-lite
 ```
 
 This will:
+
 - Set up the Python environment automatically
 - Install dependencies (skips the 4GB model download)
 - Start the API server without loading the LLM
@@ -46,6 +45,7 @@ This will:
 The API will be available at `http://127.0.0.1:8000` within a few minutes.
 
 Verify it's working:
+
 ```bash
 curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 ```
@@ -60,6 +60,7 @@ Use this if you need to test the chatbot with real LLM responses or work on mode
 First, complete the full setup in [docs/setup.md](docs/setup.md). This includes installing llama-cpp-python and downloading the 4GB model.
 
 Then run:
+
 ```bash
 make api
 ```
@@ -78,18 +79,18 @@ See [docs/README.md](docs/README.md) for detailed explanations.
 
 The tutorial shows how to fork the repo, set up the backend, download the LLM model, run the frontend, and verify the chatbot works.
 
-
-
 ## Troubleshooting
 
 ### Model Downloads
+
 - **Symptom**: The application appears "stuck" or frozen during the first run of the data pipeline or API.
 - **Cause**: The system is downloading the embedding model (`all-MiniLM-L6-v2`, ~80MB) or initializing the LLM.
 - **Solution**: This is normal behavior for the first run. Please wait for a few minutes. Ensure you have a stable internet connection.
 
 ### Python Version Mismatches
+
 - **Symptom**: `SyntaxError` or `ModuleNotFoundError` during setup or execution.
-- **Solution**: 
+- **Solution**:
   - Ensure you are using **Python 3.11+**. Verify with `python --version`.
   - Ensure the virtual environment is activated:
     ```bash
@@ -97,6 +98,7 @@ The tutorial shows how to fork the repo, set up the backend, download the LLM mo
     ```
 
 ### Common Startup Errors
+
 - **Memory Limits**: If the process is killed (e.g., `OOM Killed`), ensure your machine has sufficient RAM (at least 8GB recommended for full mode). Try running in **Lite Mode** (`make dev-lite`) first.
 - **Missing Dependencies**: If you see import errors, re-run dependency installation:
   ```bash
@@ -105,7 +107,9 @@ The tutorial shows how to fork the repo, set up the backend, download the LLM mo
 - **llama-cpp-python installation fails**: Ensure build tools (gcc, cmake) are installed. See [docs/setup.md](docs/setup.md) for platform-specific instructions.
 
 ### Verification Steps
+
 To confirm your local setup is correct:
+
 1. **Virtual Environment**: Ensure `(venv)` appears in your terminal prompt.
 2. **Lite Mode Check**: Run `make dev-lite`. It should start without errors.
 3. **API Check**: Run `curl -X POST http://127.0.0.1:8000/api/chatbot/sessions`. It should return a default session response.
@@ -118,6 +122,7 @@ Development-related documentation can be found in the [`docs/`](docs/) directory
 
 - [Setup Guide](docs/setup.md)
 - [Windows/WSL2 Setup Guide](docs/windows-setup.md) — for contributors on Windows machines
+- [macOS/Apple Silicon Setup Guide](docs/macos-setup.md) — for contributors on Mac M1/M2/M3
 
 ## Contributing
 
@@ -126,5 +131,3 @@ Refer to our [contribution guidelines](https://github.com/jenkinsci/.github/blob
 ## LICENSE
 
 Licensed under MIT, see [LICENSE](LICENSE.md)
-
-
