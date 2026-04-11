@@ -2,7 +2,7 @@
 import os
 import json
 import uuid
-from threading import Lock
+from threading import Lock, get_ident
 
 
 
@@ -43,15 +43,16 @@ def _append_message_to_json(session_id: str, messages:list) -> None:
     Persist the current session messages as a full snapshot using atomic write.
     """
     path = _get_session_file_path(session_id)
-    if os.path.exists(path):
-        tmp_path = f"{path}.tmp"
+    if not path:
+        return
+    tmp_path = f"{path}.{os.getpid()}.{get_ident()}.tmp"
 
-        with _FILE_LOCK:
+    with _FILE_LOCK:
 
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(messages, f, indent=2, ensure_ascii=False)
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(messages, f, indent=2, ensure_ascii=False)
 
-            os.replace(tmp_path, path)
+        os.replace(tmp_path, path)
 
 
 
