@@ -93,7 +93,7 @@ def test_websocket_malformed_json_returns_error_and_stays_alive(
         error_response = ws.receive_json()
         assert error_response == {"error": "Invalid JSON format."}
 
-        # Connection is still alive â€” send a valid message
+        # Connection is still alive - send a valid message
         ws.send_json({"message": "Hello"})
         token_response = ws.receive_json()
         assert "token" in token_response
@@ -136,7 +136,7 @@ def test_websocket_empty_message_is_skipped(
     mock_get_chatbot_reply_stream.side_effect = fake_stream
 
     with client.websocket_connect("/sessions/test-session-id/stream") as ws:
-        # Send valid JSON with empty message â€” should be skipped
+        # Send valid JSON with empty message - should be skipped
         ws.send_json({"message": ""})
 
         # Send a real message to prove connection is still alive
