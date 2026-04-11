@@ -243,13 +243,14 @@ For contributors who do not need local inference, a test configuration
 is available.
 
 The backend includes a `config-testing.yml` file that disables local
-LLM loading. This configuration is activated when the
-`PYTEST_VERSION` environment variable is set.
+LLM loading. This configuration is activated by setting `APP_ENV=testing`.
+For backward compatibility, setting `PYTEST_VERSION` (auto-set by pytest)
+also activates the testing configuration.
 
 Example:
 
 ```bash
-PYTEST_VERSION=1 make api
+APP_ENV=testing make api
 ```
 
 ## Common Troubleshooting
