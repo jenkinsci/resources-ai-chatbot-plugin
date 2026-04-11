@@ -176,6 +176,9 @@ def start_chat(request: Request, response: Response):
     """
     session_id = init_session()
     response.headers["Location"] = request.url_for(
+        "delete_chat", session_id=session_id
+    ).path
+    response.headers["Content-Location"] = request.url_for(
         "chatbot_reply", session_id=session_id
     ).path
     return SessionResponse(session_id=session_id)
