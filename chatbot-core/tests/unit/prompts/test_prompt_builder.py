@@ -96,3 +96,44 @@ def get_prompt_sections(prompt: str) -> tuple[str, str, str]:
     question_section = prompt.split("User Question:")[1].split("Answer:")[0]
 
     return history_section, context_section, question_section
+
+
+# The log_context parameter was added in PR #89 but never got test
+# coverage.  These three tests cover the LOG_ANALYSIS_INSTRUCTION branch.
+
+
+def test_build_prompt_with_log_context_uses_log_analysis_instruction():
+    """Passing log_context should swap the system prompt to LOG_ANALYSIS_INSTRUCTION."""
+    from api.prompts.prompt_builder import LOG_ANALYSIS_INSTRUCTION  # pylint: disable=import-outside-toplevel
+
+    memory = ConversationBufferMemory(return_messages=True)
+    prompt = build_prompt(
+        "Why did my build fail?",
+        "Jenkins pipeline docs.",
+        memory,
+        log_context="ERROR: Build step failed with exit code 1",
+    )
+
+    assert LOG_ANALYSIS_INSTRUCTION.strip() in prompt
+    assert SYSTEM_INSTRUCTION.strip() not in prompt
+
+
+def test_build_prompt_with_log_context_includes_log_data():
+    """The raw log text must appear under 'User-Provided Log Data'."""
+    memory = ConversationBufferMemory(return_messages=True)
+    log_text = "java.lang.NullPointerException at com.example.Main"
+
+    prompt = build_prompt("Diagnose this", "ctx", memory, log_context=log_text)
+
+    assert "User-Provided Log Data:" in prompt
+    assert log_text in prompt
+
+
+def test_build_prompt_without_log_context_omits_log_section():
+    """When log_context is None the prompt should use SYSTEM_INSTRUCTION
+    and not contain a log-data section at all."""
+    memory = ConversationBufferMemory(return_messages=True)
+    prompt = build_prompt("Hello", "ctx", memory, log_context=None)
+
+    assert SYSTEM_INSTRUCTION.strip() in prompt
+    assert "User-Provided Log Data:" not in prompt
