@@ -2,15 +2,20 @@
 Main entry point for the FastAPI application.
 """
 
+# Standard library
 import asyncio
 from contextlib import asynccontextmanager
+
+# Third‑party
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# First‑party
 from api.routes import chatbot
 from api.config.loader import CONFIG
 from api.services.memory import cleanup_expired_sessions, reload_persisted_sessions
 from utils import LoggerFactory
-from pydantic import BaseModel
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -91,9 +96,7 @@ async def health_check():
     """
     # pylint: disable=import-outside-toplevel
     from api.models.runtime_models import get_models_status
-    
     models_status = get_models_status()
-
     return HealthResponse(
         status="healthy",
         llm_available=models_status["llm_available"],

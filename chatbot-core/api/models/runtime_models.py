@@ -78,26 +78,26 @@ def _get_cached_model(model_name: str, loader_fn) -> Optional[Any]:
         The cached model instance, or None if initialization failed.
     """
     if model_name in _models_cache:
-        logger.debug(f"{model_name} model already cached, returning existing instance")
+        logger.debug("%s model already cached, returning existing instance", model_name)
         return _models_cache[model_name]
-    
+
     if model_name in _models_errors:
         return None
-    
+
     with _models_lock:
         # Double-check after acquiring lock
         if model_name in _models_cache:
             return _models_cache[model_name]
         if model_name in _models_errors:
             return None
-        
+
         try:
-            logger.info(f"Initializing {model_name} model for the first time...")
+            logger.info("Initializing %s model for the first time...", model_name)
             model = loader_fn()
             _models_cache[model_name] = model
-            logger.info(f"{model_name} model initialized successfully")
+            logger.info("%s model initialized successfully", model_name)
             return model
-        except Exception as exc:
+        except (ImportError, RuntimeError, ValueError) as exc:
             error_msg = f"Failed to initialize {model_name}: {type(exc).__name__}: {exc}"
             _models_errors[model_name] = error_msg
             logger.error(error_msg, exc_info=True)
@@ -109,11 +109,12 @@ def _load_embedding_model_impl():
     Internal: actually load the embedding model.
     Called only on first use and under lock.
     """
+    # pylint: disable=import-outside-toplevel
     from sentence_transformers import SentenceTransformer
     from api.config.loader import CONFIG
-    
+
     model_name = CONFIG["retrieval"]["embedding_model_name"]
-    logger.debug(f"Loading embedding model: {model_name}")
+    logger.debug("Loading embedding model: %s", model_name)
     return SentenceTransformer(model_name)
 
 
@@ -122,13 +123,13 @@ def _load_llm_provider_impl():
     Internal: actually load the LLM provider.
     Called only on first use and under lock.
     """
+    # pylint: disable=import-outside-toplevel
     from api.models.llama_cpp_provider import LlamaCppProvider
     from api.config.loader import CONFIG
-    
+
     if CONFIG.get("is_test_mode", False):
         logger.info("Test mode enabled: LLM provider will not be instantiated")
         return None
-    
+
     logger.debug("Initializing LLM provider...")
     return LlamaCppProvider()
-

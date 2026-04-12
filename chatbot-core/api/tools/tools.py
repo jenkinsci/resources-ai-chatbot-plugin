@@ -15,6 +15,7 @@ from api.config.loader import CONFIG
 
 retrieval_config = CONFIG["retrieval"]
 
+
 def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[str] = None) -> str:
     """
     Search tool for the plugin docs. Exploits both a sparse and dense search, resulting in a 
@@ -33,7 +34,7 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
     if embedding_model is None:
         logger.warning("Embedding model unavailable for plugin search")
         return "Plugin search unavailable due to missing embedding model."
-    
+
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
         retrieve_documents(
             query=query,
@@ -60,6 +61,7 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
         logger=logger
     )
 
+
 def search_jenkins_docs(query: str, keywords: str, logger) -> str:
     """
     Search tool for the Jenkins docs. Exploits both a sparse and dense search, resulting in a 
@@ -77,7 +79,7 @@ def search_jenkins_docs(query: str, keywords: str, logger) -> str:
     if embedding_model is None:
         logger.warning("Embedding model unavailable for docs search")
         return "Docs search unavailable due to missing embedding model."
-    
+
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
         retrieve_documents(
             query=query,
@@ -97,6 +99,7 @@ def search_jenkins_docs(query: str, keywords: str, logger) -> str:
         logger=logger
     )
 
+
 def search_stackoverflow_threads(query: str) -> str:
     """
     Stackoverflow Search tool
@@ -104,6 +107,7 @@ def search_stackoverflow_threads(query: str) -> str:
     if query:
         pass
     return "Nothing relevant"
+
 
 def search_community_threads(query: str, keywords: str, logger) -> str:
     """
@@ -123,7 +127,7 @@ def search_community_threads(query: str, keywords: str, logger) -> str:
     if embedding_model is None:
         logger.warning("Embedding model unavailable for community threads search")
         return "Community threads search unavailable due to missing embedding model."
-    
+
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
         retrieve_documents(
             query=query,
@@ -143,6 +147,7 @@ def search_community_threads(query: str, keywords: str, logger) -> str:
         logger=logger,
         semantic_weight=0.7
     )
+
 
 TOOL_REGISTRY = MappingProxyType({
     "search_plugin_docs": search_plugin_docs,

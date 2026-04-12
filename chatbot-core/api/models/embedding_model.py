@@ -24,4 +24,4 @@ def _get_embedding_model_compat():
     return model
 
 # Module-level getter for compatibility, but do NOT eagerly load
-EMBEDDING_MODEL = property(lambda self: _get_embedding_model_compat())
+EMBEDDING_MODEL = property(lambda self: _get_embedding_model_compat())  # pylint: disable=invalid-name

@@ -28,7 +28,6 @@ from api.tools.utils import (
 )
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
-from api.models.runtime_models import get_llm_provider
 
 llm_provider = get_llm_provider()
 

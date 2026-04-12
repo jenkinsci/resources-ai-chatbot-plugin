@@ -149,4 +149,5 @@ class LlamaCppProvider(LLMProvider if LLAMA_CPP_AVAILABLE else object):
 
 # Lazy initialization is now handled by api.models.runtime_models
 # This module should NOT instantiate llm_provider at import time
-# llm_provider = None if CONFIG["is_test_mode"] else LlamaCppProvider()  # REMOVED - use runtime_models instead
+# llm_provider = None if CONFIG["is_test_mode"] else LlamaCppProvider()
+# REMOVED - use runtime_models instead
