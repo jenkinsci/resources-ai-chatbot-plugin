@@ -3,13 +3,21 @@ Utilities for loading the FAISS vector index and performing similarity search
 to retrieve relevant document chunks based on a query vector.
 """
 
+
 import os
+import logging
+from functools import lru_cache
 import numpy as np
 from rag.vectorstore.vectorstore_utils import load_faiss_index, load_metadata
 
-VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
+VECTOR_STORE_DIR = os.path.join(os.path.dirname(
+    __file__), "..", "..", "data", "embeddings")
 
-def load_vector_index(logger, source_name):
+logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def load_vector_index(source_name):
     """
     Load the FAISS index and associated metadata from disk.
 
@@ -24,14 +32,16 @@ def load_vector_index(logger, source_name):
         logger.warning("No source name provided. Returning empty results.")
         return [], []
     index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
-    metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+    metadata_path = os.path.join(
+        VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
 
-    index = load_faiss_index(index_path, logger)
-    metadata = load_metadata(metadata_path, logger)
+    index = load_faiss_index(index_path)
+    metadata = load_metadata(metadata_path)
 
     return index, metadata
 
-def search_index(query_vector, index, metadata, logger, top_k):
+
+def search_index(query_vector, index, metadata, top_k):
     """
     Search the FAISS index with a query vector and return the top-k closest metadata results.
 
@@ -54,7 +64,7 @@ def search_index(query_vector, index, metadata, logger, top_k):
 
     if index.ntotal != len(metadata):
         logger.warning(
-            "Index contains %d vectors but metadata has %d entries." \
+            "Index contains %d vectors but metadata has %d entries."
             " Some results may be missing or inconsistent.",
             index.ntotal,
             len(metadata)
@@ -73,9 +83,9 @@ def search_index(query_vector, index, metadata, logger, top_k):
             })
         else:
             logger.error("FAISS returned index %d out of range (metadata size: %d)",
-                idx,
-                len(metadata)
-            )
+                         idx,
+                         len(metadata)
+                         )
 
     data = []
     scores = []

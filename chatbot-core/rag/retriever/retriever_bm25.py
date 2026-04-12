@@ -22,13 +22,15 @@ def perform_keyword_search_from_source(query, logger, source_name, keyword_thres
         list[dict]: A list of dictionaries, each containing a retrieved chunk and its score.
     """
     index = indexer.get(source_name)
-    _, metadata = load_vector_index(logger, source_name)
+    _, metadata = load_vector_index(source_name)
     if not index or not metadata:
         return []
     return perform_keyword_search(query, logger, index, metadata, keyword_threshold, top_k)
 
 # pylint: disable=too-many-arguments
 # pylint: disable=too-many-positional-arguments
+
+
 def perform_keyword_search(query, logger, index, metadata, keyword_threshold, top_k=5):
     """
     Retrieve the top-k most relevant chunks for a given natural language query
@@ -55,6 +57,7 @@ def perform_keyword_search(query, logger, index, metadata, keyword_threshold, to
         if s >= keyword_threshold
     ]
 
+
 def search_bm25_index(query, index, metadata, logger, top_k):
     """
     Perform the effective sparse research, using a sparse retriever.
@@ -65,7 +68,7 @@ def search_bm25_index(query, index, metadata, logger, top_k):
         metadata (List[dict]): Metadata entries associated with each stored vector.
         logger (logging.Logger): Logger for warnings and file-level updates.
         top_k (int): Number of top results to retrieve.
-    
+
     Returns:
         tuple[list[dict], list[float]]: Retrieved data and similarity scores.
     """

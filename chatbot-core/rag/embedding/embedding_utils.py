@@ -1,20 +1,25 @@
 """
 Utility functions for loading a sentence transformer model and embedding text documents.
 """
-
+import logging
 from sentence_transformers import SentenceTransformer
 
-def load_embedding_model(model_name, logger):
+
+logger = logging.getLogger(__name__)
+
+
+def load_embedding_model(model_name):
     """
     Load the sentence transformer model for generating text embeddings.
 
     Returns:
         SentenceTransformer: The loaded embedding model.
     """
-    logger.info(f"Loading embedding model: {model_name}")
+    logger.info("Loading embedding model: %s", model_name)
     return SentenceTransformer(model_name)
 
-def embed_documents(texts, model, logger, batch_size=32):
+
+def embed_documents(texts, model, batch_size=32):
     """
     Embed a list of text documents into dense vector representations using the given model.
 
@@ -28,5 +33,5 @@ def embed_documents(texts, model, logger, batch_size=32):
     """
     if not isinstance(model, SentenceTransformer):
         raise TypeError("Model must be a SentenceTransformer instance.")
-    logger.info(f"Embedding {len(texts)} documents")
+    logger.info("Embedding %d documents", len(texts))
     return model.encode(texts, batch_size=batch_size, show_progress_bar=True)
