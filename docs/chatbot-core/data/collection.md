@@ -105,7 +105,7 @@ WHERE
 ORDER BY q.Score DESC
 ```
 
-The result can be downloaded as aCSV file and have to be placed in the following path: ```chatbot-core/data/raw/QueryResults.csv```
+The result can be downloaded as a CSV file and has to be placed in the following path: ```chatbot-core/data/raw/QueryResults.csv```
 
 ### 2. Convert CSV to JSON
 
