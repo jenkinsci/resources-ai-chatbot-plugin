@@ -114,7 +114,7 @@ Unidecode==1.4.0
 
 # Web Scraping
 beautifulsoup4==4.13.4
-lxml==5.4.0
+lxml==6.0.2
 soupsieve==2.7
 
 # Visualization
