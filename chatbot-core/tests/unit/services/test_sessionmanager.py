@@ -4,6 +4,11 @@ Unit tests for session persistence — sessionmanager.py
 Covers the two bugs fixed by PR #181:
 1. Gate bug: _append_message_to_json() silently skipped new sessions (os.path.exists guard)
 2. Serialization bug: persist_session() passed raw HumanMessage/AIMessage to json.dump()
+
+Additional coverage from PR #200 (fixes #199):
+- load_session edge cases (missing file, invalid UUID)
+- delete_session_file (existing and missing files)
+- session_exists_in_json (true and false cases)
 """
 # pylint: disable=redefined-outer-name
 import json
@@ -229,3 +234,69 @@ class TestPersistLoadRoundTrip:
         assert loaded[0] == {"role": "human", "content": "What is Jenkins?"}
         assert loaded[1] == {"role": "ai", "content": "Jenkins is a CI/CD tool."}
         assert loaded[2] == {"role": "human", "content": "Thanks!"}
+
+
+# ─────────────────────────────────────────────────────────────────
+# Additional coverage: load_session edge cases (PR #200)
+# ─────────────────────────────────────────────────────────────────
+
+class TestLoadSessionEdgeCases:
+    """Edge-case coverage for load_session not covered by the bug-fix tests."""
+
+    def test_load_session_missing_file_returns_empty_list(self, tmp_session):
+        """load_session must return [] when no file exists for the session."""
+        sm, _ = tmp_session
+        result = sm.load_session(_new_uuid())
+        assert result == []
+
+    def test_load_session_invalid_uuid_returns_empty_list(self, tmp_session):
+        """load_session must return [] for an invalid UUID (no crash)."""
+        sm, _ = tmp_session
+        result = sm.load_session("not-a-uuid")
+        assert result == []
+
+
+# ─────────────────────────────────────────────────────────────────
+# Additional coverage: delete_session_file (PR #200)
+# ─────────────────────────────────────────────────────────────────
+
+class TestDeleteSessionFile:
+    """Coverage for delete_session_file."""
+
+    def test_delete_existing_session_file(self, tmp_session):
+        """delete_session_file must remove an existing file and return True."""
+        sm, _ = tmp_session
+        session_id = _new_uuid()
+        sm.append_message(session_id, [{"role": "human", "content": "hi"}])
+        assert sm.session_exists_in_json(session_id)
+
+        deleted = sm.delete_session_file(session_id)
+
+        assert deleted is True
+        assert not sm.session_exists_in_json(session_id)
+
+    def test_delete_missing_session_file(self, tmp_session):
+        """delete_session_file must return False when the file does not exist."""
+        sm, _ = tmp_session
+        deleted = sm.delete_session_file(_new_uuid())
+        assert deleted is False
+
+
+# ─────────────────────────────────────────────────────────────────
+# Additional coverage: session_exists_in_json (PR #200)
+# ─────────────────────────────────────────────────────────────────
+
+class TestSessionExistsInJson:
+    """Coverage for session_exists_in_json."""
+
+    def test_returns_true_when_file_exists(self, tmp_session):
+        """session_exists_in_json must return True when a session file exists."""
+        sm, _ = tmp_session
+        session_id = _new_uuid()
+        sm.append_message(session_id, [{"role": "human", "content": "hello"}])
+        assert sm.session_exists_in_json(session_id) is True
+
+    def test_returns_false_when_file_missing(self, tmp_session):
+        """session_exists_in_json must return False when no file exists."""
+        sm, _ = tmp_session
+        assert sm.session_exists_in_json(_new_uuid()) is False
