@@ -2,6 +2,7 @@
 Utilities for the tools package.
 """
 
+import functools
 import json
 import os
 import re
@@ -193,9 +194,37 @@ def extract_chunks_content(chunks: List[Dict], logger) -> str:
         else retrieval_config["empty_context_message"]
     )
 
+def tokenize_plugin_name(name: str) -> str:
+    """Normalize a plugin name for case/separator-insensitive comparison."""
+    return name.replace('-', '').replace(' ', '').lower()
+
+
+@functools.lru_cache(maxsize=1)
+def load_plugin_names() -> frozenset:
+    """
+    Load and cache the set of known plugin names (tokenized) from disk.
+
+    The JSON file is static data that never changes at runtime, so it is
+    read once on first access and kept in memory for O(1) lookups.
+
+    Returns:
+        frozenset: A set of tokenized plugin names.
+    """
+    list_plugin_names_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "..", "data", "raw", "plugin_names.json"
+    )
+    with open(list_plugin_names_path, "r", encoding="utf-8") as f:
+        list_plugin_names = json.load(f)
+    return frozenset(tokenize_plugin_name(name) for name in list_plugin_names)
+
+
 def is_valid_plugin(plugin_name: str) -> bool:
     """
     Checks whether the given plugin name exists in the list of known plugin names.
+
+    Uses a cached frozenset for O(1) membership checks instead of
+    re-reading from disk and performing a linear scan on every call.
 
     Args:
         plugin_name (str): The name of the plugin to validate.
@@ -203,19 +232,7 @@ def is_valid_plugin(plugin_name: str) -> bool:
     Returns:
         bool: True if the plugin exists in the list, False otherwise.
     """
-    def tokenize(item: str) -> str:
-        item = item.replace('-', '')
-        return item.replace(' ', '').lower()
-    list_plugin_names_path = os.path.join(os.path.abspath(__file__),
-                                          "..", "..", "data", "raw", "plugin_names.json")
-    with open(list_plugin_names_path, "r", encoding="utf-8") as f:
-        list_plugin_names = json.load(f)
-
-    for name in list_plugin_names:
-        if tokenize(plugin_name) == tokenize(name):
-            return True
-
-    return False
+    return tokenize_plugin_name(plugin_name) in load_plugin_names()
 
 def filter_retrieved_data(
     semantic_data: List[Dict],
@@ -234,14 +251,12 @@ def filter_retrieved_data(
     Returns:
         Tuple[List[Dict], List[Dict]]: Filtered semantic and keyword data.
     """
-    def tokenize(item: str) -> str:
-        item = item.replace('-', '')
-        return item.replace(' ', '').lower()
-
     semantic_filtered_data = [item for item in semantic_data
-                              if tokenize(item["metadata"]["title"]) == tokenize(plugin_name)]
+                              if tokenize_plugin_name(item["metadata"]["title"])
+                              == tokenize_plugin_name(plugin_name)]
     keyword_filtered_data = [item for item in keyword_data
-                             if tokenize(item["metadata"]["title"]) == tokenize(plugin_name)]
+                             if tokenize_plugin_name(item["metadata"]["title"])
+                             == tokenize_plugin_name(plugin_name)]
 
     return semantic_filtered_data, keyword_filtered_data
 
