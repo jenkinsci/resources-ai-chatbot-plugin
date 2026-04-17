@@ -169,3 +169,38 @@ def test_cleanup_expired_sessions_with_no_sessions():
 
     assert cleaned_count == 0
     assert memory.get_session_count() == 0
+
+
+# ---------- Tests for get_last_accessed / set_last_accessed (PR #215 review) ----------
+
+
+def test_get_last_accessed_returns_none_for_missing_session():
+    """get_last_accessed returns None when the session does not exist in memory."""
+    assert memory.get_last_accessed("nonexistent-session-id") is None
+
+
+def test_get_last_accessed_returns_timestamp_for_in_memory_session():
+    """get_last_accessed returns a datetime for a session held in memory."""
+    session_id = memory.init_session()
+    timestamp = memory.get_last_accessed(session_id)
+
+    assert timestamp is not None
+    assert isinstance(timestamp, datetime)
+
+
+def test_set_last_accessed_returns_false_for_missing_session():
+    """set_last_accessed returns False when the session does not exist in memory."""
+    result = memory.set_last_accessed("nonexistent-session-id", datetime.now())
+
+    assert result is False
+
+
+def test_set_last_accessed_updates_timestamp_for_in_memory_session():
+    """set_last_accessed updates the timestamp and returns True for an in-memory session."""
+    session_id = memory.init_session()
+    new_ts = datetime(2025, 1, 1, 12, 0, 0)
+
+    result = memory.set_last_accessed(session_id, new_ts)
+
+    assert result is True
+    assert memory.get_last_accessed(session_id) == new_ts
