@@ -37,6 +37,7 @@ from api.models.schemas import (
     ChatRequest,
     ChatResponse,
     DeleteResponse,
+    MessageHistoryResponse,
     SessionResponse,
     FileAttachment,
     SupportedExtensionsResponse,
@@ -47,6 +48,7 @@ from api.services.chat_service import (
 )
 from api.services.memory import (
     delete_session,
+    get_session,
     session_exists,
     persist_session,
     init_session,
@@ -103,7 +105,18 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
     try:
         while True:
             data = await websocket.receive_text()
-            message_data = json.loads(data)
+
+            try:
+                message_data = json.loads(data)
+            except json.JSONDecodeError:
+                logger.warning(
+                    "Malformed JSON from session %s", session_id
+                )
+                await websocket.send_text(
+                    json.dumps({"error": "Invalid JSON format."})
+                )
+                continue
+
             user_message = message_data.get("message", "")
 
             if not user_message:
@@ -120,6 +133,8 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
             await websocket.send_text(
                 json.dumps({"end": True})
             )
+
+            asyncio.create_task(asyncio.to_thread(persist_session, session_id))
 
     except WebSocketDisconnect:
         logger.info(
@@ -188,6 +203,41 @@ def delete_chat(session_id: str):
     )
 
 
+@router.get(
+    "/sessions/{session_id}/message",
+    response_model=MessageHistoryResponse,
+)
+def get_chat_history(session_id: str):
+    """
+    Retrieve the conversation history for a session.
+
+    Returns the ordered list of messages exchanged in the
+    given session. Restores persisted sessions from disk
+    if they are not currently in memory.
+
+    Args:
+        session_id (str): The session identifier.
+
+    Returns:
+        MessageHistoryResponse: The session ID and message list.
+    """
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found.",
+        )
+
+    messages = [
+        {"role": msg.type, "content": msg.content}
+        for msg in session.chat_memory.messages
+    ]
+    return MessageHistoryResponse(
+        session_id=session_id,
+        messages=messages,
+    )
+
+
 # Chat Endpoint
 @router.post("/sessions/{session_id}/message", response_model=ChatResponse)
 def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: BackgroundTasks):
@@ -225,6 +275,7 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
 )
 async def chatbot_reply_with_files(
     session_id: str,
+    background_tasks: BackgroundTasks,
     message: str = Form(...),
     files: Optional[List[UploadFile]] = File(None),
 ):
@@ -292,12 +343,17 @@ async def chatbot_reply_with_files(
         else "Please analyze the attached file(s)."
     )
 
-    return await asyncio.to_thread(
+    reply = await asyncio.to_thread(
         get_chatbot_reply,
         session_id,
         final_message,
         processed_files if processed_files else None
     )
+    background_tasks.add_task(
+        persist_session,
+        session_id,
+    )
+    return reply
 
 
 # =========================
