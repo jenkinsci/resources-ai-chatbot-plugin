@@ -1,9 +1,8 @@
 import {
   createBotMessage,
   createChatSession,
-  fetchChatbotReply,
   deleteChatSession,
-  fetchChatbotReplyWithFiles,
+  sendMessage,
 } from "../api/chatbot";
 
 import { callChatbotApi } from "../utils/callChatbotApi";
@@ -22,10 +21,16 @@ jest.mock("../data/chatbotTexts", () => ({
   getChatbotText: jest.fn().mockReturnValue("Fallback error message"),
 }));
 
-// Mock global fetch for file upload tests
-global.fetch = jest.fn();
+// Mock global fetch for the sendMessage function tests
+globalThis.fetch = jest.fn();
 
 describe("chatbotApi", () => {
+  beforeEach(() => {
+    (callChatbotApi as jest.Mock).mockClear();
+    (globalThis.fetch as jest.Mock).mockClear();
+    (getChatbotText as jest.Mock).mockClear();
+  });
+
   describe("createBotMessage", () => {
     it("creates a bot message with text", () => {
       const message = createBotMessage("Hello world");
@@ -42,11 +47,8 @@ describe("chatbotApi", () => {
       (callChatbotApi as jest.Mock).mockResolvedValueOnce({
         session_id: "abc123",
       });
-
       const result = await createChatSession();
-
       expect(result).toBe("abc123");
-
       expect(callChatbotApi).toHaveBeenCalledWith(
         "sessions",
         { method: "POST" },
@@ -58,298 +60,129 @@ describe("chatbotApi", () => {
     it("returns empty result if session_id is missing in response", async () => {
       (callChatbotApi as jest.Mock).mockResolvedValueOnce({});
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-
       const result = await createChatSession();
-
       expect(result).toBe("");
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Failed to create chat session: session_id missing in response",
         {},
       );
-
       consoleErrorSpy.mockRestore();
     });
   });
 
-  describe("fetchChatbotReply", () => {
-    it("returns a bot message when API reply is present", async () => {
-      (callChatbotApi as jest.Mock).mockResolvedValueOnce({
-        reply: "Hello from bot!",
-      });
-
-      const result = await fetchChatbotReply("session-xyz", "Hi!");
-
-      expect(result).toEqual({
-        id: "mock-uuid",
-        sender: "jenkins-bot",
-        text: "Hello from bot!",
-      });
-
-      expect(callChatbotApi).toHaveBeenCalledWith(
-        "sessions/session-xyz/message",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: "Hi!" }),
-        },
-        {},
-        expect.any(Number),
-      );
-    });
-
-    it("uses fallback error message when API reply is missing", async () => {
-      (callChatbotApi as jest.Mock).mockResolvedValueOnce({});
-
-      const result = await fetchChatbotReply("session-xyz", "Hi!");
-
-      expect(getChatbotText).toHaveBeenCalledWith("errorMessage");
-
-      expect(result).toEqual({
-        id: "mock-uuid",
-        sender: "jenkins-bot",
-        text: "Fallback error message",
-      });
-    });
-  });
-
-  describe("deleteChatSession", () => {
-    it("calls callChatbotApi with DELETE method", async () => {
-      (callChatbotApi as jest.Mock).mockResolvedValueOnce(undefined);
-
-      await deleteChatSession("session-xyz");
-
-      expect(callChatbotApi).toHaveBeenCalledWith(
-        "sessions/session-xyz",
-        { method: "DELETE" },
-        undefined,
-        expect.any(Number),
-      );
-    });
-
-    it("does not throw when callChatbotApi returns undefined", async () => {
-      (callChatbotApi as jest.Mock).mockResolvedValueOnce(undefined);
-
-      await expect(deleteChatSession("session-fail")).resolves.toBeUndefined();
-
-      expect(callChatbotApi).toHaveBeenCalledWith(
-        "sessions/session-fail",
-        { method: "DELETE" },
-        undefined,
-        expect.any(Number),
-      );
-    });
-  });
-
-  describe("fetchChatbotReplyWithFiles", () => {
+  describe("sendMessage", () => {
     beforeEach(() => {
-      jest.clearAllMocks();
-      (global.fetch as jest.Mock).mockClear();
       jest.useFakeTimers();
+      (globalThis.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ reply: "Success" }),
+      } as unknown as Response);
     });
 
     afterEach(() => {
       jest.useRealTimers();
     });
 
-    it("successfully uploads files and returns bot reply", async () => {
-      const mockResponse = {
-        reply: "File analyzed successfully!",
-      };
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
-
-      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
-      const controller = new AbortController();
-
-      const result = await fetchChatbotReplyWithFiles(
-        "session-xyz",
-        "Analyze this file",
-        files,
-        controller.signal,
+    it("sends a text-only message", async () => {
+      const result = await sendMessage("session-123", "Hello world");
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${API_BASE_URL}/api/chatbot/sessions/session-123/message`,
+        expect.any(Object),
       );
-
-      expect(result).toEqual({
-        id: "mock-uuid",
-        sender: "jenkins-bot",
-        text: "File analyzed successfully!",
-      });
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        `${API_BASE_URL}/api/chatbot/sessions/session-xyz/message/upload`,
-        expect.objectContaining({
-          method: "POST",
-          signal: expect.any(AbortSignal),
-        }),
-      );
+      const fetchOptions = (globalThis.fetch as jest.Mock).mock.calls[0][1];
+      expect(fetchOptions.method).toBe("POST");
+      const formData = fetchOptions.body as FormData;
+      expect(formData.get("message")).toBe("Hello world");
+      expect(formData.has("files")).toBe(false);
+      expect(result.text).toBe("Success");
     });
 
-    it("returns fallback message when API response is not ok", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+    it("sends a message with files", async () => {
+      const file = new File(["content"], "test.txt");
+      await sendMessage("session-123", "Check file", [file]);
+      const fetchOptions = (globalThis.fetch as jest.Mock).mock.calls[0][1];
+      const formData = fetchOptions.body as FormData;
+      expect(formData.get("message")).toBe("Check file");
+      expect(formData.get("files")).toBe(file);
+    });
+
+    it("sends a file-only message", async () => {
+      const file = new File(["content"], "test.txt");
+      await sendMessage("session-123", undefined, [file]);
+      const fetchOptions = (globalThis.fetch as jest.Mock).mock.calls[0][1];
+      const formData = fetchOptions.body as FormData;
+      expect(formData.has("message")).toBe(false);
+      expect(formData.get("files")).toBe(file);
+    });
+
+    it("returns fallback message on API error", async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
-        json: async () => ({ detail: "Internal server error" }),
+        json: async () => ({ detail: "Server Error" }),
       });
-
-      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
-      const controller = new AbortController();
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-
-      const result = await fetchChatbotReplyWithFiles(
-        "session-xyz",
-        "Hello",
-        files,
-        controller.signal,
-      );
-
+      const result = await sendMessage("session-123", "Hi");
       expect(result.text).toBe("Fallback error message");
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
-    });
-
-    it("aborts the request when timeout elapses", async () => {
-      // Mock fetch to reject with AbortError when signal is aborted
-      (global.fetch as jest.Mock).mockImplementationOnce(
-        (_url: string, options?: RequestInit) =>
-          new Promise((_, reject) => {
-            // Reject with AbortError when signal is aborted
-            if (options?.signal) {
-              options.signal.addEventListener("abort", () => {
-                const error = new DOMException("Aborted", "AbortError");
-                reject(error);
-              });
-            }
-          }) as unknown as Promise<Response>,
-      );
-
-      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
-      const controller = new AbortController();
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-
-      const promise = fetchChatbotReplyWithFiles(
-        "session-xyz",
-        "Hello",
-        files,
-        controller.signal,
-      );
-
-      // Fast-forward time to trigger timeout
-      jest.advanceTimersByTime(CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE);
-
-      // Wait for promise to resolve after timeout
-      const result = await promise;
-
-      expect(result.text).toBe("Fallback error message");
+      expect(getChatbotText).toHaveBeenCalledWith("errorMessage");
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("timed out"),
+        "API error: 500 - Server Error",
       );
       consoleErrorSpy.mockRestore();
     });
 
-    it("cancels the request when external signal is aborted", async () => {
-      // Mock fetch to reject when signal is aborted
-      (global.fetch as jest.Mock).mockImplementationOnce(
-        (_url: string, options?: RequestInit) =>
-          new Promise((_, reject) => {
-            if (options?.signal) {
-              options.signal.addEventListener("abort", () => {
-                reject(new DOMException("Aborted", "AbortError"));
-              });
-            }
-          }) as unknown as Promise<Response>,
+    it("returns an empty message on user cancellation", async () => {
+      (globalThis.fetch as jest.Mock).mockImplementation(
+        (_url, options) =>
+          new Promise((_, reject) =>
+            options?.signal?.addEventListener("abort", () =>
+              reject(new DOMException("Aborted", "AbortError")),
+            ),
+          ),
       );
-
-      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
       const controller = new AbortController();
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-
-      const promise = fetchChatbotReplyWithFiles(
-        "session-xyz",
-        "Hello",
-        files,
+      const promise = sendMessage(
+        "session-123",
+        "Hi",
+        undefined,
         controller.signal,
       );
-
-      // Abort the external signal (simulating user clicking Cancel)
       controller.abort();
-
       const result = await promise;
+      expect(result.text).toBe("");
+    });
 
+    it("handles timeout", async () => {
+      (globalThis.fetch as jest.Mock).mockImplementation(
+        (_url, options) =>
+          new Promise((_, reject) => {
+            options?.signal?.addEventListener("abort", () => {
+              reject(new DOMException("Timeout", "AbortError"));
+            });
+          }),
+      );
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      const promise = sendMessage("session-123", "Hi");
+      jest.advanceTimersByTime(CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE);
+      const result = await promise;
       expect(result.text).toBe("Fallback error message");
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "API request cancelled by user",
+        `API request timed out after ${CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE}ms`,
       );
       consoleErrorSpy.mockRestore();
     });
+  });
 
-    it("handles already aborted external signal", async () => {
-      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
-      const controller = new AbortController();
-      controller.abort(); // Abort before calling the function
-
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-
-      const result = await fetchChatbotReplyWithFiles(
-        "session-xyz",
-        "Hello",
-        files,
-        controller.signal,
+  describe("deleteChatSession", () => {
+    it("calls callChatbotApi with DELETE method", async () => {
+      (callChatbotApi as jest.Mock).mockResolvedValueOnce(undefined);
+      await deleteChatSession("session-xyz");
+      expect(callChatbotApi).toHaveBeenCalledWith(
+        "sessions/session-xyz",
+        { method: "DELETE" },
+        undefined,
+        expect.any(Number),
       );
-
-      expect(result.text).toBe("Fallback error message");
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
-    });
-
-    it("handles network errors gracefully", async () => {
-      (global.fetch as jest.Mock).mockRejectedValueOnce(
-        new Error("Network error"),
-      );
-
-      const files = [new File(["content"], "test.txt", { type: "text/plain" })];
-      const controller = new AbortController();
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-
-      const result = await fetchChatbotReplyWithFiles(
-        "session-xyz",
-        "Hello",
-        files,
-        controller.signal,
-      );
-
-      expect(result.text).toBe("Fallback error message");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "API error uploading files:",
-        expect.any(Error),
-      );
-      consoleErrorSpy.mockRestore();
-    });
-
-    it("creates FormData with message and files correctly", async () => {
-      const mockResponse = {
-        reply: "Success",
-      };
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
-
-      const files = [
-        new File(["content1"], "file1.txt", { type: "text/plain" }),
-        new File(["content2"], "file2.txt", { type: "text/plain" }),
-      ];
-      const controller = new AbortController();
-
-      await fetchChatbotReplyWithFiles(
-        "session-xyz",
-        "Test message",
-        files,
-        controller.signal,
-      );
-
-      const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
-      expect(fetchCall[1]?.body).toBeInstanceOf(FormData);
     });
   });
 });

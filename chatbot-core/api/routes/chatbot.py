@@ -34,7 +34,6 @@ from fastapi import (
 # Local application imports
 # =========================
 from api.models.schemas import (
-    ChatRequest,
     ChatResponse,
     DeleteResponse,
     MessageHistoryResponse,
@@ -238,53 +237,41 @@ def get_chat_history(session_id: str):
     )
 
 
-# Chat Endpoint
-@router.post("/sessions/{session_id}/message", response_model=ChatResponse)
-def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: BackgroundTasks):
-
+async def _process_one_file(upload_file: UploadFile) -> FileAttachment:
     """
-    POST endpoint to handle chatbot replies.
+    Asynchronously read and process a single uploaded file.
 
-    Receives a user message and returns the assistant's reply.
-    Validates that the session exists before processing.
-
-    Args:
-        session_id (str): The session identifier.
-        request (ChatRequest): The request containing the user message.
-
-    Returns:
-        ChatResponse: The assistant's reply.
+    Ensures the file is closed after processing. Runs the potentially
+    blocking `process_uploaded_file` in a separate thread.
     """
-    if not session_exists(session_id):
-        raise HTTPException(
-            status_code=404,
-            detail="Session not found.",
+    try:
+        content = await upload_file.read()
+        processed = await asyncio.to_thread(
+            process_uploaded_file, content, upload_file.filename or "unknown"
         )
-    reply =  get_chatbot_reply(session_id, request.message)
-    _background_tasks.add_task(
-        persist_session,
-        session_id,
-        )
-
-    return reply
+        return FileAttachment(**processed)
+    finally:
+        await upload_file.close()
 
 
 @router.post(
-    "/sessions/{session_id}/message/upload",
+    "/sessions/{session_id}/message",
     response_model=ChatResponse,
 )
-async def chatbot_reply_with_files(
+async def chatbot_reply(
     session_id: str,
     background_tasks: BackgroundTasks,
-    message: str = Form(...),
+    message: Optional[str] = Form(None),
     files: Optional[List[UploadFile]] = File(None),
 ):
     """
-    POST endpoint to handle chatbot replies with file uploads.
+    POST endpoint to handle chatbot replies, with optional file uploads.
 
     Receives a user message with optional file attachments and returns
-    the assistant's reply. Files are processed and their content is
-    included in the context for the LLM.
+    the assistant's reply. This endpoint handles both standard messages
+    and messages with files using multipart/form-data.
+
+    If only files are provided, a default message will be used.
 
     Supported file types:
     - Text files: .txt, .log, .md, .json, .xml, .yaml, .yml, code files
@@ -292,49 +279,53 @@ async def chatbot_reply_with_files(
 
     Args:
         session_id (str): The ID of the session from the URL path.
-        message (str): The user's message (form field).
-        files (List[UploadFile]): Optional list of uploaded files.
+        background_tasks (BackgroundTasks): FastAPI background tasks.
+        message (Optional[str]): The user's message (form field).
+        files (Optional[List[UploadFile]]): Optional list of uploaded files.
 
     Returns:
         ChatResponse: The chatbot's generated reply.
 
     Raises:
         HTTPException: 404 if session not found, 400 if file processing fails,
-                      422 if message is empty and no files provided.
+                      422 if neither message nor files are provided.
     """
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
 
     # Validate that at least message or files are provided
     has_message = message and message.strip()
-    has_files = files and len(files) > 0
+    has_files = files is not None and len(files) > 0
 
     if not has_message and not has_files:
         raise HTTPException(
             status_code=422,
-            detail="Either message or files must be provided.",
+            detail="Either a message or at least one file must be provided.",
         )
 
     # Process uploaded files
     processed_files: List[FileAttachment] = []
 
     if files:
-        for upload_file in files:
-            try:
-                content = await upload_file.read()
-                processed = process_uploaded_file(
-                    content, upload_file.filename or "unknown"
+        tasks = [_process_one_file(f) for f in files]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for result in results:
+            if isinstance(result, Exception):
+                if isinstance(result, FileProcessingError):
+                    raise HTTPException(status_code=400, detail=str(result)) from result
+
+                logger.error(
+                    "Unexpected error processing file for session %s: %s",
+                    session_id,
+                    result,
+                    exc_info=True,
                 )
-                processed_files.append(FileAttachment(**processed))
-            except FileProcessingError as e:
-                raise HTTPException(status_code=400, detail=str(e)) from e
-            except Exception as e:
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Failed to process file: {type(e).__name__}",
-                ) from e
-            finally:
-                await upload_file.close()
+                    detail=f"Failed to process file: {type(result).__name__}",
+                ) from result
+            processed_files.append(result)
 
     # Use default message if only files provided
     final_message = (

@@ -3,8 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { type Message } from "../model/Message";
 import { type ChatSession } from "../model/ChatSession";
 import {
-  fetchChatbotReply,
-  fetchChatbotReplyWithFiles,
+  sendMessage as apiSendMessage,
   createChatSession,
   deleteChatSession,
   fetchSupportedExtensions,
@@ -195,28 +194,16 @@ export const Chatbot = () => {
     appendMessageToCurrentSession(userMessage);
 
     try {
-      const botReply =
-        filesToSend.length > 0
-          ? await fetchChatbotReplyWithFiles(
-              currentSessionId,
-              trimmed || "Please analyze the attached file(s).",
-              filesToSend,
-              controller.signal,
-            )
-          : controller.signal
-            ? await fetchChatbotReply(
-                currentSessionId,
-                trimmed,
-                controller.signal,
-              )
-            : await fetchChatbotReply(currentSessionId, trimmed);
-      appendMessageToCurrentSession(botReply);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        // Request was intentionally cancelled
-        return;
+      const botReply = await apiSendMessage(
+        currentSessionId,
+        trimmed,
+        filesToSend,
+        controller.signal,
+      );
+
+      if (botReply.text) {
+        appendMessageToCurrentSession(botReply);
       }
-      throw error;
     } finally {
       abortControllerRef.current = null;
       setSessions((prev) =>

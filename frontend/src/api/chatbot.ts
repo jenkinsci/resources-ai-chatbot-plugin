@@ -39,66 +39,52 @@ export const createChatSession = async (): Promise<string> => {
   return data.session_id;
 };
 /**
- * Sends the user's message to the backend chatbot API and returns the bot's response.
- * If the API call fails or returns an invalid response, a fallback error message is used.
+ * Sends the user's message, with or without file attachments, to the backend chatbot API.
+ * Uses multipart/form-data to send the message and any files.
  *
  * @param sessionId - The session id of the chat
- * @param userMessage - The message input from the user
- * @returns A Promise resolving to a bot-generated Message
- */
-export const fetchChatbotReply = async (
-  sessionId: string,
-  userMessage: string,
-  signal?: AbortSignal,
-): Promise<Message> => {
-  const data = await callChatbotApi<{ reply?: string }>(
-    `sessions/${sessionId}/message`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMessage }),
-      signal,
-    },
-    {},
-    CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
-  );
-
-  const botReply = data.reply || getChatbotText("errorMessage");
-  return createBotMessage(botReply);
-};
-
-/**
- * Sends the user's message with file attachments to the backend chatbot API.
- * Uses multipart/form-data to upload files along with the message.
- *
- * @param sessionId - The session id of the chat
- * @param userMessage - The message input from the user
- * @param files - Array of File objects to upload
+ * @param userMessage - The message input from the user (optional)
+ * @param files - Array of File objects to upload (optional)
  * @param signal - External abort signal for user-initiated cancellation
  * @returns A Promise resolving to a bot-generated Message
  */
-export const fetchChatbotReplyWithFiles = async (
+export const sendMessage = async (
   sessionId: string,
-  userMessage: string,
-  files: File[],
-  signal: AbortSignal,
+  userMessage?: string,
+  files?: File[],
+  signal?: AbortSignal,
 ): Promise<Message> => {
-  // Combine external signal with timeout using AbortSignal.any()
+  // Combine external signal with timeout using AbortSignal.any() if a signal is provided
   const timeoutSignal = AbortSignal.timeout(
     CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
   );
-  const combinedSignal = AbortSignal.any([signal, timeoutSignal]);
+  const combinedSignal = signal
+    ? AbortSignal.any([signal, timeoutSignal])
+    : timeoutSignal;
 
   try {
     const formData = new FormData();
-    formData.append("message", userMessage);
+    if (userMessage) {
+      formData.append("message", userMessage);
+    }
+    if (files) {
+      files.forEach((file) => {
+        formData.append("files", file);
+      });
+    }
 
-    files.forEach((file) => {
-      formData.append("files", file);
-    });
+    if (!userMessage && (!files || files.length === 0)) {
+      console.error(
+        "sendMessage: Attempted to send without a message or files.",
+      );
+      // This case should be handled by the UI, but as a fallback:
+      return createBotMessage(
+        "Cannot send an empty message. Please type a message or attach a file.",
+      );
+    }
 
     const response = await fetch(
-      `${API_BASE_URL}/api/chatbot/sessions/${sessionId}/message/upload`,
+      `${API_BASE_URL}/api/chatbot/sessions/${sessionId}/message`,
       {
         method: "POST",
         body: formData,
@@ -118,15 +104,16 @@ export const fetchChatbotReplyWithFiles = async (
     return createBotMessage(botReply);
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      if (signal.aborted) {
-        console.error("API request cancelled by user");
+      if (signal?.aborted) {
+        console.log("API request cancelled by user.");
+        return createBotMessage("");
       } else {
         console.error(
           `API request timed out after ${CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE}ms`,
         );
       }
     } else {
-      console.error("API error uploading files:", error);
+      console.error("API error sending message:", error);
     }
     return createBotMessage(getChatbotText("errorMessage"));
   }
