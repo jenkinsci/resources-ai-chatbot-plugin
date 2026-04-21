@@ -188,3 +188,27 @@ def test_websocket_invalid_session_returns_error_and_closes(
     with client.websocket_connect("/sessions/bad-session/stream") as ws:
         error = ws.receive_json()
         assert error == {"error": "Session not found"}
+
+
+def test_websocket_persist_session_called_after_streaming(
+    client, mock_session_exists, mock_get_chatbot_reply_stream, mock_persist_session
+):
+    """persist_session must be called after a WebSocket streaming exchange completes.
+
+    Before fix: the WebSocket path updated in-memory history but never
+    persisted to disk — messages were lost on server restart.
+    After fix: asyncio.create_task runs persist_session in the background.
+    """
+    mock_session_exists.return_value = True
+
+    async def fake_stream(_session_id, _message):
+        yield "token"
+
+    mock_get_chatbot_reply_stream.side_effect = fake_stream
+
+    with client.websocket_connect("/sessions/test-session-id/stream") as ws:
+        ws.send_json({"message": "Hello"})
+        ws.receive_json()  # token
+        ws.receive_json()  # end marker
+
+    mock_persist_session.assert_called_with("test-session-id")
