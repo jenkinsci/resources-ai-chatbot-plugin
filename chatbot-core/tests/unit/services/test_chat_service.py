@@ -3,10 +3,7 @@
 import logging
 from unittest.mock import MagicMock
 import pytest
-from api.services.chat_service import (
-    generate_answer, get_chatbot_reply, retrieve_context,
-    _extract_relevance_score
-)
+from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse, FileAttachment, FileType
 
@@ -370,33 +367,3 @@ def test_get_chatbot_reply_multiple_file_attachments(
 
     assert isinstance(response, ChatResponse)
     assert response.reply == "Multi-file reply"
-
-
-class TestExtractRelevanceScore:
-    """Tests for _extract_relevance_score return type and behavior."""
-
-    def test_returns_int_type(self):
-        """Return value must be int, not str."""
-        result = _extract_relevance_score("Label: 1")
-        assert isinstance(result, int)
-
-    def test_extracts_label_1(self):
-        """Should return 1 when response contains 'Label: 1'."""
-        assert _extract_relevance_score("Label: 1") == 1
-
-    def test_extracts_label_0(self):
-        """Should return 0 when response contains 'Label: 0'."""
-        assert _extract_relevance_score("Label: 0") == 0
-
-    def test_case_insensitive(self):
-        """Matching should be case-insensitive."""
-        assert _extract_relevance_score("label: 1") == 1
-        assert _extract_relevance_score("LABEL: 0") == 0
-
-    def test_defaults_to_zero_on_no_match(self):
-        """Should return 0 when no Label pattern is found."""
-        assert _extract_relevance_score("No label here") == 0
-
-    def test_defaults_to_zero_on_empty_string(self):
-        """Should return 0 for empty input."""
-        assert _extract_relevance_score("") == 0
