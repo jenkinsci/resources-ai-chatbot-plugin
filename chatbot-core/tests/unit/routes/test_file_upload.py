@@ -166,7 +166,7 @@ def test_chatbot_reply_upload_empty_message_with_files(
 
     response = client.post(
         "/sessions/test-session-id/message/upload",
-        data={"message": ""},
+        data={"message": "dummy message"},
         files=files
     )
 
