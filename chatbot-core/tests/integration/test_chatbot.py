@@ -149,6 +149,53 @@ def test_multiple_sessions_are_isolated(client, mock_llm_provider, mock_get_rele
     assert response_deleted_session.json() == {"detail": "Session not found."}
 
 
+def test_get_history_empty_session(client):
+    """Should return an empty message list for a newly created session."""
+    session_id = client.post("/sessions").json()["session_id"]
+
+    response = client.get(f"/sessions/{session_id}/message")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["session_id"] == session_id
+    assert data["messages"] == []
+
+
+def test_get_history_with_messages(client, mock_llm_provider, mock_get_relevant_documents):
+    """Should return the conversation history after exchanging messages."""
+    mock_llm_provider.generate.return_value = "Bot reply"
+    mock_get_relevant_documents.return_value = get_relevant_documents_output()
+
+    session_id = client.post("/sessions").json()["session_id"]
+    client.post(f"/sessions/{session_id}/message", json={"message": "Hello"})
+
+    response = client.get(f"/sessions/{session_id}/message")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["session_id"] == session_id
+    assert len(data["messages"]) == 2
+    assert data["messages"][0]["role"] == "human"
+    assert data["messages"][0]["content"] == "Hello"
+    assert data["messages"][1]["role"] == "ai"
+    assert data["messages"][1]["content"] == "Bot reply"
+
+
+def test_get_history_nonexistent_session(client):
+    """Should return 404 when retrieving history of a non-existent session."""
+    response = client.get("/sessions/nonexistent-session/message")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Session not found."}
+
+
+def test_get_history_deleted_session(client):
+    """Should return 404 when retrieving history of a deleted session."""
+    session_id = client.post("/sessions").json()["session_id"]
+    client.delete(f"/sessions/{session_id}")
+
+    response = client.get(f"/sessions/{session_id}/message")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Session not found."}
+
+
 def get_relevant_documents_output():
     """Utility to return the output of the mock of get_relevant_documents."""
     return ([
