@@ -26,6 +26,29 @@ class TestLogSanitizer(unittest.TestCase):
         self.assertNotIn("AKIAIOSFODNN7EXAMPLE", result)
         self.assertIn("[REDACTED_AWS_KEY]", result)
 
+    def test_sanitize_bearer_token(self):
+        """Test that Bearer tokens are redacted."""
+        log = "Authorization: Bearer hf_thisIsAFakeToken123"
+        expected = "Authorization: Bearer [REDACTED_TOKEN]"
+        self.assertEqual(sanitize_logs(log), expected)
+
+    def test_sanitize_github_token(self):
+        """Test that GitHub tokens are redacted."""
+        log = "Authenticating with ghp_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6"
+        expected = "Authenticating with [REDACTED_GITHUB_TOKEN]"
+        self.assertEqual(sanitize_logs(log), expected)
+
+    def test_sanitize_private_key(self):
+        """Test that private key blocks are redacted."""
+        log = (
+            "Found key:\n"
+            "-----BEGIN RSA PRIVATE KEY-----\n"
+            "someBase64ContentHere\n"
+            "-----END RSA PRIVATE KEY-----"
+        )
+        expected = "Found key:\n[REDACTED_PRIVATE_KEY]"
+        self.assertEqual(sanitize_logs(log), expected)
+
     def test_no_false_positives(self):
         """Test that normal logs without secrets remain unchanged."""
         log = "Build step 'Execute Windows batch command' marked build as failure"
