@@ -56,10 +56,45 @@ MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024
 
 # Maximum text content length to include in context
 MAX_TEXT_CONTENT_LENGTH = 10000
+PROMPT_CONTEXT_UNSAFE_FILENAME_CHARS = {'<', '>', '"'}
 
 
 class FileProcessingError(Exception):
     """Custom exception for file processing errors."""
+
+
+def validate_filename_for_prompt_context(filename: str) -> str:
+    """
+    Validate uploaded filenames before they are used by parsing or prompt paths.
+
+    Rejects filename shapes that can break downstream context delimiters or
+    indicate path traversal/path injection attempts.
+    """
+    raw_filename = str(filename or "").strip()
+    if not raw_filename:
+        raise FileProcessingError("Filename is required.")
+
+    if raw_filename in {".", ".."}:
+        raise FileProcessingError("Unsafe filename: path segments are not allowed.")
+
+    if (
+        "/" in raw_filename
+        or "\\" in raw_filename
+        or Path(raw_filename).name != raw_filename
+    ):
+        raise FileProcessingError("Unsafe filename: path-like values are not allowed.")
+
+    if any((ord(char) < 32 or ord(char) == 127) for char in raw_filename):
+        raise FileProcessingError(
+            "Unsafe filename: control characters are not allowed."
+        )
+
+    if any(char in PROMPT_CONTEXT_UNSAFE_FILENAME_CHARS for char in raw_filename):
+        raise FileProcessingError(
+            "Unsafe filename: contains disallowed prompt-context delimiters."
+        )
+
+    return raw_filename
 
 
 def get_file_extension(filename: str) -> str:
@@ -357,42 +392,43 @@ def process_uploaded_file(content: bytes, filename: str) -> dict:
     Raises:
         FileProcessingError: If the file type is not supported or processing fails.
     """
-    logger.info("Processing uploaded file: %s (%d bytes)", filename, len(content))
+    validated_filename = validate_filename_for_prompt_context(filename)
+    logger.info("Processing uploaded file: %s (%d bytes)", validated_filename, len(content))
 
-    if not is_supported_file(filename):
+    if not is_supported_file(validated_filename):
         raise FileProcessingError(
-            f"Unsupported file type for '{filename}'. "
+            f"Unsupported file type for '{validated_filename}'. "
             f"Supported types: text files, code files, and images."
         )
 
-    validate_file_size(content, filename)
+    validate_file_size(content, validated_filename)
 
     # Validate content matches extension (security check)
-    validate_file_content_type(content, filename)
+    validate_file_content_type(content, validated_filename)
 
-    if is_text_file(filename):
-        text_content = process_text_file(content, filename)
+    if is_text_file(validated_filename):
+        text_content = process_text_file(content, validated_filename)
         return {
-            "filename": filename,
+            "filename": validated_filename,
             "type": "text",
             "content": text_content,
             "mime_type": "text/plain"
         }
 
-    if is_image_file(filename):
-        base64_content, mime_type = process_image_file(content, filename)
+    if is_image_file(validated_filename):
+        base64_content, mime_type = process_image_file(content, validated_filename)
         return {
-            "filename": filename,
+            "filename": validated_filename,
             "type": "image",
             "content": base64_content,
             "mime_type": mime_type
         }
 
     # Should not reach here due to is_supported_file check
-    raise FileProcessingError(f"Unknown file type for '{filename}'")
+    raise FileProcessingError(f"Unknown file type for '{validated_filename}'")
 
 
-def safe_filename_for_prompt(filename: str) -> str:
+def escape_filename_for_prompt_context(filename: str) -> str:
     """
     Sanitize a user-controlled filename before embedding it into prompt context.
 
@@ -424,7 +460,7 @@ def format_file_context(processed_files: list) -> str:
     context_parts = []
 
     for file_info in processed_files:
-        filename = safe_filename_for_prompt(file_info.get("filename", "unknown"))
+        filename = escape_filename_for_prompt_context(file_info.get("filename", "unknown"))
         file_type = file_info.get("type", "unknown")
         content = file_info.get("content", "")
 
