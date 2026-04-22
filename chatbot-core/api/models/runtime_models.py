@@ -17,6 +17,9 @@ _models_cache: Dict[str, Any] = {}
 _models_lock = Lock()
 _models_errors: Dict[str, str] = {}
 
+EMBEDDING_MODEL_KEY = "embedding"
+LLM_MODEL_KEY = "llm"
+
 
 def get_embedding_model():
     """
@@ -27,7 +30,7 @@ def get_embedding_model():
                                        Check logs for error details.
     """
     return _get_cached_model(
-        "embedding",
+        EMBEDDING_MODEL_KEY,
         _load_embedding_model_impl
     )
 
@@ -42,7 +45,7 @@ def get_llm_provider():
     """
 
     return _get_cached_model(
-        "llm",
+        LLM_MODEL_KEY,
         _load_llm_provider_impl
     )
 
