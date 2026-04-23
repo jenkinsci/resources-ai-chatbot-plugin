@@ -1,9 +1,15 @@
 """Unit tests for chat service logic."""
 
+import asyncio
 import logging
 from unittest.mock import MagicMock
 import pytest
-from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
+from api.services.chat_service import (
+    generate_answer,
+    get_chatbot_reply,
+    get_chatbot_reply_stream,
+    retrieve_context,
+)
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse, FileAttachment, FileType
 
@@ -367,3 +373,50 @@ def test_get_chatbot_reply_multiple_file_attachments(
 
     assert isinstance(response, ChatResponse)
     assert response.reply == "Multi-file reply"
+
+
+def test_get_chatbot_reply_stream_offloads_retrieve_context(mocker):
+    """Test that get_chatbot_reply_stream offloads retrieve_context
+    to a thread via asyncio.to_thread (fixes #332)."""
+    mock_memory = mocker.MagicMock()
+    mock_memory.chat_memory = mocker.MagicMock()
+
+    mocker.patch(
+        "api.services.chat_service.get_session_async",
+        return_value=mock_memory,
+    )
+    mock_to_thread = mocker.patch(
+        "api.services.chat_service.asyncio.to_thread",
+        return_value="Threaded context",
+    )
+    mocker.patch(
+        "api.services.chat_service.build_prompt",
+        return_value="Built prompt",
+    )
+
+    async def fake_stream(prompt, max_tokens=None):  # pylint: disable=unused-argument
+        yield "token1"
+        yield "token2"
+
+    mocker.patch(
+        "api.services.chat_service.generate_answer_stream",
+        side_effect=fake_stream,
+    )
+
+    async def run_stream():
+        tokens = []
+        async for token in get_chatbot_reply_stream("session-id", "user query"):
+            tokens.append(token)
+        return tokens
+
+    tokens = asyncio.run(run_stream())
+
+    # Verify retrieve_context was called via asyncio.to_thread, not directly
+    mock_to_thread.assert_called_once()
+    call_args = mock_to_thread.call_args
+    assert call_args[0][0] is retrieve_context
+    assert call_args[0][1] == "user query"
+
+    assert tokens == ["token1", "token2"]
+    mock_memory.chat_memory.add_user_message.assert_called_once_with("user query")
+    mock_memory.chat_memory.add_ai_message.assert_called_once_with("token1token2")
