@@ -28,17 +28,6 @@ brew install cmake python@3.11 && xcode-select --install
 
 ## Getting Started
 
-Windows (Native Git Bash) Setup
-If you are developing on native Windows (not WSL2) and wish to avoid CUDA-related installation failures, use the CPU-specific requirements:
-
-1. cd chatbot-core
-
-2. python -m venv venv
-
-3. source venv/Scripts/activate
-
-4. pip install -r requirements-cpu.txt
-
 There are two ways to run the API locally, depending on your use case:
 
 ### Option 1: Lite Mode (Recommended for Most Contributors)
