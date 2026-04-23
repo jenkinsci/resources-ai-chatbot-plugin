@@ -231,9 +231,34 @@ def _get_sub_queries(query: str) -> List[str]:
         logger.debug("Failed sub-query payload: %s", _sanitize_log_payload(queries_string))
         queries = [query]
 
-    queries = [q.strip() for q in queries]
+    if not isinstance(queries, (list, tuple)):
+        logger.warning(
+            "Subqueries output has invalid type %s. Setting to default array with 1 element.",
+            type(queries).__name__,
+        )
+        return [query]
 
-    return queries
+    normalized_queries = []
+    for sub_query in queries:
+        if not isinstance(sub_query, str):
+            logger.warning(
+                "Subquery item has invalid type %s. Skipping element.",
+                type(sub_query).__name__,
+            )
+            continue
+
+        stripped = sub_query.strip()
+        if stripped:
+            normalized_queries.append(stripped)
+
+    if not normalized_queries:
+        logger.warning(
+            "Subqueries output is empty after normalization. "
+            "Setting to default array with 1 element."
+        )
+        return [query]
+
+    return normalized_queries
 
 
 def _assemble_response(answers: List[str]):
