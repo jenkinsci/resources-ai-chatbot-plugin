@@ -11,7 +11,7 @@ pytest-mock==3.14.1
 fastapi==0.115.12
 pydantic==2.12.5
 uvicorn[standard]==0.34.3
-starlette==0.46.2
+starlette==0.49.3
 
 # =========================
 # LangChain & AI
