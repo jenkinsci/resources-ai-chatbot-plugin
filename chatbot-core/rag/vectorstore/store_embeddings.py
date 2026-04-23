@@ -20,34 +20,40 @@ N_PROBE = 20
 
 def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
     """
-    Build and return a FAISS IndexIVFFlat index from the given vectors.
+    Build and return a FAISS index from the given vectors.
+    Automatically chooses between FlatL2 (small data) and IVFFlat (large data).
 
     Args:
-        vectors (np.ndarray): 2D array of shape (n_samples, dim) with float32 vectors.
-        nlist (int): Number of clusters (centroids) to use in the index.
-        nprobe (int): Number of clusters to probe during a search.
-        logger (logging.Logger): Logger for status messages.
+        vectors (np.ndarray): 2D array of shape (n_samples, dim).
+        nlist (int): Number of clusters for IVF.
+        nprobe (int): Number of clusters to probe.
+        logger (logging.Logger): Logger instance.
 
     Returns:
-        faiss.IndexIVFFlat: A trained FAISS IVF index with added vectors.
+        faiss.Index: A trained and populated FAISS index.
     """
     if not isinstance(vectors, np.ndarray):
         raise TypeError("Vectors must be an instance of numpy.ndarray.")
-    if vectors.ndim != 2:
-        raise ValueError(f"Vectors must be 2D, got shape {vectors.shape}.")
-    if vectors.dtype != np.float32:
-        raise TypeError(f"Vectors must be float32, got dtype {vectors.dtype}.")
-
+    
     d = vectors.shape[1]
-    quantizer = faiss.IndexFlatL2(d)
-    index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_L2)
+    n_samples = vectors.shape[0]
 
-    logger.info("FAISS index training started...")
-    index.train(vectors)  # pylint: disable=no-value-for-parameter
-    logger.info("FAISS index training completed.")
-    index.nprobe = nprobe
-    index.add(vectors)  # pylint: disable=no-value-for-parameter
+    # --- ARCHITECTURAL FIX ---
+    if n_samples < nlist:
+        logger.warning(f"Small dataset ({n_samples}). Using IndexFlatL2.")
+        index = faiss.IndexFlatL2(d)
+    else:
+        logger.info(f"Large dataset ({n_samples}). Using IndexIVFFlat.")
+        quantizer = faiss.IndexFlatL2(d)
+        index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_L2)
+        
+        # Training and nprobe are ONLY for IVF
+        if not index.is_trained:
+            index.train(vectors)
+        index.nprobe = nprobe
 
+    # Both Flat and IVF use the same .add() method
+    index.add(vectors)
     return index
 
 

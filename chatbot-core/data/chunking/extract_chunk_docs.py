@@ -82,7 +82,7 @@ def extract_chunks(docs):
     Processes all Jenkins documentation pages by chunking their content.
 
     Args:
-        docs (dict): A dictionary mapping URLs to raw HTML strings.
+        docs (dict): A dictionary mapping URLs to raw HTML strings or nested dicts.
 
     Returns:
         list[dict]: A list of all processed chunks across all docs.
@@ -91,7 +91,18 @@ def extract_chunks(docs):
     text_splitter = get_text_splitter(CHUNK_SIZE, CHUNK_OVERLAP)
 
     for url, html in docs.items():
-        page_chunks = process_page(url, html, text_splitter)
+        # Handle both nested dict format and raw string format (for unit tests)
+        if isinstance(html, dict):
+            html_values = list(html.values())
+            if not html_values:
+                logger.warning("No content found for URL: %s", url)
+                continue
+            actual_html_string = html_values[0]
+        else:
+            actual_html_string = html
+
+        # Process the page using the extracted string
+        page_chunks = process_page(url, actual_html_string, text_splitter)
         all_chunks.extend(page_chunks)
 
     return all_chunks
