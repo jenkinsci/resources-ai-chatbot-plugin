@@ -1,7 +1,6 @@
 # macOS / Apple Silicon Setup Guide
 
-This guide provides step-by-step instructions for setting up the
-Jenkins AI Chatbot plugin locally on macOS with Apple Silicon (M1/M2/M3).
+This guide provides step-by-step instructions for setting up the Jenkins AI Chatbot plugin locally on macOS with Apple Silicon (M1/M2/M3).
 
 ## Prerequisites
 
@@ -38,9 +37,7 @@ pip install python-multipart
 pip install llama-cpp-python
 ```
 
-> **Note:** `llama-cpp-python` and `python-multipart` are required
-> but not listed in `requirements-cpu.txt`. They must be installed
-> manually before running the API.
+> **Note:** `llama-cpp-python` and `python-multipart` are required but not listed in `requirements-cpu.txt`. They must be installed manually before running the API.
 
 ### 4. Download the LLM Model (~4GB)
 
@@ -54,18 +51,12 @@ curl -L -o api/models/mistral/mistral-7b-instruct-v0.2.Q4_K_M.gguf \
 
 Open `chatbot-core/api/config/config.yml` and change:
 
-```yaml
-# Change this
-gpu_layers: 0
-
-# To this
-gpu_layers: 32
+```diff
+- gpu_layers: 0
++ gpu_layers: 32
 ```
 
-> **Important:** The default `gpu_layers: 0` causes all inference
-> to run on CPU, resulting in response times of 5+ minutes. Setting
-> it to 32 enables Apple Metal GPU acceleration, reducing response
-> time to under 30 seconds.
+> **Important:** The default `gpu_layers: 0` causes all inference to run on CPU, resulting in response times of 5+ minutes. Setting it to 32 enables Apple Metal GPU acceleration, reducing response time to under 30 seconds.
 
 ### 6. Run the Data Pipeline
 
@@ -82,8 +73,7 @@ Monitor progress:
 tail -f logs/data-pipeline.log
 ```
 
-> **Note:** This may take a while. This only needs to be run once. Embeddings are persisted
-> to disk.
+> **Note:** This may take a while. This only needs to be run once. Embeddings are persisted to disk.
 
 ### 7. Start the Backend
 
@@ -93,9 +83,7 @@ From the repo root:
 IS_CPU_REQ=1 make api
 ```
 
-> **Note:** The `IS_CPU_REQ=1` flag ensures `requirements-cpu.txt`
-> is used instead of `requirements.txt`, avoiding numpy version
-> conflicts.
+> **Note:** The `IS_CPU_REQ=1` flag ensures `requirements-cpu.txt` is used instead of `requirements.txt`, avoiding numpy version conflicts.
 
 API available at `http://127.0.0.1:8000`
 
@@ -129,8 +117,7 @@ curl -X POST http://127.0.0.1:8000/api/chatbot/sessions \
 ### LLM not loading
 
 - Ensure `llama-cpp-python` is installed in the venv
-- Verify the model file exists at
-  `chatbot-core/api/models/mistral/mistral-7b-instruct-v0.2.Q4_K_M.gguf`
+- Verify the model file exists at `chatbot-core/api/models/mistral/mistral-7b-instruct-v0.2.Q4_K_M.gguf`
 - Check that `gpu_layers: 32` is set in `config.yml`
 
 ### Slow responses (5+ minutes)
@@ -142,11 +129,9 @@ curl -X POST http://127.0.0.1:8000/api/chatbot/sessions \
 ### numpy version conflict
 
 - Use `IS_CPU_REQ=1 make api` instead of `make api`
-- This uses `requirements-cpu.txt` which avoids the numpy
-  version conflict present in `requirements.txt`
+- This uses `requirements-cpu.txt` which avoids the numpy version conflict present in `requirements.txt`
 
 ### Backend already set up message
 
-- If you see "Backend already set up. Skipping...", the venv
-  already exists
+- If you see "Backend already set up. Skipping...", the venv already exists
 - To reinstall dependencies: `make clean` then `IS_CPU_REQ=1 make api`
