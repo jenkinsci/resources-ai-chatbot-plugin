@@ -1,6 +1,9 @@
 api:
   prefix: "/api/chatbot"
 
+chat:
+  max_message_length: 5000
+
 is_test_mode: true
 
 session:
