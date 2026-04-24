@@ -2,15 +2,20 @@
 Main entry point for the FastAPI application.
 """
 
+# Standard library
 import asyncio
 from contextlib import asynccontextmanager
+
+# Third‑party
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# First‑party
 from api.routes import chatbot
 from api.config.loader import CONFIG
 from api.services.memory import cleanup_expired_sessions, reload_persisted_sessions
 from utils import LoggerFactory
-from pydantic import BaseModel
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -63,6 +68,7 @@ class HealthResponse(BaseModel):
     """Response model for health check endpoint."""
     status: str
     llm_available: bool
+    embedding_available: bool
 
 
 app = FastAPI(lifespan=lifespan)
@@ -86,19 +92,15 @@ async def health_check():
     Health check endpoint for container orchestration (Kubernetes, Docker, etc.).
 
     Returns:
-        HealthResponse: Contains the service status and LLM availability.
+        HealthResponse: Contains the service status and model availability.
     """
-    llm_available = False
-    try:
-        # pylint: disable=import-outside-toplevel
-        from api.models.llama_cpp_provider import llm_provider
-        llm_available = llm_provider is not None
-    except Exception:  # pylint: disable=broad-except
-        pass
-
+    # pylint: disable=import-outside-toplevel
+    from api.models.runtime_models import get_models_status
+    models_status = get_models_status()
     return HealthResponse(
         status="healthy",
-        llm_available=llm_available
+        llm_available=models_status["llm_available"],
+        embedding_available=models_status["embedding_available"]
     )
 
 
