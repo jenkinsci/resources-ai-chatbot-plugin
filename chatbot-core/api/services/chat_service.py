@@ -401,6 +401,7 @@ def retrieve_context(user_input: str) -> str:
     for item in data_retrieved:
         item_id = item.get("id", "")
         text = item.get("chunk_text", "")
+        item_metadata = item.get("metadata") or {}
         if not item_id:
             logger.warning(
                 "Id of retrieved context not found. Skipping element.")
@@ -410,6 +411,14 @@ def retrieve_context(user_input: str) -> str:
             replace = make_placeholder_replacer(code_iter, item_id, logger)
             text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
 
+            # adding light metadata header when present (docs/discourse).
+            if item_metadata:
+                header_parts = []
+                data_source = item_metadata.get("data_source")
+                if data_source:
+                    header_parts.append(str(data_source))
+                if header_parts:
+                    text = f"[{' | '.join(header_parts)}]\n{text}"
             context_texts.append(text)
         else:
             logger.warning("Text of chunk with ID %s is missing", item_id)
