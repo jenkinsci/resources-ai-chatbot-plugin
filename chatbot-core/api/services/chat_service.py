@@ -347,7 +347,7 @@ def _execute_search_tools(tool_calls) -> str:
     )
 
 
-def _get_query_context_relevance(query: str, context: str):
+def _get_query_context_relevance(query: str, context: str) -> int:
     """
     Returns the relevance of the retrieved context to the original query.
 
@@ -356,7 +356,7 @@ def _get_query_context_relevance(query: str, context: str):
         context (str): The retrieved context.
 
     Returns:
-        str: A relevance score or label as a string.
+        int: A relevance score (1 for relevant, 0 for not relevant).
     """
     prompt = CONTEXT_RELEVANCE_PROMPT.format(query=query, context=context)
 
@@ -546,18 +546,21 @@ def _extract_query_type(response: str) -> str:
     return ""
 
 
-def _extract_relevance_score(response: str) -> str:
+def _extract_relevance_score(response: str) -> int:
     """
     Extracts relevance score (0 or 1) from a response labeled with 'Label: N'; defaults to 0.
     The search is case-insensitive.
+
+    Args:
+        response (str): The LLM output containing a 'Label: N' pattern.
+
+    Returns:
+        int: 1 if the response is relevant, 0 otherwise.
     """
     match = re.search(r"Label:\s*([01])", response, re.IGNORECASE)
     if match:
-        relevance_score = int(match.group(1))
-    else:
-        relevance_score = 0
-
-    return relevance_score
+        return int(match.group(1))
+    return 0
 
 def _generate_search_query_from_logs(log_text: str) -> str:
     """
