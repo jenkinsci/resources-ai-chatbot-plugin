@@ -252,6 +252,38 @@ Example:
 PYTEST_VERSION=1 make api
 ```
 
+## Production Hardening: CORS
+
+The shipped `chatbot-core/api/config/config.yml` sets:
+
+```yaml
+cors:
+  allowed_origins:
+    - "*"
+```
+
+The wildcard is intended for local development only. **Before exposing the
+API beyond `localhost`, restrict `allowed_origins` to the Jenkins instance
+origin(s) that should be allowed to call the chatbot API.**
+
+Leaving `*` in production allows any website a logged-in user visits to
+make cross-origin requests to the chatbot endpoints in that user's browser
+context (CSRF-style abuse, chat history exfiltration). This is OWASP
+[A05:2021 Security Misconfiguration](https://owasp.org/Top10/A05_2021-Security_Misconfiguration/).
+
+### Example
+
+Edit `chatbot-core/api/config/config.yml`:
+
+```yaml
+cors:
+  allowed_origins:
+    - "http://localhost:8080"        # local Jenkins
+    - "https://jenkins.example.com"  # production Jenkins origin
+```
+
+Restart the API after changing the config.
+
 ## Common Troubleshooting
 
 This section covers common issues encountered during setup, especially when installing
