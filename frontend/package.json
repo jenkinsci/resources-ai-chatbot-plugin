@@ -15,7 +15,7 @@
   "dependencies": {
     "docx": "^9.5.1",
     "jspdf": "^3.0.4",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^1.14.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-use-websocket": "^4.13.0",
