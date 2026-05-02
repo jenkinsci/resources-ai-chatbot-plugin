@@ -1,11 +1,12 @@
 """Unit tests for chat service logic."""
 
 import logging
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 from api.services.chat_service import generate_answer, get_chatbot_reply, retrieve_context
 from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse, FileAttachment, FileType
+
 
 def test_get_chatbot_reply_success(
     mock_get_session,
@@ -27,8 +28,10 @@ def test_get_chatbot_reply_success(
 
     assert isinstance(response, ChatResponse)
     assert response.reply == "LLM answers to the query"
-    mock_chat_memory.add_user_message.assert_called_once_with("Query for the LLM")
-    mock_chat_memory.add_ai_message.assert_called_once_with("LLM answers to the query")
+    mock_chat_memory.add_user_message.assert_called_once_with(
+        "Query for the LLM")
+    mock_chat_memory.add_ai_message.assert_called_once_with(
+        "LLM answers to the query")
 
 
 def test_get_chatbot_reply_session_not_found(mock_get_session):
@@ -38,7 +41,8 @@ def test_get_chatbot_reply_session_not_found(mock_get_session):
     with pytest.raises(RuntimeError) as exc_info:
         get_chatbot_reply("missing-session-id", "Query for the LLM")
 
-    assert "Session 'missing-session-id' not found in the memory store." in str(exc_info.value)
+    assert "Session 'missing-session-id' not found in the memory store." in str(
+        exc_info.value)
 
 
 def test_get_chatbot_reply_does_not_log_raw_content(
@@ -148,9 +152,11 @@ def test_retrieve_context_no_documents(mock_get_relevant_documents):
 
     assert result == CONFIG["retrieval"]["empty_context_message"]
 
+
 def test_retrieve_context_missing_id(mock_get_relevant_documents, caplog):
     """Test retrieve_context skips chunks missing an ID and logs a warning."""
-    mock_get_relevant_documents.return_value = (get_mock_documents("missing_id"), None)
+    mock_get_relevant_documents.return_value = (
+        get_mock_documents("missing_id"), None)
     logging.getLogger("API").propagate = True
 
     with caplog.at_level(logging.WARNING):
@@ -162,7 +168,8 @@ def test_retrieve_context_missing_id(mock_get_relevant_documents, caplog):
 
 def test_retrieve_context_missing_text(mock_get_relevant_documents, caplog):
     """Test retrieve_context skips chunks missing text and logs a warning."""
-    mock_get_relevant_documents.return_value = (get_mock_documents("missing_text"), None)
+    mock_get_relevant_documents.return_value = (
+        get_mock_documents("missing_text"), None)
     logging.getLogger("API").propagate = True
 
     with caplog.at_level(logging.WARNING):
@@ -189,7 +196,6 @@ def test_retrieve_context_with_missing_code(mock_get_relevant_documents, caplog)
         "Snippet 1: print('Only one snippet'), Snippet 2: [MISSING_CODE]"
     )
     assert "More placeholders than code blocks in chunk with ID doc-111" in caplog.text
-
 
 
 def get_mock_documents(doc_type: str):
@@ -222,7 +228,7 @@ def get_mock_documents(doc_type: str):
                 "code_blocks": ["print('no text here')"]
             }
         ]
-    if doc_type== "missing_code":
+    if doc_type == "missing_code":
         return [
             {
                 "id": "doc-111",
@@ -233,6 +239,55 @@ def get_mock_documents(doc_type: str):
             }
         ]
     return []
+
+
+@patch("api.services.chat_service.get_session")
+@patch("api.services.chat_service.retrieve_context")
+@patch("api.services.chat_service.build_prompt")
+@patch("api.services.chat_service.generate_answer")
+def test_get_chatbot_reply_sanitizes_secrets_at_entry(
+    mock_generate_answer,
+    mock_build_prompt,
+    mock_retrieve_context,
+    mock_get_session
+):
+    """
+    Ensures that user input containing secrets is sanitized immediately at the 
+    producer level before being passed to retrieval, prompt building, or memory.
+    """
+    # 1. Setup the fake environment (Mocks)
+    mock_memory = MagicMock()
+    mock_get_session.return_value = mock_memory
+    mock_retrieve_context.return_value = "Mocked context"
+    mock_build_prompt.return_value = "Mocked prompt"
+    mock_generate_answer.return_value = "Mocked reply"
+
+    # 2. The "Poisoned" Input (Raw Log)
+    session_id = "test-session-123"
+    raw_user_input = (
+        "Jenkins failed at line 42: password=MySuperSecret123 "
+        "and aws_key=AKIAIOSFODNN7EXAMPLE"
+    )
+
+    # What it SHOULD look like after our new front-door sanitizer
+    expected_safe_input = (
+        "Jenkins failed at line 42: password=[REDACTED] "
+        "and aws_key=[REDACTED_AWS_KEY]"
+    )
+
+    # 3. Fire the function
+    get_chatbot_reply(session_id=session_id, user_input=raw_user_input)
+
+    # 4. THE PROOF: Assert downstream functions only saw the safe, redacted version
+    mock_retrieve_context.assert_called_once_with(expected_safe_input)
+    mock_build_prompt.assert_called_once_with(
+        expected_safe_input, "Mocked context", mock_memory)
+
+    # Also prove it doesn't leak into the chat history!
+    mock_memory.chat_memory.add_user_message.assert_called_once_with(
+        expected_safe_input)
+
+
 def test_get_chatbot_reply_with_file_attachment(
     mock_get_session,
     mock_retrieve_context,
@@ -262,7 +317,8 @@ def test_get_chatbot_reply_with_file_attachment(
     assert isinstance(response, ChatResponse)
     assert response.reply == "Reply with file context"
     mock_chat_memory.add_user_message.assert_called_once()
-    mock_chat_memory.add_ai_message.assert_called_once_with("Reply with file context")
+    mock_chat_memory.add_ai_message.assert_called_once_with(
+        "Reply with file context")
 
 
 def test_get_chatbot_reply_memory_updated_correctly(
