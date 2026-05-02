@@ -4,7 +4,7 @@ Definition of the tools avaialable to the Agent.
 
 from typing import Optional
 from types import MappingProxyType
-from api.models.embedding_model import EMBEDDING_MODEL
+from api.models.runtime_models import get_embedding_model
 from api.tools.utils import (
     filter_retrieved_data,
     is_valid_plugin,
@@ -14,6 +14,7 @@ from api.tools.utils import (
 from api.config.loader import CONFIG
 
 retrieval_config = CONFIG["retrieval"]
+
 
 def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[str] = None) -> str:
     """
@@ -29,13 +30,18 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
         str: The result of the research of the plugin search tool.
     """
     source_name = CONFIG["tool_names"]["plugins"]
+    embedding_model = get_embedding_model()
+    if embedding_model is None:
+        logger.warning("Embedding model unavailable for plugin search")
+        return "Plugin search unavailable due to missing embedding model."
+
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
         retrieve_documents(
             query=query,
             keywords=keywords,
             logger=logger,
             source_name=source_name,
-            embedding_model=EMBEDDING_MODEL
+            embedding_model=embedding_model
         )
     )
 
@@ -55,6 +61,7 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
         logger=logger
     )
 
+
 def search_jenkins_docs(query: str, keywords: str, logger) -> str:
     """
     Search tool for the Jenkins docs. Exploits both a sparse and dense search, resulting in a 
@@ -68,13 +75,18 @@ def search_jenkins_docs(query: str, keywords: str, logger) -> str:
         str: The result of the research of the docs search tool.
     """
     source_name = CONFIG["tool_names"]["jenkins_docs"]
+    embedding_model = get_embedding_model()
+    if embedding_model is None:
+        logger.warning("Embedding model unavailable for docs search")
+        return "Docs search unavailable due to missing embedding model."
+
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
         retrieve_documents(
             query=query,
             keywords=keywords,
             logger=logger,
             source_name=source_name,
-            embedding_model=EMBEDDING_MODEL
+            embedding_model=embedding_model
         )
     )
 
@@ -87,6 +99,7 @@ def search_jenkins_docs(query: str, keywords: str, logger) -> str:
         logger=logger
     )
 
+
 def search_stackoverflow_threads(query: str) -> str:
     """
     Stackoverflow Search tool
@@ -94,6 +107,7 @@ def search_stackoverflow_threads(query: str) -> str:
     if query:
         pass
     return "Nothing relevant"
+
 
 def search_community_threads(query: str, keywords: str, logger) -> str:
     """
@@ -109,13 +123,18 @@ def search_community_threads(query: str, keywords: str, logger) -> str:
         str: The result of the research of the docs search tool.
     """
     source_name = CONFIG["tool_names"]["community_threads"]
+    embedding_model = get_embedding_model()
+    if embedding_model is None:
+        logger.warning("Embedding model unavailable for community threads search")
+        return "Community threads search unavailable due to missing embedding model."
+
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
         retrieve_documents(
             query=query,
             keywords=keywords,
             logger=logger,
             source_name=source_name,
-            embedding_model=EMBEDDING_MODEL
+            embedding_model=embedding_model
         )
     )
 
@@ -128,6 +147,7 @@ def search_community_threads(query: str, keywords: str, logger) -> str:
         logger=logger,
         semantic_weight=0.7
     )
+
 
 TOOL_REGISTRY = MappingProxyType({
     "search_plugin_docs": search_plugin_docs,

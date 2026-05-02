@@ -147,4 +147,7 @@ class LlamaCppProvider(LLMProvider if LLAMA_CPP_AVAILABLE else object):
             yield "Sorry, an unexpected error occurred."
 
 
-llm_provider = None if CONFIG["is_test_mode"] else LlamaCppProvider()
+# Lazy initialization is now handled by api.models.runtime_models
+# This module should NOT instantiate llm_provider at import time
+# llm_provider = None if CONFIG["is_test_mode"] else LlamaCppProvider()
+# REMOVED - use runtime_models instead
