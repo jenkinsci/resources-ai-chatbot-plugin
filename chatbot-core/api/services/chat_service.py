@@ -1,6 +1,7 @@
 """Chat service layer responsible for processing the requests forwarded by the controller."""
 
 import ast
+import asyncio
 import json
 import re
 from typing import AsyncGenerator, List, Optional
@@ -505,7 +506,7 @@ async def get_chatbot_reply_stream(
         raise RuntimeError(
             f"Session '{session_id}' not found in memory store.")
 
-    context = retrieve_context(user_input)
+    context = await asyncio.to_thread(retrieve_context, user_input)
     logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
 
     prompt = build_prompt(user_input, context, memory)
