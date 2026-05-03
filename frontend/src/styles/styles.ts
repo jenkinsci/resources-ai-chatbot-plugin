@@ -140,8 +140,8 @@ export const chatbotStyles = {
     flexWrap: "wrap",
     gap: "8px",
     padding: "8px 12px",
-    backgroundColor: "#f8f9fa",
-    borderBottom: "1px solid #eee",
+    backgroundColor: "var(--panel-background)",
+    borderBottom: "1px solid var(--border-color)",
     maxHeight: "100px",
     overflowY: "auto",
   } as CSSProperties,
@@ -151,7 +151,8 @@ export const chatbotStyles = {
     alignItems: "center",
     gap: "4px",
     padding: "4px 8px",
-    backgroundColor: "#e9ecef",
+    backgroundColor: "var(--item-background--hover)",
+    color: "var(--text-color)",
     borderRadius: "16px",
     fontSize: "12px",
     maxWidth: "200px",
@@ -164,8 +165,14 @@ export const chatbotStyles = {
     maxWidth: "120px",
   } as CSSProperties,
 
+  attachedFilePreviewIcon: {
+    display: "flex",
+    alignItems: "center",
+    flexShrink: 0,
+  } as CSSProperties,
+
   attachedFileSize: {
-    color: "#6c757d",
+    color: "var(--text-color)",
     fontSize: "11px",
     flexShrink: 0,
   } as CSSProperties,
@@ -208,9 +215,10 @@ export const chatbotStyles = {
     width: "40px",
     height: "40px",
     padding: 0,
-    border: "1px solid #ccc",
+    border: "1px solid var(--border-color)",
     borderRadius: "6px",
-    backgroundColor: "#fff",
+    backgroundColor: "var(--button-background)",
+    color: "var(--text-color)",
     fontSize: "18px",
     cursor: "pointer",
     flexShrink: 0,
@@ -240,8 +248,11 @@ export const chatbotStyles = {
 
   sendButton: (input: string): CSSProperties =>
     ({
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
       width: "14%",
-      padding: "0.5rem 1rem",
+      padding: "0.5rem",
       backgroundColor: "var(--button-background)",
       color: "var(--text-color)",
       borderRadius: "0.625rem",
