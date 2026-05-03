@@ -41,6 +41,7 @@ from api.models.schemas import (
     SessionResponse,
     FileAttachment,
     SupportedExtensionsResponse,
+    MAX_MESSAGE_LENGTH,
 )
 from api.services.chat_service import (
     get_chatbot_reply,
@@ -133,6 +134,13 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
             user_message = message_data.get("message", "")
 
             if not user_message:
+                continue
+
+            if len(user_message) > MAX_MESSAGE_LENGTH:
+                await websocket.send_text(json.dumps({
+                    "error": f"Message too long. "
+                             f"Maximum {MAX_MESSAGE_LENGTH} characters."
+                }))
                 continue
 
             async for token in get_chatbot_reply_stream(
