@@ -3,7 +3,7 @@
 
 import os
 from bs4 import BeautifulSoup
-from data.chunking.chunking_utils import(
+from data.chunking.chunking_utils import (
     extract_code_blocks,
     assign_code_blocks_to_chunks,
     save_chunks,
@@ -17,13 +17,16 @@ logger_factory = LoggerFactory.instance()
 logger = logger_factory.get_logger("chunking")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw", "stack_overflow_threads.json")
-OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "processed", "chunks_stackoverflow_threads.json")
+INPUT_PATH = os.path.join(SCRIPT_DIR, "..", "raw",
+                          "stack_overflow_threads.json")
+OUTPUT_PATH = os.path.join(
+    SCRIPT_DIR, "..", "processed", "chunks_stackoverflow_threads.json")
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 100
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[CODE_BLOCK_(\d+)\]\]"
 PLACEHOLDER_TEMPLATE = "[[CODE_BLOCK_{}]]"
+
 
 def clean_html(html):
     """
@@ -36,6 +39,7 @@ def clean_html(html):
         BeautifulSoup: Parsed HTML object.
     """
     return BeautifulSoup(html, "lxml")
+
 
 def process_thread(thread, text_splitter):
     """
@@ -59,7 +63,7 @@ def process_thread(thread, text_splitter):
 
     if question_body == "" or answer_body == "":
         logger.warning(
-            "Question %d is missing question/answer content. Extracting 0 chunks from it.", 
+            "Question %d is missing question/answer content. Extracting 0 chunks from it.",
             question_id
         )
         return []
@@ -96,6 +100,7 @@ def process_thread(thread, text_splitter):
         for chunk in processed_chunks
     ]
 
+
 def extract_chunks(threads):
     """
     Processes a list of StackOverflow threads into structured chunks.
@@ -115,6 +120,7 @@ def extract_chunks(threads):
 
     return all_chunks
 
+
 def main():
     """Main entry point."""
     threads = read_json_file(INPUT_PATH, logger)
@@ -125,6 +131,7 @@ def main():
     all_chunks = extract_chunks(threads)
 
     save_chunks(OUTPUT_PATH, all_chunks, logger)
+
 
 if __name__ == "__main__":
     main()
