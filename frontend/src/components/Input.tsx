@@ -1,6 +1,13 @@
 import { useRef } from "react";
 import { getChatbotText } from "../data/chatbotTexts";
 import { chatbotStyles } from "../styles/styles";
+import {
+  Paperclip,
+  Image as ImageIcon,
+  File,
+  Send,
+  CircleStop,
+} from "lucide-react";
 
 /**
  * Props for the Input component.
@@ -118,9 +125,19 @@ export const Input = ({
             >
               <span style={chatbotStyles.attachedFileName}>
                 {file.type.startsWith("image/") ? (
-                  <span data-testid="file-icon-image">🖼️</span>
+                  <span
+                    data-testid="file-icon-image"
+                    style={chatbotStyles.attachedFilePreviewIcon}
+                  >
+                    <ImageIcon size={14} />
+                  </span>
                 ) : (
-                  <span data-testid="file-icon-document">📄</span>
+                  <span
+                    data-testid="file-icon-document"
+                    style={chatbotStyles.attachedFilePreviewIcon}
+                  >
+                    <File size={14} />
+                  </span>
                 )}{" "}
                 {file.name}
               </span>
@@ -162,7 +179,7 @@ export const Input = ({
             style={chatbotStyles.attachButton}
             title="Attach files"
           >
-            📎
+            <Paperclip size={16} />
           </button>
         )}
 
@@ -181,17 +198,19 @@ export const Input = ({
             type="button"
             onClick={onCancel}
             style={chatbotStyles.sendButton("x")}
-            aria-label="Cancel message"
+            aria-label="Cancel"
+            title="Cancel message"
           >
-            Cancel
+            <CircleStop size={20} />
           </button>
         ) : (
           <button
             onClick={onSend}
             disabled={!canSend}
+            aria-label="Send"
             style={chatbotStyles.sendButton(canSend ? "x" : "")}
           >
-            {getChatbotText("sendMessage")}
+            <Send size={20} />
           </button>
         )}
       </div>
