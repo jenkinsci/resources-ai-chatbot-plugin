@@ -16,7 +16,7 @@
     "docx": "^9.5.1",
     "jspdf": "^3.0.4",
     "lucide-react": "^1.14.0",
-    "react": "^19.1.0",
+    "react": "^19.2.5",
     "react-dom": "^19.1.0",
     "react-use-websocket": "^4.13.0",
     "uuid": "^13.0.0"
@@ -28,7 +28,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.2",
     "@types/jest": "^30.0.0",
-    "@types/react": "^19.2.7",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
     "eslint": "^9.25.0",
