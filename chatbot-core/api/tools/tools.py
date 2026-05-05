@@ -4,7 +4,7 @@ Definition of the tools avaialable to the Agent.
 import os
 from typing import Optional
 from types import MappingProxyType
-
+import urllib.parse
 import httpx
 
 from api.tools.sanitizer import sanitize_logs
@@ -150,10 +150,17 @@ def fetch_jenkins_build_logs(job_name: str, build_number: str, logger) -> str:
     Returns:
         str: The sanitized log output or an error message.
     """
+    # --- START OF FIX 1: URL Encoding ---
+    safe_job = urllib.parse.quote(job_name, safe="")
+    safe_build = urllib.parse.quote(str(build_number), safe="")
+
     # Fallback to localhost if JENKINS_URL isn't set in the environment
     jenkins_url = os.environ.get(
         "JENKINS_URL", "http://localhost:8080").rstrip("/")
-    url = f"{jenkins_url}/job/{job_name}/{build_number}/consoleText"
+
+    # Use the safe variables in the URL string
+    url = f"{jenkins_url}/job/{safe_job}/{safe_build}/consoleText"
+    # --- END OF FIX 1 ---
 
     try:
         user = os.environ.get("JENKINS_USER")
@@ -164,6 +171,12 @@ def fetch_jenkins_build_logs(job_name: str, build_number: str, logger) -> str:
 
         # Use httpx to grab the raw console text
         response = httpx.get(url, auth=auth, timeout=10.0)
+
+        # --- START OF FIX 2: Explicit 401/403 Handling ---
+        if response.status_code in (401, 403):
+            logger.error("Jenkins Authentication failed.")
+            return "Authentication failed. Please check JENKINS_USER and JENKINS_TOKEN env vars."
+        # --- END OF FIX 2 ---
 
         if response.status_code == 404:
             return (
