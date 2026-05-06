@@ -10,6 +10,7 @@ from utils import LoggerFactory
 
 logger = LoggerFactory.instance().get_logger("api")
 
+
 def load_config():
     """
     Loads and parses the config.yml file located in the same directory.
@@ -31,6 +32,14 @@ def load_config():
     with open(config_path, "r", encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
+        # Inject Jenkins environment variables into the central config
+    config["jenkins"] = {
+        "url": os.environ.get("JENKINS_URL", "http://localhost:8080"),
+        "user": os.environ.get("JENKINS_USER"),
+        "token": os.environ.get("JENKINS_TOKEN")
+    }
+
     return config
+
 
 CONFIG = load_config()
