@@ -61,8 +61,8 @@ def test_read_json_file_handles_file_not_found(mocker, tmp_path):
 
     result = read_json_file(str(nonexistent_file), logger)
     assert result == []
-    logger.error.assert_called_once()
-    assert "File error while reading" in logger.error.call_args[0][0]
+    logger.warning.assert_called_once()
+    assert "File not found" in logger.warning.call_args[0][0]
 
 
 def test_read_json_file_handles_json_decode_error(mocker, tmp_path):

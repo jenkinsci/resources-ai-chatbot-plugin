@@ -62,6 +62,11 @@ def mock_get_chatbot_reply_stream(mocker):
     """Mock the get_chatbot_reply_stream function."""
     return mocker.patch("api.routes.chatbot.get_chatbot_reply_stream")
 
+@pytest.fixture
+def mock_persist_session(mocker):
+    """Mock the persist_session function."""
+    return mocker.patch("api.routes.chatbot.persist_session")
+
 
 @pytest.fixture
 def mock_process_uploaded_file(mocker):

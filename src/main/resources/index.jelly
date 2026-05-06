@@ -1,4 +1,8 @@
 <?jelly escape-by-default='true'?>
 <div>
-    TODO
+  Resources AI Chatbot plugin for Jenkins.
+  See
+  <a href="https://github.com/jenkinsci/resources-ai-chatbot-plugin#readme">
+    documentation
+  </a>.
 </div>
