@@ -1,7 +1,7 @@
 """
 Definition of the tools avaialable to the Agent.
 """
-import os
+
 from typing import Optional
 from types import MappingProxyType
 import urllib.parse
@@ -155,16 +155,15 @@ def fetch_jenkins_build_logs(job_name: str, build_number: str, logger) -> str:
     safe_build = urllib.parse.quote(str(build_number), safe="")
 
     # Fallback to localhost if JENKINS_URL isn't set in the environment
-    jenkins_url = os.environ.get(
-        "JENKINS_URL", "http://localhost:8080").rstrip("/")
+    jenkins_url = CONFIG["jenkins"]["url"].rstrip("/")
 
     # Use the safe variables in the URL string
     url = f"{jenkins_url}/job/{safe_job}/{safe_build}/consoleText"
     # --- END OF FIX 1 ---
 
     try:
-        user = os.environ.get("JENKINS_USER")
-        token = os.environ.get("JENKINS_TOKEN")
+        user = CONFIG["jenkins"]["user"]
+        token = CONFIG["jenkins"]["token"]
         auth = (user, token) if user and token else None
 
         logger.info(f"Fetching live logs from Jenkins: {url}")
