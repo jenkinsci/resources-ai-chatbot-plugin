@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import pytest
 from langchain.memory import ConversationBufferMemory
 
+from api.prompts.prompt_builder import build_prompt
 from api.services import memory
 
 
@@ -30,6 +31,29 @@ def test_get_session_returns_existing_session():
 
     assert isinstance(session, ConversationBufferMemory)
     assert session is memory.get_session(session_id)
+
+
+def test_get_session_restores_disk_messages_as_langchain_messages(mocker):
+    """Test disk-restored sessions keep message object shape used by prompts/routes."""
+    session_id = str(uuid.uuid4())
+    mocker.patch(
+        "api.services.memory.load_session",
+        return_value=[
+            {"role": "human", "content": "hi"},
+            {"role": "ai", "content": "hello"},
+        ],
+    )
+
+    session = memory.get_session(session_id)
+
+    assert session is not None
+    assert [msg.type for msg in session.chat_memory.messages] == ["human", "ai"]
+    assert [msg.content for msg in session.chat_memory.messages] == ["hi", "hello"]
+
+    prompt = build_prompt("How are you?", "context", session)
+    assert "User: hi" in prompt
+    assert "Jenkins Assistant: hello" in prompt
+
 
 def test_get_session_returns_none_for_invalid_id():
     """Test that get_session returns None when the session ID does not exist."""
@@ -145,3 +169,38 @@ def test_cleanup_expired_sessions_with_no_sessions():
 
     assert cleaned_count == 0
     assert memory.get_session_count() == 0
+
+
+# ---------- Tests for get_last_accessed / set_last_accessed (PR #215 review) ----------
+
+
+def test_get_last_accessed_returns_none_for_missing_session():
+    """get_last_accessed returns None when the session does not exist in memory."""
+    assert memory.get_last_accessed("nonexistent-session-id") is None
+
+
+def test_get_last_accessed_returns_timestamp_for_in_memory_session():
+    """get_last_accessed returns a datetime for a session held in memory."""
+    session_id = memory.init_session()
+    timestamp = memory.get_last_accessed(session_id)
+
+    assert timestamp is not None
+    assert isinstance(timestamp, datetime)
+
+
+def test_set_last_accessed_returns_false_for_missing_session():
+    """set_last_accessed returns False when the session does not exist in memory."""
+    result = memory.set_last_accessed("nonexistent-session-id", datetime.now())
+
+    assert result is False
+
+
+def test_set_last_accessed_updates_timestamp_for_in_memory_session():
+    """set_last_accessed updates the timestamp and returns True for an in-memory session."""
+    session_id = memory.init_session()
+    new_ts = datetime(2025, 1, 1, 12, 0, 0)
+
+    result = memory.set_last_accessed(session_id, new_ts)
+
+    assert result is True
+    assert memory.get_last_accessed(session_id) == new_ts

@@ -184,7 +184,7 @@ Tool calls:
     "tool": "search_community_threads",
     "params": {{
       "query": "jenkins plugin dependency resolution failure after upgrade",
-      "keywords": "plugin missing dependency upgrade
+      "keywords": "plugin missing dependency upgrade"
     }}
   }}
 ]

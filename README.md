@@ -116,6 +116,9 @@ For more details, see [docs/setup.md](docs/setup.md).
 
 Development-related documentation can be found in the [`docs/`](docs/) directory.
 
+- [Setup Guide](docs/setup.md)
+- [Windows/WSL2 Setup Guide](docs/windows-setup.md) — for contributors on Windows machines
+
 ## Contributing
 
 Refer to our [contribution guidelines](https://github.com/jenkinsci/.github/blob/master/CONTRIBUTING.md)
