@@ -22,7 +22,7 @@ flowchart TD
     J3 --> J4
 
     J2 --> |Relevant context| Z[.]
-    J2 --> |Medium/Low relveant context| I3[Reformulate query]
+    J2 --> |Medium/Low relevant context| I3[Reformulate query]
     I3 --> H
     J2 --> |Very Low relevant context| Z1[Avoid hallucination ; Answer you are not able to respond]
 

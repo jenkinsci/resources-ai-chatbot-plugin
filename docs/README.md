@@ -15,8 +15,8 @@ Below is a brief explanation of the key subdirectories:
   - `utils/`: Contains utils for the chatbot-core directory(e.g. logger).
   - `rag/`: Core logic of the RAG
     - `embedding/`: Scripts to embed the chunks.
-    - `vectorestore/`: Scripts to store the embeddings into a vector database.
-    - `retrieval/`: Scripts to perform the semantic research across the vectore database.
+    - `vectorstore/`: Scripts to store the embeddings into a vector database.
+    - `retriever/`: Scripts to perform the semantic search across the vector database.
   - `api/`: FastAPI application that exposes the chatbot via a REST API.
     - `main.py`: Entry point to run the FastAPI app.
     - `routes/`: Defines the HTTP endpoints.
@@ -29,7 +29,7 @@ Below is a brief explanation of the key subdirectories:
     - `integration/`: Contains the integration tests and the related configuration.
   - `requirements.txt`: Python dependencies.
   - `requirements-cpu.txt`: Python dependencies for cpu only usage.
-- `docs/`: Developer documentation. Inside it mirros the codebase layout.
+- `docs/`: Developer documentation. Inside it mirrors the codebase layout.
 - `frontend/`: Directory for the frontend React application.
 
 ## Getting Started
@@ -51,7 +51,7 @@ The first thing we want to be able to do is running the whole data pipeline. The
 
 > **Note:** the collection of StackOverflow's data is not included; to include it you must follow [this](chatbot-core/data/collection.md).
 
-So starting from the identificatiion of the data sources(e.g. Jenkins Official Documentation) the data pipeline will collect it, process it, and finally store it in a vector database(FAISS) to later perform semantic search.
+So starting from the identification of the data sources(e.g. Jenkins Official Documentation) the data pipeline will collect it, process it, and finally store it in a vector database(FAISS) to later perform semantic search.
 
 To run the following pipeline you can use the `run-data-pipeline` target:
 ```bash
@@ -62,14 +62,14 @@ make run-data-pipeline
 
 ## API
 
-Another key component in this repo is the backend, that allows to run the API that serves the chabot funcionalities. Also for the API there is a specific target in the `Makefile`, that does all the setup, installing the correct dependencies in the virtual environment, and runs the API.
+Another key component in this repo is the backend, that allows to run the API that serves the chatbot functionalities. Also for the API there is a specific target in the `Makefile`, that does all the setup, installing the correct dependencies in the virtual environment, and runs the API.
 
 To run it you can use the `api` target:
 ```bash
 make api
 ```
 
-> **Note:** for more details on the API and on the architectual overview you can visit the docs under `docs/chatbot-core/api/`.
+> **Note:** for more details on the API and on the architectural overview you can visit the docs under `docs/chatbot-core/api/`.
 
 ## User Interface
 

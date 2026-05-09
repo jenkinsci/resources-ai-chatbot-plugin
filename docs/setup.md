@@ -111,12 +111,12 @@ make api
 6. **Download the Required Model**
     1. Create the model directory if it doesn't exist:
         ```bash
-        mkdir -p api\models\mistral
+        mkdir -p api/models/mistral
         ```
     2. Download the Mistral 7B Instruct model from Hugging Face:
         * Go to https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
         * Download the file named `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
-        * Place the downloaded file in `api\models\mistral\`
+        * Place the downloaded file in `api/models/mistral/`
 
 By default, the backend attempts to load the local GGUF model during
 startup. If the model file is missing, the server will fail to start.
@@ -252,6 +252,38 @@ Example:
 PYTEST_VERSION=1 make api
 ```
 
+## Production Hardening: CORS
+
+The shipped `chatbot-core/api/config/config.yml` sets:
+
+```yaml
+cors:
+  allowed_origins:
+    - "*"
+```
+
+The wildcard is intended for local development only. **Before exposing the
+API beyond `localhost`, restrict `allowed_origins` to the Jenkins instance
+origin(s) that should be allowed to call the chatbot API.**
+
+Leaving `*` in production allows any website a logged-in user visits to
+make cross-origin requests to the chatbot endpoints in that user's browser
+context (CSRF-style abuse, chat history exfiltration). This is OWASP
+[A05:2021 Security Misconfiguration](https://owasp.org/Top10/A05_2021-Security_Misconfiguration/).
+
+### Example
+
+Edit `chatbot-core/api/config/config.yml`:
+
+```yaml
+cors:
+  allowed_origins:
+    - "http://localhost:8080"        # local Jenkins
+    - "https://jenkins.example.com"  # production Jenkins origin
+```
+
+Restart the API after changing the config.
+
 ## Common Troubleshooting
 
 This section covers common issues encountered during setup, especially when installing
@@ -269,13 +301,15 @@ dependencies that require native compilation (e.g. `llama-cpp-python`).
 `llama-cpp-python` requires a working C/C++ toolchain and CMake to build native extensions.
 
 **Solution**
+
 For Linux (Ubuntu/Debian):
 ```bash
 sudo apt install build-essential cmake
 pip install llama-cpp-python
+```
 
 For macOS:
 ```bash
 brew install cmake
-pip install llama-cpp-python    
+pip install llama-cpp-python
 ```

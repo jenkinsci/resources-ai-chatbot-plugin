@@ -1,0 +1,36 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
+  <l:layout title="Resources AI Chatbot">
+    <l:main-panel>
+      <div class="chatbot-plugin-page">
+        <h1>Resources AI Chatbot</h1>
+        <p>
+          This plugin embeds the Resources AI Chatbot into Jenkins to help users
+          quickly find relevant documentation and guidance.
+        </p>
+        <p>
+          The chatbot UI is injected globally via the page decorator. Look for the
+          chat widget in the Jenkins interface after installing and restarting.
+        </p>
+        <h2>Documentation</h2>
+        <ul>
+          <li>
+            <a href="https://github.com/jenkinsci/resources-ai-chatbot-plugin#readme">
+              Project README
+            </a>
+          </li>
+          <li>
+            <a href="https://github.com/jenkinsci/resources-ai-chatbot-plugin/blob/main/docs/setup.md">
+              Setup guide
+            </a>
+          </li>
+          <li>
+            <a href="https://github.com/jenkinsci/resources-ai-chatbot-plugin/blob/main/docs/windows-setup.md">
+              Windows/WSL2 setup
+            </a>
+          </li>
+        </ul>
+      </div>
+    </l:main-panel>
+  </l:layout>
+</j:jelly>
