@@ -34,10 +34,10 @@ api: setup-backend run-api
 
 dev-lite: setup-backend
 	@echo "Starting API in lite mode..."
-	# Lite mode uses PYTEST_VERSION=1 to load the testing configuration,
+	# Lite mode uses APP_ENV=testing to load the testing configuration,
 	# which disables local LLM loading. This is useful for API development
 	# when you don't need to test actual chat completions.
-	@$(BACKEND_SHELL) && PYTEST_VERSION=1 uvicorn api.main:app --reload
+	@$(BACKEND_SHELL) && APP_ENV=testing uvicorn api.main:app --reload
 
 # TESTS
 
