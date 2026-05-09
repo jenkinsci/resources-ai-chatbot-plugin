@@ -255,6 +255,51 @@ class TestLoadSessionEdgeCases:
         result = sm.load_session("not-a-uuid")
         assert result == []
 
+    def test_load_session_malformed_json_returns_empty_list(self, tmp_session):
+        """load_session must return [] when session JSON is malformed."""
+        sm, tmp_path = tmp_session
+        session_id = _new_uuid()
+        session_file = tmp_path / f"{session_id}.json"
+        session_file.write_text("{invalid-json", encoding="utf-8")
+
+        result = sm.load_session(session_id)
+        assert result == []
+
+    def test_load_session_non_list_payload_returns_empty_list(self, tmp_session):
+        """load_session must return [] when payload shape is not a list."""
+        sm, tmp_path = tmp_session
+        session_id = _new_uuid()
+        session_file = tmp_path / f"{session_id}.json"
+        session_file.write_text(
+            json.dumps({"role": "human", "content": "not-a-list"}),
+            encoding="utf-8",
+        )
+
+        result = sm.load_session(session_id)
+        assert result == []
+
+    def test_reload_persisted_sessions_skips_malformed_files(self, tmp_session, monkeypatch):
+        """reload_persisted_sessions must restore valid files and skip malformed ones."""
+        sm, tmp_path = tmp_session
+        valid_session_id = _new_uuid()
+        malformed_session_id = _new_uuid()
+
+        (tmp_path / f"{valid_session_id}.json").write_text(
+            json.dumps([{"role": "human", "content": "hello"}]),
+            encoding="utf-8",
+        )
+        (tmp_path / f"{malformed_session_id}.json").write_text(
+            "{invalid-json",
+            encoding="utf-8",
+        )
+
+        monkeypatch.setattr(memory, "get_persisted_session_ids", sm.get_persisted_session_ids)
+        loaded = memory.reload_persisted_sessions()
+
+        assert loaded == 1
+        assert memory.session_exists(valid_session_id)
+        assert not memory.session_exists(malformed_session_id)
+
 
 # ─────────────────────────────────────────────────────────────────
 # Additional coverage: delete_session_file (PR #200)
