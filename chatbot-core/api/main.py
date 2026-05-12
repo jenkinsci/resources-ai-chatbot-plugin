@@ -4,13 +4,15 @@ Main entry point for the FastAPI application.
 
 import asyncio
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from api.routes import chatbot
 from api.config.loader import CONFIG
 from api.services.memory import cleanup_expired_sessions, reload_persisted_sessions
 from utils import LoggerFactory
-from pydantic import BaseModel
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -19,8 +21,10 @@ async def periodic_session_cleanup():
     """
     Background task that periodically cleans up expired sessions.
     """
-    cleanup_interval = CONFIG.get("session", {}).get("cleanup_interval_seconds", 3600)
-    logger.info("Starting periodic session cleanup task (interval: %ss)", cleanup_interval)
+    cleanup_interval = CONFIG.get("session", {}).get(
+        "cleanup_interval_seconds", 3600)
+    logger.info(
+        "Starting periodic session cleanup task (interval: %ss)", cleanup_interval)
 
     while True:
         await asyncio.sleep(cleanup_interval)
