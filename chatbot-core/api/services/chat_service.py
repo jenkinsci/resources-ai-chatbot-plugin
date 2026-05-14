@@ -3,6 +3,7 @@
 import ast
 import json
 import re
+import inspect
 from typing import AsyncGenerator, List, Optional
 
 from api.config.loader import CONFIG
@@ -70,11 +71,13 @@ def get_chatbot_reply(
         ChatResponse: The generated assistant response.
     """
     logger.info("New message from session '%s'", session_id)
-    logger.debug("Handling the user query: %s", _sanitize_log_payload(user_input))
+    logger.debug("Handling the user query: %s",
+                 _sanitize_log_payload(user_input))
 
     memory = get_session(session_id)
     if memory is None:
-        raise RuntimeError(f"Session '{session_id}' not found in the memory store.")
+        raise RuntimeError(
+            f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
     logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
@@ -84,7 +87,8 @@ def get_chatbot_reply(
 
     prompt = build_prompt(user_input, context, memory)
 
-    logger.debug("Generating answer with prompt: %s", _sanitize_log_payload(prompt))
+    logger.debug("Generating answer with prompt: %s",
+                 _sanitize_log_payload(prompt))
     reply = generate_answer(prompt)
 
     # Format user message with file info for memory
@@ -141,7 +145,8 @@ def get_chatbot_reply_new_architecture(
         ChatResponse: The generated assistant response.
     """
     logger.info("New message from session '%s'", session_id)
-    logger.debug("Handling the user query: %s", _sanitize_log_payload(user_input))
+    logger.debug("Handling the user query: %s",
+                 _sanitize_log_payload(user_input))
 
     memory = get_session(session_id)
     if memory is None:
@@ -200,7 +205,8 @@ def _handle_query_type(query: str, query_type: QueryType, memory) -> str:
 
         answers = []
         for sub_query in sub_queries:
-            logger.debug("Handling sub-query: %s.", _sanitize_log_payload(sub_query))
+            logger.debug("Handling sub-query: %s.",
+                         _sanitize_log_payload(sub_query))
             answers.append(_get_reply_simple_query_pipeline(sub_query, memory))
 
         reply = _assemble_response(answers)
@@ -228,8 +234,10 @@ def _get_sub_queries(query: str) -> List[str]:
     try:
         queries = ast.literal_eval(queries_string)
     except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
-        logger.warning("Error in parsing sub-queries. Falling back to single query mode.")
-        logger.debug("Failed sub-query payload: %s", _sanitize_log_payload(queries_string))
+        logger.warning(
+            "Error in parsing sub-queries. Falling back to single query mode.")
+        logger.debug("Failed sub-query payload: %s",
+                     _sanitize_log_payload(queries_string))
         queries = [query]
 
     queries = [q.strip() for q in queries]
@@ -267,7 +275,8 @@ def _get_reply_simple_query_pipeline(query: str, memory) -> str:
 
         retrieved_context = _execute_search_tools(tool_calls)
 
-        logger.debug("Retrieved context: %s", _sanitize_log_payload(retrieved_context))
+        logger.debug("Retrieved context: %s",
+                     _sanitize_log_payload(retrieved_context))
 
         relevance = _get_query_context_relevance(query, retrieved_context)
         logger.info("Query context relevance %s", relevance)
@@ -305,7 +314,8 @@ def _get_agent_tool_calls(query: str):
             tool_calls_parsed = get_default_tools_call(query)
     except json.JSONDecodeError:
         logger.warning("Invalid JSON syntax in the tools output.")
-        logger.debug("Raw tool calls payload: %s", _sanitize_log_payload(tool_calls))
+        logger.debug("Raw tool calls payload: %s",
+                     _sanitize_log_payload(tool_calls))
         logger.warning("Calling all the search tools with default settings.")
         tool_calls_parsed = get_default_tools_call(query)
     except (KeyError, ValueError, TypeError, AttributeError) as e:
@@ -313,7 +323,8 @@ def _get_agent_tool_calls(query: str):
             "JSON structure or value error(%s %s) in the tools output.",
             type(e).__name__,
             e)
-        logger.debug("Raw tool calls payload: %s", _sanitize_log_payload(tool_calls))
+        logger.debug("Raw tool calls payload: %s",
+                     _sanitize_log_payload(tool_calls))
         logger.warning("Calling all the search tools with default settings.")
         tool_calls_parsed = get_default_tools_call(query)
 
@@ -332,8 +343,18 @@ def _execute_search_tools(tool_calls) -> str:
     """
     retrieved_results = []
     for call in tool_calls:
-        tool_name, params = call.get("tool"), call.get("params")
+        tool_name = call.get("tool")
+        params = call.get("params") or {}
+
         tool_fn = TOOL_REGISTRY.get(tool_name)
+
+        if tool_fn is None:
+            logger.warning("Unknown tool '%s' — skipping.", tool_name)
+            continue
+
+        # Check if the tool actually expects a logger before injecting it
+        if "logger" in inspect.signature(tool_fn).parameters:
+            params.setdefault("logger", logger)
 
         result = tool_fn(**params)
         retrieved_results.append({
@@ -342,7 +363,8 @@ def _execute_search_tools(tool_calls) -> str:
         })
 
     return "\n\n".join(
-        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip()
+        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip(
+        )
         for res in retrieved_results
     )
 
@@ -451,15 +473,18 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
         logger.error("LLM provider unavailable: %s", e)
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     except (ValueError, RuntimeError) as exc:
-        logger.error("LLM generation failed: %s", _sanitize_log_payload(repr(exc)))
-        logger.debug("Failed prompt payload: %s", _sanitize_log_payload(prompt))
+        logger.error("LLM generation failed: %s",
+                     _sanitize_log_payload(repr(exc)))
+        logger.debug("Failed prompt payload: %s",
+                     _sanitize_log_payload(prompt))
         return "Sorry, I'm having trouble generating a response right now."
     except Exception as exc:  # pylint: disable=broad-except
         logger.error(
             "Unexpected error during LLM generation: %s",
             _sanitize_log_payload(repr(exc))
         )
-        logger.debug("Failed prompt payload: %s", _sanitize_log_payload(prompt))
+        logger.debug("Failed prompt payload: %s",
+                     _sanitize_log_payload(prompt))
         return "Sorry, an unexpected error occurred. Please contact support."
 
 
@@ -561,6 +586,7 @@ def _extract_relevance_score(response: str) -> int:
     if match:
         return int(match.group(1))
     return 0
+
 
 def _generate_search_query_from_logs(log_text: str) -> str:
     """

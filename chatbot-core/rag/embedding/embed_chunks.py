@@ -54,7 +54,6 @@ def embed_chunks(logger):
 
     Args:
         logger (logging.Logger): Logger for progress updates.
-        model (SentenceTransformer, optional): Optionally pass a preloaded model.
 
     Returns:
         tuple: (list[np.ndarray], list[dict]) - embeddings and structured metadata.
