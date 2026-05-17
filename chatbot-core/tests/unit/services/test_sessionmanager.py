@@ -68,7 +68,7 @@ class TestAppendMessageGateFix:
         """append_message must create the session file if it does not yet exist."""
         sm, _ = tmp_session
         session_id = _new_uuid()
-        messages = [{"role": "human", "content": "Hello"}]
+        messages = {"summary": "", "messages": [{"role": "human", "content": "Hello"}]}
 
         assert not sm.session_exists_in_json(session_id), "Precondition: file must not exist yet"
 
@@ -80,10 +80,13 @@ class TestAppendMessageGateFix:
         """Content written by append_message must match what was passed in."""
         sm, _ = tmp_session
         session_id = _new_uuid()
-        messages = [
-            {"role": "human", "content": "What is Jenkins?"},
-            {"role": "ai", "content": "Jenkins is a CI/CD tool."},
-        ]
+        messages = {
+            "summary": "",
+            "messages": [
+                {"role": "human", "content": "What is Jenkins?"},
+                {"role": "ai", "content": "Jenkins is a CI/CD tool."},
+            ]
+        }
 
         sm.append_message(session_id, messages)
         loaded = sm.load_session(session_id)
@@ -95,23 +98,26 @@ class TestAppendMessageGateFix:
         sm, _ = tmp_session
         session_id = _new_uuid()
 
-        first = [{"role": "human", "content": "First message"}]
+        first = {"summary": "", "messages": [{"role": "human", "content": "First message"}]}
         sm.append_message(session_id, first)
 
-        updated = [
-            {"role": "human", "content": "First message"},
-            {"role": "ai", "content": "Reply"},
-        ]
+        updated = {
+            "summary": "",
+            "messages": [
+                {"role": "human", "content": "First message"},
+                {"role": "ai", "content": "Reply"},
+            ]
+        }
         sm.append_message(session_id, updated)
 
         loaded = sm.load_session(session_id)
         assert loaded == updated
-        assert len(loaded) == 2
+        assert len(loaded["messages"]) == 2
 
     def test_append_message_ignores_invalid_session_id(self, tmp_session):
         """append_message must silently skip non-UUID session IDs (no crash, no file)."""
         sm, tmp_path = tmp_session
-        sm.append_message("not-a-uuid", [{"role": "human", "content": "Hi"}])
+        sm.append_message("not-a-uuid", {"summary": "", "messages": [{"role": "human", "content": "Hi"}]})
 
         # No file should have been created
         files_created = list(tmp_path.iterdir())
@@ -140,9 +146,9 @@ class TestPersistSessionSerializationFix:
         memory.persist_session(session_id)
 
         loaded = sm.load_session(session_id)
-        assert len(loaded) == 1
-        assert loaded[0]["role"] == "human"
-        assert loaded[0]["content"] == "How do I install Jenkins?"
+        assert len(loaded["messages"]) == 1
+        assert loaded["messages"][0]["role"] == "human"
+        assert loaded["messages"][0]["content"] == "How do I install Jenkins?"
 
     def test_persist_session_serializes_ai_message(self, tmp_session):
         """persist_session() must serialize AIMessage to a JSON-safe dict."""
@@ -154,9 +160,9 @@ class TestPersistSessionSerializationFix:
         memory.persist_session(session_id)
 
         loaded = sm.load_session(session_id)
-        assert len(loaded) == 1
-        assert loaded[0]["role"] == "ai"
-        assert loaded[0]["content"] == "Jenkins is open-source."
+        assert len(loaded["messages"]) == 1
+        assert loaded["messages"][0]["role"] == "ai"
+        assert loaded["messages"][0]["content"] == "Jenkins is open-source."
 
     def test_persist_session_serializes_multi_turn_conversation(self, tmp_session):
         """persist_session() must serialize a full multi-turn conversation correctly."""
@@ -170,10 +176,10 @@ class TestPersistSessionSerializationFix:
         memory.persist_session(session_id)
 
         loaded = sm.load_session(session_id)
-        assert len(loaded) == 3
-        assert loaded[0] == {"role": "human", "content": "What is Jenkins?"}
-        assert loaded[1] == {"role": "ai", "content": "Jenkins is a CI/CD tool."}
-        assert loaded[2] == {"role": "human", "content": "How do I install it?"}
+        assert len(loaded["messages"]) == 3
+        assert loaded["messages"][0] == {"role": "human", "content": "What is Jenkins?"}
+        assert loaded["messages"][1] == {"role": "ai", "content": "Jenkins is a CI/CD tool."}
+        assert loaded["messages"][2] == {"role": "human", "content": "How do I install it?"}
 
     def test_persist_session_output_is_valid_json(self, tmp_session):
         """The session file written by persist_session() must be valid JSON."""
@@ -188,7 +194,9 @@ class TestPersistSessionSerializationFix:
         assert session_file.exists()
         with open(session_file, encoding="utf-8") as f:
             parsed = json.load(f)  # Raises if not valid JSON
-        assert isinstance(parsed, list)
+        assert isinstance(parsed, dict)
+        assert "summary" in parsed
+        assert "messages" in parsed
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -214,9 +222,9 @@ class TestPersistLoadRoundTrip:
         memory.persist_session(session_id)
 
         loaded = sm.load_session(session_id)
-        assert len(loaded) == 1
-        assert loaded[0]["role"] == "human"
-        assert loaded[0]["content"] == "Hello, Jenkins!"
+        assert len(loaded["messages"]) == 1
+        assert loaded["messages"][0]["role"] == "human"
+        assert loaded["messages"][0]["content"] == "Hello, Jenkins!"
 
     def test_full_round_trip_multi_turn(self, tmp_session):
         """A full conversation must survive a persist → load round-trip intact."""
@@ -230,10 +238,10 @@ class TestPersistLoadRoundTrip:
         memory.persist_session(session_id)
 
         loaded = sm.load_session(session_id)
-        assert len(loaded) == 3
-        assert loaded[0] == {"role": "human", "content": "What is Jenkins?"}
-        assert loaded[1] == {"role": "ai", "content": "Jenkins is a CI/CD tool."}
-        assert loaded[2] == {"role": "human", "content": "Thanks!"}
+        assert len(loaded["messages"]) == 3
+        assert loaded["messages"][0] == {"role": "human", "content": "What is Jenkins?"}
+        assert loaded["messages"][1] == {"role": "ai", "content": "Jenkins is a CI/CD tool."}
+        assert loaded["messages"][2] == {"role": "human", "content": "Thanks!"}
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -244,39 +252,39 @@ class TestLoadSessionEdgeCases:
     """Edge-case coverage for load_session not covered by the bug-fix tests."""
 
     def test_load_session_missing_file_returns_empty_list(self, tmp_session):
-        """load_session must return [] when no file exists for the session."""
+        """load_session must return empty structures when no file exists for the session."""
         sm, _ = tmp_session
         result = sm.load_session(_new_uuid())
-        assert result == []
+        assert result == {"summary": "", "messages": []}
 
     def test_load_session_invalid_uuid_returns_empty_list(self, tmp_session):
-        """load_session must return [] for an invalid UUID (no crash)."""
+        """load_session must return empty structures for an invalid UUID (no crash)."""
         sm, _ = tmp_session
         result = sm.load_session("not-a-uuid")
-        assert result == []
+        assert result == {"summary": "", "messages": []}
 
     def test_load_session_malformed_json_returns_empty_list(self, tmp_session):
-        """load_session must return [] when session JSON is malformed."""
+        """load_session must return empty structures when session JSON is malformed."""
         sm, tmp_path = tmp_session
         session_id = _new_uuid()
         session_file = tmp_path / f"{session_id}.json"
         session_file.write_text("{invalid-json", encoding="utf-8")
 
         result = sm.load_session(session_id)
-        assert result == []
+        assert result == {"summary": "", "messages": []}
 
     def test_load_session_non_list_payload_returns_empty_list(self, tmp_session):
-        """load_session must return [] when payload shape is not a list."""
+        """load_session must return empty structures when payload shape is invalid."""
         sm, tmp_path = tmp_session
         session_id = _new_uuid()
         session_file = tmp_path / f"{session_id}.json"
         session_file.write_text(
-            json.dumps({"role": "human", "content": "not-a-list"}),
+            json.dumps("invalid-payload-shape"),
             encoding="utf-8",
         )
 
         result = sm.load_session(session_id)
-        assert result == []
+        assert result == {"summary": "", "messages": []}
 
     def test_reload_persisted_sessions_skips_malformed_files(self, tmp_session, monkeypatch):
         """reload_persisted_sessions must restore valid files and skip malformed ones."""
@@ -312,7 +320,7 @@ class TestDeleteSessionFile:
         """delete_session_file must remove an existing file and return True."""
         sm, _ = tmp_session
         session_id = _new_uuid()
-        sm.append_message(session_id, [{"role": "human", "content": "hi"}])
+        sm.append_message(session_id, {"summary": "", "messages": [{"role": "human", "content": "hi"}]})
         assert sm.session_exists_in_json(session_id)
 
         deleted = sm.delete_session_file(session_id)
@@ -338,7 +346,7 @@ class TestSessionExistsInJson:
         """session_exists_in_json must return True when a session file exists."""
         sm, _ = tmp_session
         session_id = _new_uuid()
-        sm.append_message(session_id, [{"role": "human", "content": "hello"}])
+        sm.append_message(session_id, {"summary": "", "messages": [{"role": "human", "content": "hello"}]})
         assert sm.session_exists_in_json(session_id) is True
 
     def test_returns_false_when_file_missing(self, tmp_session):

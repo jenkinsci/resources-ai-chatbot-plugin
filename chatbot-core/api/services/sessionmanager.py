@@ -29,13 +29,13 @@ def _get_session_file_path(session_id: str) -> str:
     return os.path.join(_SESSION_DIRECTORY, f"{session_id}.json")
 
 
-def _load_session_from_json(session_id: str) -> list:
+def _load_session_from_json(session_id: str) -> dict:
     """
     Load a session's history from disk.
     """
     path = _get_session_file_path(session_id)
     if not os.path.exists(path):
-        return []
+        return {"summary": "", "messages": []}
 
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -46,20 +46,28 @@ def _load_session_from_json(session_id: str) -> list:
             session_id,
             exc,
         )
-        return []
+        return {"summary": "", "messages": []}
 
-    if not isinstance(payload, list):
+    if isinstance(payload, list):
+        return {"summary": "", "messages": payload}
+
+    if not isinstance(payload, dict):
         logger.warning(
-            "Ignoring invalid persisted payload for session '%s': expected list, got %s",
+            "Ignoring invalid persisted payload for session '%s': expected dict or list, got %s",
             session_id,
             type(payload).__name__,
         )
-        return []
+        return {"summary": "", "messages": []}
+
+    if "summary" not in payload:
+        payload["summary"] = ""
+    if "messages" not in payload or not isinstance(payload["messages"], list):
+        payload["messages"] = []
 
     return payload
 
 
-def _append_message_to_json(session_id: str, messages:list) -> None:
+def _append_message_to_json(session_id: str, messages: dict) -> None:
     """
     Persist the current session messages as a full snapshot using atomic write.
     """
@@ -98,13 +106,13 @@ def session_exists_in_json(session_id: str) -> bool:
 
 # Public API functions
 
-def append_message(session_id: str, messages: list) -> None:
+def append_message(session_id: str, messages: dict) -> None:
     """
     Public function to append messages to a session's JSON file.
     """
     _append_message_to_json(session_id, messages)
 
-def load_session(session_id: str) -> list:
+def load_session(session_id: str) -> dict:
     """
     Public function to load a session's history from its JSON file.
     """

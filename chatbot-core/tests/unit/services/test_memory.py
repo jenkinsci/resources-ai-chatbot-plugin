@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationSummaryBufferMemory
 
 from api.prompts.prompt_builder import build_prompt
 from api.services import memory
@@ -29,7 +29,7 @@ def test_get_session_returns_existing_session():
     session_id = memory.init_session()
     session = memory.get_session(session_id)
 
-    assert isinstance(session, ConversationBufferMemory)
+    assert isinstance(session, ConversationSummaryBufferMemory)
     assert session is memory.get_session(session_id)
 
 

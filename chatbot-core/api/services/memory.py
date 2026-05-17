@@ -7,9 +7,10 @@ import uuid
 from datetime import datetime, timedelta
 from threading import Lock
 from typing import Optional
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationSummaryBufferMemory
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from api.config.loader import CONFIG
+from api.models.langchain_llm_wrapper import CustomLangchainLLM
 from api.services.sessionmanager import(
     delete_session_file,
     load_session,
@@ -17,7 +18,7 @@ from api.services.sessionmanager import(
     append_message,
     get_persisted_session_ids
 )
-# sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
+# sessionId --> {"memory": ConversationSummaryBufferMemory, "last_accessed": datetime}
 
 
 _sessions = {}
@@ -41,13 +42,17 @@ def init_session() -> str:
     session_id = str(uuid.uuid4())
     with _lock:
         _sessions[session_id] = {
-            "memory": ConversationBufferMemory(return_messages=True),
+            "memory": ConversationSummaryBufferMemory(
+                llm=CustomLangchainLLM(max_tokens=256),
+                max_token_limit=1500,
+                return_messages=True,
+            ),
             "last_accessed": datetime.now()
         }
     return session_id
 
 
-def _restore_persisted_message(memory: ConversationBufferMemory, message: object) -> None:
+def _restore_persisted_message(memory: ConversationSummaryBufferMemory, message: object) -> None:
     """
     Restore one persisted message into LangChain memory.
 
@@ -71,7 +76,7 @@ def _restore_persisted_message(memory: ConversationBufferMemory, message: object
     memory.chat_memory.add_message(message_class(content=content))
 
 
-def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
+def get_session(session_id: str) -> Optional[ConversationSummaryBufferMemory]:
     """
     Retrieve the chat session memory for the given session ID.
     Lazily restores from disk if missing in memory.
@@ -80,7 +85,7 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
         session_id (str): The session identifier.
 
     Returns:
-        Optional[ConversationBufferMemory]: The memory object if found, else None.
+        Optional[ConversationSummaryBufferMemory]: The memory object if found, else None.
     """
 
     with _lock:
@@ -91,12 +96,20 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
             session_data["last_accessed"] = datetime.now()
             return session_data["memory"]
 
-        history = load_session(session_id)
-        if not history:
-            return None
+        history_data = load_session(session_id)
+        if isinstance(history_data, list):
+            history_data = {"summary": "", "messages": history_data}
 
-        memory = ConversationBufferMemory(return_messages=True)
-        for msg in history:
+        if not history_data.get("summary") and not history_data.get("messages"):
+            return None
+        memory = ConversationSummaryBufferMemory(
+            llm=CustomLangchainLLM(max_tokens=256),
+            max_token_limit=1500,
+            return_messages=True,
+        )
+        if history_data.get("summary"):
+            memory.moving_summary_buffer = history_data["summary"]
+        for msg in history_data.get("messages", []):
             _restore_persisted_message(memory, msg)
 
         _sessions[session_id] = {
@@ -106,7 +119,7 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
 
         return memory
 
-async def get_session_async(session_id: str) -> Optional[ConversationBufferMemory]:
+async def get_session_async(session_id: str) -> Optional[ConversationSummaryBufferMemory]:
     """
     Async wrapper for get_session to prevent event loop blocking.
     """
@@ -122,11 +135,14 @@ def persist_session(session_id: str)-> None:
     """
     session_data = get_session(session_id)
     if session_data:
+        if hasattr(session_data, "prune"):
+            session_data.prune()
+        summary = getattr(session_data, "moving_summary_buffer", "")
         messages = [
             {"role": msg.type, "content": msg.content}
             for msg in session_data.chat_memory.messages
         ]
-        append_message(session_id, messages)
+        append_message(session_id, {"summary": summary, "messages": messages})
 
 
 

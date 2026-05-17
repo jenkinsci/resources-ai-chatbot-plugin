@@ -253,6 +253,23 @@ def test_build_prompt_with_whitespace_only_log_context_triggers_log_branch():
     assert SYSTEM_INSTRUCTION.strip() not in prompt
     assert "User-Provided Log Data:" in prompt
 
+def test_build_prompt_with_moving_summary():
+    """Test that build_prompt correctly prepends the moving summary if present in memory."""
+    class DummyMemory:
+        class DummyChatMemory:
+            messages = []
+        chat_memory = DummyChatMemory()
+        moving_summary_buffer = "This is a summary of previous conversations."
+
+    context = "Some Jenkins context."
+    user_query = "What is next?"
+    memory = DummyMemory()
+
+    prompt = build_prompt(user_query, context, memory)
+
+    assert "System: Summary of older chat turns: This is a summary of previous conversations." in prompt
+
+
 def get_prompt_indexes(prompt: str) -> tuple[int, int, int, int]:
     """Helper to extract section positions in the prompt."""
     chat_idx = prompt.index("Chat History:")

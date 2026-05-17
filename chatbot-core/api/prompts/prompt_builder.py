@@ -2,14 +2,13 @@
 Constructs the prompt used for querying the LLM, including system-level instructions,
 chat history, context retrieved from the knowledge base, and the user's question.
 """
-from typing import Optional
-from langchain.memory import ConversationBufferMemory
+from typing import Optional, Any
 from api.prompts.prompts import SYSTEM_INSTRUCTION, LOG_ANALYSIS_INSTRUCTION
 
 def build_prompt(
     user_query: str,
     context: str,
-    memory: ConversationBufferMemory,
+    memory: Any,
     log_context: Optional[str] = None
 ) -> str:
     """
@@ -19,19 +18,22 @@ def build_prompt(
     Args:
         user_query (str): The raw question from the user.
         context (str): The relevant retrieved chunks to ground the answer.
-        memory (ConversationBufferMemory): LangChain memory holding prior chat turns.
+        memory (Any): LangChain memory holding prior chat turns.
         log_context (Optional[str]): Raw logs provided by the user (e.g. build failure logs).
 
     Returns:
         str: A structured prompt for the language model.
     """
+    history_lines = []
     if memory:
-        history = "\n".join(
-            f"{'User' if msg.type == 'human' else 'Jenkins Assistant'}: {msg.content or ''}"
-            for msg in memory.chat_memory.messages
-        ) if memory.chat_memory.messages else ""
-    else:
-        history = ""
+        summary = getattr(memory, "moving_summary_buffer", "")
+        if summary:
+            history_lines.append(f"System: Summary of older chat turns: {summary}")
+        for msg in memory.chat_memory.messages:
+            role_name = "User" if msg.type == "human" else "Jenkins Assistant"
+            history_lines.append(f"{role_name}: {msg.content or ''}")
+
+    history = "\n".join(history_lines) if history_lines else ""
 
     # If log context exists, we append it as a specific section
     if log_context:

@@ -241,10 +241,13 @@ def get_chat_history(session_id: str):
             detail="Session not found.",
         )
 
-    messages = [
-        {"role": msg.type, "content": msg.content}
-        for msg in session.chat_memory.messages
-    ]
+    messages = []
+    summary = getattr(session, "moving_summary_buffer", "")
+    if summary:
+        messages.append({"role": "system", "content": f"Summary of older messages: {summary}"})
+    for msg in session.chat_memory.messages:
+        messages.append({"role": msg.type, "content": msg.content})
+
     return MessageHistoryResponse(
         session_id=session_id,
         messages=messages,
