@@ -43,10 +43,8 @@ describe("exportchat", () => {
   let originalBlob: typeof Blob;
 
   beforeAll(() => {
-    (URL as unknown as Record<string, unknown>).createObjectURL =
-      createObjectURLMock;
-    (URL as unknown as Record<string, unknown>).revokeObjectURL =
-      revokeObjectURLMock;
+    URL.createObjectURL = createObjectURLMock;
+    URL.revokeObjectURL = revokeObjectURLMock;
 
     originalBlob = global.Blob;
     (global as unknown as { Blob: unknown }).Blob = function (
