@@ -1,0 +1,194 @@
+[
+    {
+        "id": "q-001",
+        "input": "Can I trigger multiple deployment jobs from a single Jenkins job?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-002",
+        "input": "Why does the kubectl container hang or exit immediately in a Jenkins Kuberenetes plugin pipeline?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-003",
+        "input": "Why is Jenkins on Kubernetes getting BitBucket connection timeout errors?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-004",
+        "input": "Is it possible to specify a kubernetes secret as the source for the private SSH key in JCASC plugin?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-005",
+        "input": "How to disable auto update of Jenkins and Plugins on Jenkins restart when running on Kuberenetes?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-006",
+        "input": "Why is the GitLab API Token not showing in the credentials dropdown in Jenkins?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-007",
+        "input": "Why does the File Parameter Plugin pipeline fail on Windows nodes?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-008",
+        "input": "Why do my Jenkins Jobs fail when I close my laptop? Not shutdown.",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-009",
+        "input": "How to change USERNAME and USERPROFILE in Jenkins system properties on Windows?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-010",
+        "input": "In Jenkins, does project, job and item mean the same thing?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-011",
+        "input": "What backup methods are available for Jenkins?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-012",
+        "input": "How does Blue Ocean handle SSH key generation when connecting to a remote Git repository?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-013",
+        "input": "What are the benefits of using Docker as agents in a Jenkins Pipeline?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-014",
+        "input": "Which plugins help filter potentially unsafe environment variables in Jenkins?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-015",
+        "input": "How are Jenkins plugins typically built and packaged?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-016",
+        "input": "How can you combine retry and timeout steps in a Jenkins Pipeline?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-017",
+        "input": "Why should Jenkins builds be isolated from each other?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-018",
+        "input": "What are the two ways to write CLI commands in a Jenkins plugin?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-019",
+        "input": "What are the prerequisites to start using the Adobe Cloud Manager Jenkins plugin?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-020",
+        "input": "What can you manage using the CA Service Virtualization Jenkins plugin?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-021",
+        "input": "What are the four testing modes available in the API Fortress Jenkins plugin?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-022",
+        "input": "How do you setup and use the calendar view plugin?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-023",
+        "input": "Is there a way to categorize Jenkins jobs by naming patterns in a view?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-024",
+        "input": "How can I find out if my Jenkins instance has security vulnerabilities or plugin issues without manually checking everything?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-025",
+        "input": "How to configure build log compression plugin?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-026",
+        "input": "How do I send Jenkins build notifications to a Discord channel?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-027",
+        "input": "How can I track which version of my application is deployed to which environment?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-028",
+        "input": "How can I use GitLab accounts to authenticate and authorize users in Jenkins?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-029",
+        "input": "How to setup Go in a Jenkins pipeline?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-030",
+        "input": "How do I install the Google Kubernetes Engine plugin in Jenkins?",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-02",
+        "input": "",
+        "actual_output": "",
+        "retrieval_context": []
+    },
+    {
+        "id": "q-02",
+        "input": "",
+        "actual_output": "",
+        "retrieval_context": []
+    }
+]
