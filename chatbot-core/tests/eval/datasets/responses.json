@@ -3,192 +3,500 @@
         "id": "q-001",
         "input": "Can I trigger multiple deployment jobs from a single Jenkins job?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Trigger exactly one build\nJenkins will batch builds of a job if those builds have same parameters. If this plugin gets invoked by many webhooks at the same time it may trigger only one build and it will have many\nGeneric Cause\nas causes. This has been reported in many issues\n#64\n#116\n#126\n#162\n#171\n.",
+            "The best practice in this case would be to have one job that builds the different flavours (i.e. the APKs with different application IDs) and then, if the build is successful, it would archive the APKs and start multiple \"downstream\" Jenkins builds which individually publish each of the applications.\nThis can be achieved, for example, with the Parameterized Trigger Plugin and the Copy Artifacts Plugin, i.e. the \"upload\" job could be generic, and would receive the APK information via parameter.",
+            "Trigger multiple builds with ease. Designed for users with many jobs.\nScreenshot\nDevelopment\nOffical\nCI\nServer\nBackstage\nCI\nServer\n(more stats available)\nBoth track the official repository at\ngithub.com/jenkinsci/bulk-builder-plugin\n.\nBugs\nPlease\nraise an\nissue\nfor any bugs you find, and ensure the component is set to\nbulk-builder\n. Please include details about your Jenkins setup and\nplugin version number.\nIntegration with external systems"
+        ]
     },
     {
         "id": "q-002",
         "input": "Why does the kubectl container hang or exit immediately in a Jenkins Kuberenetes plugin pipeline?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Jenkins log recorder\nfor\nokhttp3\nat\nDEBUG\nlevel.\nDeleting pods in bad state\n[[CODE_BLOCK_33]]\nPipeline\nsh\nstep hangs when multiple containers are used\nTo debug this you need to set\n-Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true\nsystem property and then restart the pipeline. Most likely in the console log you will see the following:\n[[CODE_BLOCK_34]]",
+            "io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.startMaxRetry\nNumber of retry attempts if container fails to start due to context deadline miss. May be increased for clusters with kubelet load.\nDefault:\n3\nio.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.startRetryMaxWaitSecs\nMax wait time between retries. Used to spread kubelet load.\nDefault:\n2\nio.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.pathMaxRetry",
+            "false\n).\njenkins.host.address\n: (for unit tests) controls the host agents should use to contact Jenkins\norg.csanchez.jenkins.plugins.kubernetes.PodTemplate.connectionTimeout\n: The time in seconds to wait before considering the pod scheduling has failed (defaults to\n1000\n)\norg.csanchez.jenkins.plugins.kubernetes.pipeline.ContainerExecDecorator.stdinBufferSize"
+        ]
     },
     {
         "id": "q-003",
         "input": "Why is Jenkins on Kubernetes getting BitBucket connection timeout errors?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "2.289.1\nFix JENKINS-66539 we now handle rate limiting for posting build statuses\nJENKINS-66498 BitbucketSCMStep can now use serverName instead of serverId to specify a Bitbucket instance\nSmall bug and security fixes. See security advisory for this version here:\nhttps://www.jenkins.io/security/advisory/2022-03-29/\n3.1.0 (5 November 2021)\nSending notifications to Bitbucket Data Center's deployment status API",
+            "(\nJENKINS-32940\n)\nAdd support for single and global API credentials.\n(\nJENKINS-32574\n)\nFix bug max Bitbucker key lenght.\n(\nJENKINS-32781\n)\nAdd support for mercurial repositories.\n(\nJENKINS-32548\n)\nVersion 1.0.3 (Jan 29, 2016)\nFix bug parsing repository URI.\n(\nJENKINS-32498\n)\nMark UNSTABLE builds as FAILED on Bitbucket.\nVersion 1.0.1 (Jan 22, 2016)\nFix problem finding current revision.\n(\nJENKINS-32519\n)\nImprove logging for exceptions in order to easy debugging.\nVersion 1.0 (Jan 15, 2016)",
+            "We're collecting feedback at\nissues.jenkins-ci.org\n. Head there to see what issues have been created, or create a new issue using the component\natlassian-bitbucket-server-integration-plugin\n.\nThe Bitbucket Server integration plugin is the easiest way to connect\nJenkins\nto\nBitbucket Server\n. With a few simple steps you can configure it to:\nAutomatically create webhooks in Bitbucket to trigger builds.\nAllow Jenkins to clone/fetch from Bitbucket to run the builds."
+        ]
     },
     {
         "id": "q-004",
         "input": "Is it possible to specify a kubernetes secret as the source for the private SSH key in JCASC plugin?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "where the secret will be created based on the credentials\nconfigured. The credentials you provided will be consolidated\ninto a Secret resource in your Kubernetes cluster with the name\nyou provided. You can use that secret in your Kubernetes\nconfiguration.\nYou can use variables in the secret name\n(e.g.,\n$BUILD_NUMBER\n), to generate a secret specific to a\nbuild. The name will be exposed as environment\nvariable\nKUBERNETES_SECRET_NAME\nand you can use that in your",
+            "\"kubernetes.io/ssh-auth\" map to Jenkins SSH User credentials\nOpaque/generic secrets where the data has a \"username\" key and a \"password\" key map to Jenkins Username / Password credentials\nOpaque/generic secrets where the data has a \"ssh-privatekey\" map to Jenkins SSH User credentials\nOpaque/generic secrets where the data has a \"secrettext\" key map to Jenkins Secret Text credentials",
+            "Installing plugins\nWe don't support installing plugins with JCasC, so you need to use something else for this,\nDockers users can use:\nhttps://github.com/jenkinsci/docker/#preinstalling-plugins\nKubernetes users:\nhttps://github.com/jenkinsci/helm-charts\nSupported Plugins\nMost plugins should be supported out-of-the-box or maybe require some minimal changes. See this\ndashboard\nfor known compatibility issues.\nAdding JCasC support to a plugin"
+        ]
     },
     {
         "id": "q-005",
         "input": "How to disable auto update of Jenkins and Plugins on Jenkins restart when running on Kuberenetes?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "fixed: disconnects (and no reconnects) when changing the global\nconfig\n(\nJENKINS-6993\n)\nimproved behaviour when plugin is disabled. I.e. doesn't log\nunnecessary stuff.\nfixed: plugin's configure option not visible\nJENKINS-5978\nJENKINS-5233\nVersion 1.10\nfixed:\nnotify upstream commiter\nwould have notified committers of\n'old' builds\n(\nJENKINS-6712\n)\nimprovement: print useful project names for matrix jobs\n(\nJENKINS-6560\n)\nfixed: don't delay Hudson startup\n(\nJENKINS-4346\n)\nfeature:\nuserstat",
+            ": Jenkins URL to be used by agents. This is meant to be used for OEM integration.\nio.jenkins.plugins.kubernetes.disableNoDelayProvisioning\n(since 1.19.1) Whether to disable the no-delay provisioning strategy the plugin uses (defaults to\nfalse\n).\nio.jenkins.plugins.kubernetes.NoDelayProvisionerStrategy.disableCloudShuffle\nWhether to disable the shuffling of clouds. When true clouds will be searched in order they are defined (defaults to\nfalse\n).\njenkins.host.address",
+            "Eliminate running processes before or after build.\nWith this plugin user can decide to clean the processes either before or after the build. It can either kill all processes started by the user that runs Jenkins agent (except of that process) or all child processes of Jenkins agent (note this will not affect processes running on background)."
+        ]
     },
     {
         "id": "q-006",
         "input": "Why is the GitLab API Token not showing in the credentials dropdown in Jenkins?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "\"jenkins.io/credentials-type\"\nof\n\"gitlabToken\"\n. These secrets need to have a data property\n\"text\"\nthat contains a base64 encoded\nbearer token\nfor gitlab server.\nExample\n[[CODE_BLOCK_0]]\nLICENSE\nLicensed under MIT, see\nLICENSE",
+            "After setting your username/password credential, select\nCreate token credentials\n.\nThe token creator will create a Personal Access Token in your GitLab Server for the given user with the required scope and also create a credentials for the same inside Jenkins server. You can go back to the GitLab Server Configuration to select the new credentials generated (select \"-none-\" first then new credentials will appear). For security reasons this token is not revealed as plain text rather returns an\nid",
+            ".\niv. Set\nKind\nto GitLab Personal Access Token.\nv. Enter\nToken\n.\nvi. Enter a unique id in\nID\n.\nvii. Enter a human readable description.\nviii. Select\nAdd\n.\nTesting connection:\ni. Select your desired token in the\nCredentials\ndropdown.\nii. Select\nTest Connection\n.\niii. It should return something like\nCredentials verified for user {username}\n.\nSelect\nApply\n(at the bottom).\nGitLab Server is now setup on Jenkins.\nCreating Personal Access Token within Jenkins"
+        ]
     },
     {
         "id": "q-007",
         "input": "Why does the File Parameter Plugin pipeline fail on Windows nodes?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Input folder/file path restrictions during job configuration\nFrom plugin version 2.4, all folder and file paths should be inside the agent node where the job is running. Paths to master node and other remote nodes won’t work.",
+            "This plugin is deprecated, please use\nPipeline: Declarative\nplugin instead.",
+            "Plugins contributing additional parameter types to this plugin\nGit Plugin\nNodeLabel Parameter Plugin\nBackward compatibility with version 2.22\nSince Parameterized Trigger 2.23, there are cases that Parameterized Trigger fails to trigger downstream builds that can be successfully triggered with Parameterized Trigger <= 2.22."
+        ]
     },
     {
         "id": "q-008",
         "input": "Why do my Jenkins Jobs fail when I close my laptop? Not shutdown.",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "project,\nTaskListener\nlistener, Throwable exception\njenkins.started\njenkins.plugins.listed\njenkins.plugins.prepared\njenkins.plugins.prepared\njenkins.plugins.started\njenkins.plugins.augmented\njenkins.jobs.loaded\njenkins.completed\njenkins.shutdown\nNOOP",
+            "but there is no point where Jenkins will be shutdown\n.\nSo, what is a safe environment? A safe environment would mean that no jobs are running. Because a running job could change a file in the workspace (results, build output, etc.), in this case the file could be locked. This situation should be avoided by using the quiet mode.\nHere is an example of how it works:\nThe scheduler triggers a backup.\nThere are active jobs and some jobs are waiting in the queue.",
+            "You can see it on the home page of Jenkins :\nTroubleshooting\nZombie process : Sometimes, \"sysadminctl\" tool continue to run after task executed. After a while, it can saturate MacOS (in our case we had +1000 process running). To prevent this, a script with the command \"killall sysadminctl\" has to be run regulary."
+        ]
     },
     {
         "id": "q-009",
         "input": "How to change USERNAME and USERPROFILE in Jenkins system properties on Windows?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Go to Jenkins, right click, and select  \"Properties\". Under the \"Log On\" tab, choose the user Jenkins will run as, and put in the username and password (it requires one). Then restart the Jenkins service by right clicking on Jenkins (in the services window), and hit \"Restart\".",
+            "Disable security\n.\nThe password of this user is automatically synced with the Jenkins Internal Database by this feature. In order to configure this new feature you should enable *Use Jenkins Internal Database* in the AD configuration under Manage Jenkins → Configure Global Security and specify a SINGLE user by its username.",
+            "With this plugin, you can configure Jenkins to authenticate the username and the password through Active Directory. This plugin internally uses two very different implementations, depending on whether Jenkins is running on Windows or non-Windows and if you specify a domain."
+        ]
     },
     {
         "id": "q-010",
         "input": "In Jenkins, does project, job and item mean the same thing?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "visualise one or more delivery pipelines in the same view, even in full\nscreen.\n{height=\"250\"}\nJenkins jobs are tagged with a stage and a task name. In the screenshot\nabove, the pipeline consists of three stages called Commit stage, Test\nstage and Deployment. The first stage consists of two tasks called\n\"Build, package and run unit tests\" and \"Build and publish artifacts\".\nEach task corresponds to a traditional Jenkins job.",
+            "Each of these jobs contains an arbitrary number of builds (or more technically, runs). Each build is identified by its unique build number. Jenkins' plug-ins can attach results to these builds, e.g. build artifacts, test results, analysis reports, etc. In order to attach such a result, a plugin technically needs to implement and create an action that stores these results.",
+            "If assignment is succeeded, it is used.\nWorkChunks and ExecutorChunks\nIn simple cases, Jenkins launches only one build at the same time. Though multi-configuration project results in multiple builds even triggered once, these builds are launched just one by one sequentially.\nBut there are cases Jenkins launches two or more builds at the same time. SEE\nJobProperty#getSubTasks\nor\nSubTaskContributor\nfor details."
+        ]
     },
     {
         "id": "q-011",
         "input": "What backup methods are available for Jenkins?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Backup plugin allows archiving and restoring your Jenkins (and Hudson)\nhome directory.\nThis plugin is searching for a new maintainer!\nUnfortunately, the current maintainer has no more time to work on this\nplugin, but there are still\nsome important\nissues\nto fix.\nIf you want to take ownership of this plugin, just don't hesitate\n(please mention that on the mailing list).\nWant periodic backups?\nThis plugin requires that you manually start it to back up your data.",
+            "Want periodic backups?\nThis plugin requires that you manually start it to back up your data.\nFor automated periodic backups, check out the\nthinBackup\nplugin.\nDescription\nThe Backup plugin adds a new\nBackup manager\nitem in the\nManage\nJenkins\npage. This item allows (cf. screenshot below):\nTweaking backup settings (using the\nSetup\nlink)\nBackuping Jenkins's configuration (using the\nBackup Jenkins\nconfiguration\nlink)\nRestoring Jenkins's configuration from a previous backup (using the",
+            "Backup build results\nBackup next build number file\nBackup 'config-history' folder\nBackup 'userContents'\nBackup only builds marked to keep\nBackup additional files\nClean up differential backups\nMove old backups to ZIP files\nJenkins Configuration as Code (JCasC) support\nBackup process\nFeature requests or bug reports\nDocumentation\nThis plugin adds a management link to \"Manage Jenkins\" in the Tools section, called ThinBackup which looks like this:\nThis link provides the following actions:\nNote:"
+        ]
     },
     {
         "id": "q-012",
         "input": "How does Blue Ocean handle SSH key generation when connecting to a remote Git repository?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "New Features:\nBlue Ocean UI support - the HipChat plugin should now generate URLs\nthat are compatible with Blue Ocean (#82)\nExpose commit message as a variable, $COMMIT_MESSAGE (when using\nHTML format) and $COMMIT_MESSAGE_TEXT (when using text format)\nvariables have been added\nDisplay \"No changes\" if no SCM change happened between builds\nv1/v2 API/OAuth2 tokens are now stored in Jenkins using the\nCredential API. Existing keys will be migrated across to the new",
+            "SSH Host Key verification\nGit Client plugin provides various options to verify the SSH keys presented by Git repository host servers. By default, Git Client plugin uses the \"Known hosts file\" strategy to verify all host keys using the known_hosts file.\nHost key verification strategies include:\nAccept first connection",
+            "Manually provided keys\nProvides a form field where the administrator inserts the host keys for the git repository servers. This works well when a small set of repository servers meet the needs of most users\nNo verification\nDisables all verification of ssh host keys.\nNot recommended\nbecause it provides no protection from \"man-in-the-middle\" attacks\nConfigure the host key verification strategy from \"Manage Jenkins\" >> \"Security\" >> \"Git Host Key Verification Configuration\".\nNote"
+        ]
     },
     {
         "id": "q-013",
         "input": "What are the benefits of using Docker as agents in a Jenkins Pipeline?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "If your primary build methodology is containers, you dont actually care much about the base image since most of the work is happening in the dockerfile.\nTo this end eliminating the maintenence of the agent image and getting Jenkins Agents to connect was the primary goal, as well as enabling any custom logic via a custom\nbuildspec.yml\nwithin the jenkins cloud interface.\nGetting started\nUser Quick Start\nInstall the plugin from the update center",
+            "This plugin allows containers to be dynamically provisioned as Jenkins agents using Docker. It is a Jenkins Cloud plugin for Docker.\nThis plugin allows a\nDocker\nhost to dynamically provision a container as a Jenkins agent node, lets that run a single build, then removes that node, without the build process or Jenkins job definition requiring any awareness of Docker.",
+            "The Jenkins administrator configures Jenkins with Docker hosts, one or more \"templates\" that describe the labels/tags provided by the template, the Docker image, and Jenkins creates agents on-demand using those Docker containers.\nSee also\nChangelog\nand\narchive\nSupport and\ncontribution guide\nNote:\nThere is\nmore than one Docker plugin"
+        ]
     },
     {
         "id": "q-014",
         "input": "Which plugins help filter potentially unsafe environment variables in Jenkins?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Jenkins includes a filter called\nOnly Keep Specified Environment Variables\nthat will remove all environment variables not explicitly listed. This does not apply to system-level environment variables like\nPATH\nor\nUSER\n. If these contain unsafe content that was contributed by Jenkins, they will be reset to their defaults as defined outside Jenkins.\nSecuring pipelines\nPipelines can have the same problems of various sources providing unsafe environment variables. For this reason,",
+            "Script Security Plugin\n)\nTo export environment variables as a metadata in your binary repository\nConfiguration\nAt node (controller and agent) level\nAt job level\nSet up a clean environment\nInject variables after a SCM checkout\nInject variables as a build step\nAdvanced use-cases\nVariables Traceability\nEach build captures environment variables and stores them in an environment file called 'injectedEnvVars.txt' located in\n$JENKINS\\_HOME/jobs/\\<your\\_job\\>/builds/\\<your\\_build\\>",
+            "Job-specific configuration\nIt is possible to configure build environment modification on a per-build step basis. Local rules are applied before the global rules. This allows for strict system-wide defaults without failing every build step because something unforeseen is contributed to the environment.\nJenkins includes a filter called\nOnly Keep Specified Environment Variables"
+        ]
     },
     {
         "id": "q-015",
         "input": "How are Jenkins plugins typically built and packaged?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Each of these jobs contains an arbitrary number of builds (or more technically, runs). Each build is identified by its unique build number. Jenkins' plug-ins can attach results to these builds, e.g. build artifacts, test results, analysis reports, etc. In order to attach such a result, a plugin technically needs to implement and create an action that stores these results.",
+            "SOURCE : If this points to a local file that file will be installed. If this is an URL, Jenkins downloads the URL and installs that as a plugin. Otherwise the name is assumed to be the short name of the plugin i.e. \"oracle-cloud-infrastructure-devops\", and the plugin will be installed from the update center. -deploy : Deploys plugins right away without postponing them until the reboot. -name VAL : If specified, the plugin will be installed as the short name (usually the name is inferred from",
+            "Introduction\nThe plugin provides the basic infrastructure for generating \"bundles\" of support information within Jenkins.\nThere are three ways of generating bundles:\nAutomatic bundles, these get saved in\n$JENKINS_HOME/support"
+        ]
     },
     {
         "id": "q-016",
         "input": "How can you combine retry and timeout steps in a Jenkins Pipeline?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Wait Timeout\nThe time in seconds up to which this step will wait. By default, the step waits forever to reach the specified build states. For longer builds, it is recommended to wait for a shorter timeout and use looping constructs available in pipeline script to retry.\nWait Interval",
+            "Retry Count:\nNumber of times to execute the query as a single\npost-build step.\nRetry Interval:\nTime to wait in between each query in seconds.\nMark Build Unstable:\nCheck if we should mark the build unstable\nif the Max Record Count is exceeded.\nShow Query Results:\nCheck if we should should display the query\nresults in the Jenkins console.\nYou can configure multiple Queries.\nFor any issue please report at our\nofficial\nrepository\n.\nChange Log\nVersion 1.0 (2018-11-20)\nRelease notes of 1.0",
+            "This plugin allows you to automatically terminate a build if it’s taking too long.\nThis plugin isn’t applicable to pipelines.\nUse the\ntimeout\nstep in workflow-basic-steps\ninstead.\nInstructions for the user\nGlobal configuration\nGo to\nManage Jenkins\nand then\nConfigure System\n. Under the item\nGlobal Build Time Out\nyou can activate a global timeout which will be applied to any job. Choose your timeout strategy, the duration and add actions which should be executed at timeout."
+        ]
     },
     {
         "id": "q-017",
         "input": "Why should Jenkins builds be isolated from each other?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Jenkins Shared Library\n. However, when you are in a large-scaled/enterprise environments with hundreds/thousands of developers with lots of repositories, you need to somehow protect the content/stability of the Jenkins Pipeline Scripts to avoid failures.",
+            "- In this mode, Jenkins will only build a project on this node when that project is restricted to certain nodes using a label expression, and that expression matches this node's name and/or labels. This allows a node to be reserved for certain kinds of jobs. For example, if you have jobs that run performance tests, you may want them to only run on a specially configured machine, while preventing all other jobs from using that machine. To do so, you would restrict where the test jobs may run by",
+            "quick overview of what's happening, so that I can start chasing people\nto fix problems or delete their outdated projects, and not let broken\nbuilds become the norm. I want failures to be something that gets\nnoticed quickly, and fixed, and on a busy project with many teams\nsharing one Jenkins, it takes a bit of care to ensure that old, broken\njunk doesn't build up. This view is just another tool that helps me with\nthat:\nConfiguration\nAll configuration is in the global Jenkins config page. After"
+        ]
     },
     {
         "id": "q-018",
         "input": "What are the two ways to write CLI commands in a Jenkins plugin?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "CLI Commander Plugin\nRun\nCLI commands\nfrom Jenkins web UI.\nWhat? Why?\nWhile some operations are easy to perform from UI, other are easier to\ndo using CLI commands. Users often decide not to use Jenkins CLI as the\nsetup is not trivial, especially when authentication is required. CLI\nCommander Plugin give users instant access to CLI features for\nexperiments or occasional use.",
+            "Introduction\nTool environment plugin lets you use \"tools\" in unusual ways, such as from shell scripts.\nSee\nJENKINS-4532\nfor motivation.\nSome screenshots are better than a long discussion:\nThis is what you define in the Jenkins configuration screen:\nThis is how you use the plugin in a job:\nThis is what you get:\nCompared to\nCustom Tools Plugin\nthe advantage is that you can use the tool in arbitrary ways, not just running an executable from it.\nRelease notes\nSee\nGitHub Release",
+            "Introduction\nThis plugin allows you to use Project-Env within Jenkins pipelines. See\nProject-Env\nfor more details.\nGetting started\nDeclarative pipeline\n[[CODE_BLOCK_0]]\nScripted pipeline\n[[CODE_BLOCK_1]]\nParameters\nName\nDescription\ncliVersion\nThe Project-Env CLI version which should be used. If not configured, the latest version will be resolved automatically. If the Project-Env CLI is already installed (resolved through\nPATH\n), the plugin will use this version instead.\ncliDebug"
+        ]
     },
     {
         "id": "q-019",
         "input": "What are the prerequisites to start using the Adobe Cloud Manager Jenkins plugin?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Introduction\nGetting Started\nUsage\nBuild Actions\nExamples\nIntroduction\nThis plugin is intended to allow teams to integrate their Adobe Cloud Manager release process with upstream, intermediate and downstream operational tasks. It provides mechanisms for activating builds, responding to AdobeIO Cloud Manager build events, and taking actions during approval steps.\nVersions\nThis plugin uses automatic releases, which has a different version format. See\nhttps://www.jenkins.io/jep/229\nGetting Started",
+            "https://www.jenkins.io/jep/229\nGetting Started\nBefore using any of the builders or steps in this plugin, Jenkins needs to be configured to authenticate to an Adobe IO project. To do that, follow these steps:\nCreate an Adobe IO API Integration\n.\nAdd the credentials to Jenkins\nConfigure an Adobe IO Project\nAdobeIO WebHook\nThis plugin supports receiving AdobeIO Cloud Manager events. See the\nAdobe IO Project configuration\nfor details on the WebHook operation, and the\nAdobe IO documentation",
+            "Prerequisites\nThe following are required to use this plugin:\nJenkins\nJenkins Credentials plugin\nBMC AMI Strobe (Strobe) license\nBMC AMI Common Configuration plugin\nAn installation of BMC AMI Common Enterprise Services (CES) with Strobe installed.\nNote\n: You need CES version 20.02.\nxx"
+        ]
     },
     {
         "id": "q-020",
         "input": "What can you manage using the CA Service Virtualization Jenkins plugin?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "CA Service Virtualization Jenkins Plugin\nThe CA Service Virtualization plug-in for Jenkins lets you manage virtual services and provision tests on CA Service Virtualization from your Jenkins UI.\nKey Features:\nCreate and Deploy virtual services\nStart / Stop virtual services\nDeploy / Undeploy virtual services\nDeploy tests and test suites\nDisplay of test or test suite Jenkins built-in reports\nUse global or dynamic CA SV connection settings",
+            "For detailed documentation see:\nJenkins Plug-in for CA Service Virtualization.\nSee the Changelog to learn about new features, changes and fixes in the particular plugin version.\nVisit the CA DevTest Community pages to provide your feedback and receive community support.\nLicense\nCopyright (c) 2022 CA Technologies.\nLicensed under the\nEclipse Public License - v 2.0",
+            "Use global or dynamic CA SV connection settings\nCA Service Virtualization credentials supported by Jenkins Credentials store\nLeverage Jenkins parameters to parametrize CA SV build steps\nFull support of Jenkins Pipeline scripting\nFollow the\nCA Service Virtualization Jenkins plugin community\nto get the latest news, tips & tricks, best practices and support.\nAdditional Information\nFor detailed documentation see:\nJenkins Plug-in for CA Service Virtualization."
+        ]
     },
     {
         "id": "q-021",
         "input": "What are the four testing modes available in the API Fortress Jenkins plugin?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "The API Fortress plugin allows you to add an API testing build step in\nyour Jenkins CI. There are multiple testing modes you can choose from,\ndepending on your needs.\nThe key parameter that you need to retrieve from API Fortress for any\nmode is the Webhook URL, a uniquely generated URL representing a\nproject. You can create them in the company settings of your API\nFortress account.\nModes\nThere are 4 testing modes available. \"Run single test\" will run a single",
+            "Fortress account.\nModes\nThere are 4 testing modes available. \"Run single test\" will run a single\ntest, while the others will run suites of tests.\nRun single test\nYou can run a single test by providing a test ID. Test IDs can be found\nin test interstitial pages.\nRun automatch\nYou can run our \"automatch\" mode by providing a URL representing a\ncertain endpoint. You can configure automatch patterns in the\n\"Automatch\" section of each test. Read more about automatch\nHere\n.\nRun by tag",
+            "This plugin publishes test results of an execution of a testing tool in Jenkins.\nFeatures\nRecords xUnit tests\nMark the build unstable or fail according to threshold values\nSupported tools\nEmbedded tools\nJUnit (supported schema are\nAnt junit\nand\nMaven Surefire\n)\nAUnit\nMSTest\n(imported from\nMSTest Plugin\n)\nNUnit\n(imported from\nNUnit Plugin\n)\nUnitTest++\nBoost Test Library\nPHPUnit\nFree Pascal Unit\nCppUnit\nMbUnit\nGoogletest\nEmbUnit\ngtester/glib\nQTestLib"
+        ]
     },
     {
         "id": "q-022",
         "input": "How do you setup and use the calendar view plugin?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Select the\nCalendar View\noption and give the view a name.\n2. Configure the view\nSelect the jobs whose builds should be displayed in the view and customize the view to your liking:\nTip: to be more flexible in selecting the jobs use the\nView Job Filters Plugin\n.\n3. Open the view\nThis will show all the past and future builds for the jobs that you have selected in the previous step.\nNote: there is currently no auto refresh available.\nPast builds\nPast builds will appear in four different colors:",
+            "About\nShows past and future builds in a calendar view.\nScreenshots\nFeatures\nProvides a month, week and day view of past and future builds\nIndicates status of past builds by color\nDisplays when future scheduled builds will happen\nShows estimated duration of future scheduled builds\nConfigurable date and time settings\nUsage\n1. Create a new view\nSelect the\nCalendar View\noption and give the view a name.\n2. Configure the view",
+            "advantages of this plugin by following these steps:\nhave your plugin depend on this plugin"
+        ]
     },
     {
         "id": "q-023",
         "input": "Is there a way to categorize Jenkins jobs by naming patterns in a view?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Introduce a new kind of view where you can categorize groups of jobs under a single label created by regular expressions or other criterias that can be implemented as extension points.\nDescription\nThis plugin allows you to create a new view that is very similar to the standard Jenkins List Views, but where you can group jobs and categorize them according to regular expressions. The functionality is better explained with images.",
+            "A view type to allow grouping job views into multiple levels instead of one big list of tabs. This is an awesome legacy extension for Jenkins. No pipelines, no folders, thousands of jobs with ten thousands of views? This can help you to make an order!\nIntroduction",
+            "The plugin also supports standard\nJobFilter\nand\nListViewColumn\nextensions.\nIf you want to filter all jobs, set a regexp filter with the\n.\\*\nmask\nSelect your new view.\nYou can set additional filters on the main view page.\nSelect\nSubmit\nto apply the additional filters.\nThe updated View creation page:\nView with additional filters:\nReport an Issue\nPlease report issues and enhancements through the\nJenkins issue tracker\n."
+        ]
     },
     {
         "id": "q-024",
         "input": "How can I find out if my Jenkins instance has security vulnerabilities or plugin issues without manually checking everything?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Test and monitor your projects for vulnerabilities with Jenkins. Officially maintained by\nSnyk\n.\nUsage\nTo use the plugin up you will need to take the following steps in order:\nInstall the Snyk Security Plugin\nConfigure a Snyk Installation\nConfigure a Snyk API Token Credential\nAdd Snyk Security to your Project\nRun a Build and View Your Snyk Report\n1. Install the Snyk Security Plugin\nGo to \"Manage Jenkins\" > \"Manage Plugins\" > \"Available\".\nSearch for \"Snyk Security\".\nInstall the plugin.",
+            "Contrast Jenkins Plugin\nAbout\nThis plugin verifies vulnerability conditions by checking a build's\nvulnerabilities found against configured filters. The plugin also graphs\nhistory of vulnerability detection found during each projects build.\nThis plugin supports a post build action and a step in the pipeline\nbuild process.\nUse the Plugin\nYou can view the plugin code in Jenkins'\nGithub\nrepository\n.\nRequirements\nJenkins Version >= 2.60.3\nDocumentation\nContrast Docs",
+            ": Permission checks prevent unauthorized credential enumeration\nCSRF Protection\n: All external API calls are protected from cross-site request forgery attacks\nAuthorization\n: Proper permission checks ensure only authorized users can access sensitive operations\nSecurity Scanning\n: Plugin passes Jenkins CodeQL security scans\nPrerequisites\nJenkins 2.504.3 or later\nJava 17 or later\nDiversion API refresh token (\nGet one here\n)\nInstallation\nThe plugin can be installed from the\nJenkins Plugin Manager"
+        ]
     },
     {
         "id": "q-025",
         "input": "How to configure build log compression plugin?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "About\nThe Compress Build Log Plugin allows to configure jobs to have their\nbuild logs compressed. For a long time, Jenkins has supported showing\ngzipped build logs on the UI and through its APIs, but had no facility\nto compress build logs. This plugin implements that.\nConfiguring build log compression\nIn a job configuration, check \"Compress Build Log\" and save. You're\ndone! From then on, when builds finish, their build log will be\ncompressed to a\nlog.gz\nfile, after which the original\nlog",
+            "support compressing these, only the main log file. As of version 2.26\nthere is now only 1 log file for pipeline jobs.\nIt can be configured either through the UI, or by\nadding\ncompressBuildLog()\nto the\nproperties()\ndefined in the\nPipeline DSL or Jenkinsfile.\nChanges effective immediately\nDue to how this plugin is implemented, the change to the property will\nbe effective immediately, so that the current build's log will be\ncompressed after it completes. This is different from some other",
+            "The plugin functions as a post-build action with the below interface used for configuration:\nThe configuration settings allow for builds to be discarded based on age, quantity, intervals of these properties, status, logfile size and expressions parsed from logfiles.\nFeatures are described in detail in the help documentation accessible through the question mark symbols (?) on the user interface."
+        ]
     },
     {
         "id": "q-026",
         "input": "How do I send Jenkins build notifications to a Discord channel?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "here\n.\nBasic usage\nCreateing a channel in Notify.Events\nSign-up to the\nNotify.Events\nservice.\nCreate a new channel.\nAdd Jenkins as a source to your channel.\nCopy your token and save the integration.\nJenkins build configuration\nBuild Step\nAdd a build step.\nPaste the copied\nToken\n(see Create a Notify.Events channel, step 4).\nFill in the\nMessage\nfield.\nPost-build Actions\nAdd a post-build step.\nPaste the copied\nToken\n(see Create a Notify.Events channel, step 4).\nFill in the\nMessage\n(optional).",
+            "Discord Notifier provides a bridge between Jenkins and Discord through the built-in webhook functionality.\nThe purpose\nThe Jenkins Discord Webhook plugin was made to share results of a build to a Discord channel using the webhooks that Discord provides.\nThrough this plugin you are able to:\nGet success and fail messages about your build\nLink to build artifacts\nList SCM changes to the build\nOnly send notifications on state change\nDownload\nDiscord notifier is available in official jenkins repos.",
+            "Google Chat Notification Jenkins Plugin to send build status to\nGoogle Chat\n.\nThis Jenkins plugin allows you to send Google Chat notification as a post build action or as a pipeline script.\nInstall Instructions for Google Chat\nCreate a webhook in Google\nChat Space to send notifications\nInstall this plugin on your Jenkins server:\nFrom the Jenkins homepage navigate to\nManage Jenkins\nNavigate to\nManage Plugins\n,\nChange the tab to\nAvailable\n,\nSearch for\ngoogle-chat-notification\n,"
+        ]
     },
     {
         "id": "q-027",
         "input": "How can I track which version of my application is deployed to which environment?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Pre-production\nProduction\nYou have Jenkins jobs for deploying build packages to your environments.\nYou find it hard to track which version of each application is currently deployed to.\nYou configure your deployment jobs to publish a record of each deployment to this plugin.\nYou create a view which displays a matrix with rows for your 3 applications, columns for your environments and the intersections with the deployed code version.\nOther information:",
+            "Provides dashboard of deployed applications versions across\nenvironments\nUsage\nCreate any type Jenkins project to collect Build Metadata by adding\npost-build\naction \"\nCollect Build Metadata\n\" and select\nApplication\nthat is being built by current project.\n{width=\"300\"}\n   \n{width=\"300\"}\nwhere *\"0.0.\nUnknown macro: {v}\n\"* is a version naming template that could be changed according to\nyour convention.\nCrate any type Jenkins project to collect Deploy Metadata by adding\npost-build\naction \"",
+            "Jenkins Environment Dashboard Plugin\nThis Jenkins plugin creates a custom view which can be used as a dashboard to display what code release versions have been deployed to what test and production environments (or devices).\nClick on the Environment name to get a historical view of the deployments.\nExample set up\nYou have 3 software components:\nUI\nWeb Application and API\nDatabase"
+        ]
     },
     {
         "id": "q-028",
         "input": "How can I use GitLab accounts to authenticate and authorize users in Jenkins?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "After setting your username/password credential, select\nCreate token credentials\n.\nThe token creator will create a Personal Access Token in your GitLab Server for the given user with the required scope and also create a credentials for the same inside Jenkins server. You can go back to the GitLab Server Configuration to select the new credentials generated (select \"-none-\" first then new credentials will appear). For security reasons this token is not revealed as plain text rather returns an\nid",
+            ".\niv. Set\nKind\nto GitLab Personal Access Token.\nv. Enter\nToken\n.\nvi. Enter a unique id in\nID\n.\nvii. Enter a human readable description.\nviii. Select\nAdd\n.\nTesting connection:\ni. Select your desired token in the\nCredentials\ndropdown.\nii. Select\nTest Connection\n.\niii. It should return something like\nCredentials verified for user {username}\n.\nSelect\nApply\n(at the bottom).\nGitLab Server is now setup on Jenkins.\nCreating Personal Access Token within Jenkins",
+            "The GitLab OAuth plugin provides a means of securing a Jenkins instance by offloading authentication and authorization to GitLab. The plugin authenticates by using a\nGitLab OAuth Application\n. It can use multiple authorization strategies for authorizing users. GitLab users are surfaced as Jenkins users for authorization. GitLab organizations and teams are surfaced as Jenkins groups for authorization.\nMore comprehensive documentation is listed on the\nuser documentation page\n.\nUseful links"
+        ]
     },
     {
         "id": "q-029",
         "input": "How to setup Go in a Jenkins pipeline?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Export the\nGOROOT\nenvironment variable, pointing to the installed Go tools\nAdd the path\n$GOROOT/bin\nas a prefix of the\nPATH\n, so that the tools are available during the build\nUsage\nOnce this plugin is installed, you must first configure which Go version(s) you need for your Jenkins jobs, and then configure any jobs that need Go as appropriate.\nGlobal configuration",
+            "Misc Jenkins pipeline functions",
+            "Automatically installs and sets up the\nGo programming language\n(golang) tools on a Jenkins agent during a build.\nFunctionality\nDuring a build, this plugin can:\nInstall a particular version of Go on the agent that the build is running on\nThe correct package for the machine's operating system and CPU architecture will be automatically downloaded and installed, if not already present\nExport the\nGOROOT\nenvironment variable, pointing to the installed Go tools\nAdd the path\n$GOROOT/bin"
+        ]
     },
     {
         "id": "q-030",
         "input": "How do I install the Google Kubernetes Engine plugin in Jenkins?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Available\ntab and look for the \"Google Kubernetes Engine Plugin\".\nCheck the box under the\nInstall\ncolumn and click the\nInstall without restart\nbutton.\nIf the plugin does not appear under\nAvailable\n, make sure it appears under\nInstalled\nand is enabled.\nPlugin Source Build Installation\nSee\nPlugin Source Build Installation\nto build and install from source.\nUsage\nSee the\nUsage\ndocumentation for how to create a\nDeploy to GKE\nbuild step.\nFeature requests and bug reports",
+            "How to install\nIn order to install the plugin, please follow the\nJenkins documentation\nAuthors\nRAMBELONTSALAMA Haja (project's initiator)\nROBINSON Clarck\nVACELET Manuel\nGOYOT Martin",
+            "Kubernetes Client API Plugin\nThis plugin exposes the\nKubernetes Client\nAPI to Jenkins plugins.\nKnown usage\nkubernetes-credentials-plugin\nkubernetes-credentials-provider-plugin\nkubernetes-plugin\nEnvironment\nThe following build environment is required to build this plugin\njava-1.8\nand\nmaven-3.3.9\nBuild\nTo build the plugin locally:\n[[CODE_BLOCK_0]]\nRelease\nSee the release page\nTo release the plugin, just ask a maintainer to merge the PR on master branch.\nTest local instance"
+        ]
     },
     {
-        "id": "q-02",
-        "input": "",
+        "id": "q-031",
+        "input": "Why does a GitLab merge request webhook trigger a Jenkins build when a user is just assigned to the MR?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Jenkinsfile\nin their root directory.\nThe Job results are notified to the GitLab Server as Pipeline Status for the HEAD commit of each branches built. The build for forked MR cannot be notified to GitLab Server as GitLab doesn't provide Pipeline status for Merge Requests from forks for security concerns. See\nthis\n.\nWe have a workaround for this. Jenkins will build the MRs from forked projects if the MR author is a trusted owner i.e. has\nDeveloper\n/\nMaintainer\n/\nOwner",
+            "https://github.com/jenkinsci/basic-branch-build-strategies-plugin/blob/master/docs/user.adoc\nDo remember if you are using Basic Branch Build for tag builds you also need to add strategies for branch and pull request (change request) else they would not be automatically built (See GIF below).\nSee\nhttps://docs.gitlab.com/ee/user/project/integrations/webhooks.html#tag-events\nExpand ☀️\n[[CODE_BLOCK_12]]\nMerge Request Event:\nSee",
+            "Pipeline jobs - addGitLabMRComment\n[[CODE_BLOCK_14]]\nNote that it requires that the build be triggered by the GitLab MR webhook, not the push webhook (or manual build). Please also note that it currently does\nnot\nwork with Multibranch Pipeline jobs, because MR hooks won't trigger.\nAccept merge request\nTo accept a merge request when build is completed select 'Accept GitLab merge request on success' from the optional Post-build actions.\nPipeline jobs"
+        ]
     },
     {
-        "id": "q-02",
-        "input": "",
+        "id": "q-032",
+        "input": "How can I make a Jenkins job act as a link or shortcut to another job?",
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": [
+            "Introduction\nSometimes you want to have everything in one place, even if in reality it is spread across a number of folders or even a number of jenkins servers. This plugin helps with that by allowing you to create an item that is a shortcut to any URL - either absolute, or relative to the web server or relative to Jenkins root.\nUsage\nSimply create a new item with type Shortcut - enter a name for it and URL, and you are done.\nJob Options:\nName\n- Job name\nTargetUrl",
+            "queueid\nto the\njobid\n.\nThe Queue Redirector plugin solves this problem by adding a new route that can take a\nqueueid\n, perform a lookup, and redirect to the corresponding build page if the\njobid\nis found. This enables you to queue a job using the REST API, receive a\nqueueid\n, and provide users with a URL that will always resolve to the correct build.\nNew Route\nThe new route is accessible either from a specific job or from the Jenkins instance itself:\nJob-specific route:\nExample:",
+            "Job Options:\nName\n- Job name\nTargetUrl\n- Target URL in one of three formats:\nFull URL stating with http:// or https://\nExample:\nIf your jenkins server is at\nhttps://my.jenkins.io/jenkins\nand you moved team \"team\"'s folder to a new jenkins server with url of\nhttps://team.jenkins.io/jenkins\nYou can create an item in old server with\nTargetUrl\nof\nhttps://team.jenkins.io/jenkins\nRelative URL starting with / - this will be relative to the root of current web server.\nExample:"
+        ]
+    },
+    {
+        "id": "q-033",
+        "input": "Why does my Jenkins SSH credential fail to connect to a Linux machine?",
+        "actual_output": "",
+        "retrieval_context": [
+            "Jenkins 2 can't connect by SSH\nhttps://issues.jenkins-ci.org/browse/JENKINS-53954\nContributing\nContributions are welcome! Please read our\nguidelines\nand our\nCode of Conduct\n.",
+            "SSH crendentials plugin\n.\nPassword\nEven if using SSH keys is recommended authentication method, password authentication may sometimes be required. The plugin has supported password based authentication since 0.3.0. When using password based authentication, the\nsshpass\nbinary is expected to be on the PATH. The plugin supports the credential type \"Username with password\" configured in the Jenkins credential store through the\nSSH crendentials plugin\n.\nVault Credentials",
+            "Credentials selection failed when SSH Private Key entries were among\nthe options\nReplaced each instance of automatic Base URL validation with a Test\nConnection button in the Advanced section\nCode cleanup\nVersion 1.5 (Sep 24, 2016)\nUpgraded Jenkins plugin dependencies for better master-slave\nbehavior\nResolved several issues related to serialization in master-slave\nconfigurations\nVersion 1.4 (Sep 19, 2016)\nUpgraded dependencies and plugin parent pom to support Jenkins 2.0\nVarious bug fixes"
+        ]
+    },
+    {
+        "id": "q-034",
+        "input": "Why does the Jenkins controller randomly disconnect from an agent on Linux?",
+        "actual_output": "",
+        "retrieval_context": [
+            "JEP-222\nfor more.\nTo test this connection is successful you can use the\nTest Connection\nbutton to ensure there is adequate communication from Jenkins to the Kubernetes cluster, as seen below\nGarbage collection\nIn some exceptional cases, agent pods can be left behind, with no declared Jenkins agent in the controller. They will try to reconnect over and over, until something deletes them.",
+            "You should see it on the home page of Jenkins :\nTroubleshooting\nThe plugin was tested on a VMware virtual machine with 2 processors and 8GB Memory. The memory was wide, but the processor touched 100% many times.\nWhen it happens, the creation of the agents can be slow or sometimes, it cannot be created before the timeout.",
+            "Leave the defaults for\nDisable reconnect\nand\nAgent Timeout\nunless using ECR, real help.\nBuildspec is where this plugin gets interesting. Are you using a custom docker image or off the shelf? If using an off the shelf image from AWS like\naws/codebuild/amazonlinux2-aarch64-standard:2.0\nit doesnt have jenkins agents deployed to it. So we need to add those pieces. If you are using your own custom image\nUsing off the shelf image, example below."
+        ]
+    },
+    {
+        "id": "q-035",
+        "input": "Why does an `sh` step hang inside a custom Docker image used as a Jenkins agent?",
+        "actual_output": "",
+        "retrieval_context": [
+            "above, and the Build Request. The build request may be specified inline\n(as demonstrated below), or from a file located in the Jenkins\nworkspace.\nAfter the command is sent, the plugin polls the Cloud Build to check the\nstatus. If the step fails, the Jenkins step is failed. If it succeeds,\nthe Jenkins step succeeds.\n{width=\"700\"}\nIn this example, the build request runs a simple step: in the Ubuntu\ndocker image, which is available by default, it runs the command \"echo\nhello world\".",
+            "Docker image, ensure that the user is set to\njenkins\n. For backward compatibility\nor\nnon-standard sshd packaged in your Docker image, you also have option to provide manually configured ssh credentials\nNote:\nIf the Docker container's host SSH key is not trusted by Jenkins (usually the case) then you'll need to set the SSH host key verification method to \"non-verifying\".\nLaunch via JNLP\na JDK installed. You can use\njenkins/inbound-agent\nas a basis for a custom image.",
+            "and\nImage Tag\ninput on the job build step configuration.\nIf using Jenkins environment\n$VARIABLE\nsyntax, ensure variable is predefined and in scope.\nReport failure\n404 Not Found\nReport not ready.\nIncrease timeout.\nError Codes\nCode\nName\nDescription\n-1001\nAUTHENTICATION_FAILURE\nUser authentication failed.\n-1002\nDOCKER_LOGIN_FAILURE\nDocker login has failed\n-1003\nDOCKER_TAG_FAILURE\nError in performing docker tag\n-1004\nDOCKER_PUSH_FAILURE\nError in performing docker push\n-1005"
+        ]
+    },
+    {
+        "id": "q-036",
+        "input": "Why does POSTing to `/user/<id>/descriptorByName/jenkins.security.ApiTokenProperty/revoke` return HTTP 400 \"The tokenUuid cannot be empty\"?",
+        "actual_output": "",
+        "retrieval_context": [
+            "with\nUser name\n, which should match to the user name of your Jenkins\nserver account,\nAPI token\n, which is your personal API token found in your user\naccount view and\nCross-Site Request Forgery prevention enabled in Jenkins\nmust\nbe checked if your Jenkins server is configured for\nCSRF-protection.\nIf you are using a Jenkins server without authentication the above is\nnot needed. The\nOrigins\nvalue of \"*\" will allow requests from any\ndomain, but it is not recommended for production use -",
+            "Usage\nThe use case is that Jenkins is secured so that anonymous users lack overall read permissions. Say you want to triggers builds of certain jobs from a script. You can pick a sufficiently authenticated user and use that person's API token to POST to\njob/NAME/build\n. But this grants that person's full permissions to anyone who can see the script, which is hazardous.\nThe usual workaround for this issue is to define a build authorization token in job configuration, and have the script ping",
+            "X-Instance-Identity\nheader in the response. This header is always available, even if the response is 401 access denied (which can happen if Jenkins is protected via security.) The value represents a base64-encoded ASN.1 DER serialization of X.509 SubjectPublicKeyInfo record.\nPlugins that run inside Jenkins can access this key pair programmatically through the\norg.jenkinsci.main.modules.instance_identity.InstanceIdentity\nclass (add a plugin-to-plugin dependency on this plugin into your plugin)."
+        ]
+    },
+    {
+        "id": "q-037",
+        "input": "Why does the Jenkins LDAP plugin fail with \"No subject alternative DNS name matching ... found\" when talking to an internal AD?",
+        "actual_output": "",
+        "retrieval_context": [
+            "JENKINS-16429\nmight be a good reason to favour the LDAP plugin over the Active Directory plugin, but if that issue is resolved by the time you are reading this then there should be no reason to pick the LDAP plugin over the Active Directory plugin)\nTips and Tricks\nIf you are using the LDAP plugin to connect to Active Directory you should probably read this page of\nAD syntax notes",
+            "System property\n-Dhudson.plugins.active_directory.ActiveDirectorySecurityRealm.forceLdaps=true\nas a startup parameter to force Jenkins to start a connection with LDAPS.\nUse secured port is defined 636 or 3269 (\nyour.hostname.com\\[\\|:636\\|:3269\\]\n)\nNote that\n-Dhudson.plugins.active_directory.ActiveDirectorySecurityRealm.forceLdaps=true\nskips the default LDAP + TLS upgrade.\nOverride domain controllers",
+            "LDAP Email plugin\nThis plugin resolves user email addresses from an LDAP directory.\nIt is not needed if Jenkins uses LDAP as its authentication source and\nuser records have a standard \"mail\" attribute. In this case Jenkins will\nalready find user email addresses.\nConfigure the plugin in the\nLDAP Email Lookup\nsection in the main\nJenkins settings page (Manage / Configure System).\nHere's an example configuration file:\n[[CODE_BLOCK_0]]\nThe\nbindDN\nand\nbindPassword"
+        ]
+    },
+    {
+        "id": "q-038",
+        "input": "What happens to the workspace when the same Jenkins job runs concurrently on one node?",
+        "actual_output": "",
+        "retrieval_context": [
+            "Overview\nThe Distributed Workspace Clean plugin is used to remove unnecessary old build workspaces from nodes used by previous builds. This allows us to keep the overall disk usage down on long-lifetime nodes that do lots of different builds. The \"Workspace\" link for a job only ever points to the most recently used node, so that means that all nodes except one could safely delete their unused workspaces ... but Jenkins does not do that by default.",
+            "affecting the runtime.\nThe ability to use a custom workspace location (that can optionally\nmake use of parameter values) that uses Jenkins' workspace locking\nmechanism so that the Job can still be executed multiple times on\nthe same host without collision.\nThis is highly useful if many projects make use of the same\nremote repository. Just use the repository name as workspace\nlocation to cut down on the number of workspaces.\nThe ability to automatically generate child jobs by joining multiple",
+            "If assignment is succeeded, it is used.\nWorkChunks and ExecutorChunks\nIn simple cases, Jenkins launches only one build at the same time. Though multi-configuration project results in multiple builds even triggered once, these builds are launched just one by one sequentially.\nBut there are cases Jenkins launches two or more builds at the same time. SEE\nJobProperty#getSubTasks\nor\nSubTaskContributor\nfor details."
+        ]
+    },
+    {
+        "id": "q-039",
+        "input": "Why does my global variable documentation not show in the Jenkins UI for a Shared Library?",
+        "actual_output": "",
+        "retrieval_context": [
+            "Using environmental variables in the configuration\nMost configuration fields of the plugin can be decorated with common\nJenkins set environmental\nvariables\n.\nThese tags are replaced with values of matching environmental variables.\nPlease see the above picture of the plugin configuration for the format\nof the actual tags.\nIn addition to the default variables set, plugin sets some easy to use\ncommon variables for your use:\nVariable\nDescription\nBUILD_FULL_DISPLAY_NAME",
+            "On the left navigation menu, click \"Global Variables Reference\"\nA preview is provided below, but please see the Global Variable Reference in a running instance for the latest API information.",
+            "Missing def before globals\nPipeline can access VC_ global vars, but not functions\nNeed to pass all required VC_ global vars to functions\nFixed encoding issues\nVersion 0.78 (14 Jun 2025)\nMoved to minimum Jenkins version: 2.452.1 and Java 11\nChanged default coverage plugin on new job creation\nChanged from\nLegacy VectorCAST Coverage Plugin\nChanged to\nJenkins Coverage Plugin\nAdding in following capabilities\nExtended Cobertura format output for use with Jenkins Coverage Plugin"
+        ]
+    },
+    {
+        "id": "q-040",
+        "input": "Why does an ephemeral Docker Android agent fail with `UnsupportedClassVersionError: class file version 55.0`?",
+        "actual_output": "",
+        "retrieval_context": [
+            "Another symptom of the same problem if you run Docker on your agents can be either docker containers randomly exiting with ExitCode 137 or getting error messages with \"EOF\" part way through trying to pull or run images - this can occur if there is a security patch for Docker itself because applying this update stops Docker. These upgrades are asynchronous on Amazon Linux 2 (whereas on the older Amazon Linux the docs stated that the SSH service was not started until they complete) so your",
+            "This can either be an absolute path, or can contain environment variables in the format\n$``VARIABLE_NAME\n. This will be replaced at build time from the node's environment variables (see the \"Node Properties\" settings for each agent), or from the build's environment.\nIf no value is entered, or the plugin cannot find a valid SDK under the configured path, it will search under the following environment variables on the build node to try and locate a usable SDK:\nANDROID_SDK_ROOT\nANDROID_SDK_HOME",
+            "available.\njenkinsci/slave\njenkinsci/slave\nis an image\nmeant to be run by Jenkins to start a new agent. The configuration is\nvery simple:\nWhen you’re running Jenkins via Gradle JPI plugin it will be run under\nyou user account, so either your user needs to be able to\nexecute\nsudo docker\nwithout password or you will need to type that\npassword in Gradle’s terminal session.\njenkinsci/ssh-slave\njenkinsci/ssh-slave\nis\nanother (better) option. It allows you manage agent container separately"
+        ]
+    },
+    {
+        "id": "q-041",
+        "input": "How do I run Jenkins behind Caddy as an HTTPS reverse proxy using Docker Compose?",
+        "actual_output": "",
+        "retrieval_context": [
+            "a local Jenkins controller at\nhttp://localhost:8080\na local HTTPS fixture service for\n.env\nfiles at\nhttps://env-fixture:8443/\ninside the Docker network\nseeded example jobs you can open directly in the Jenkins UI after startup\na Job DSL seed job that generates additional examples from\nexamples/jobdsl/\nSeeded jobs:\nexample-remote-env-wrapper-success\nexample-remote-env-wrapper-multi-source-success\nexample-remote-env-wrapper-blocked-path\nexample-remote-env-wrapper-duplicate-case",
+            "Be sure to set the\nX-Forwarded-Proto\nheader if your reverse proxy is accessed via HTTPS and then Jenkins itself is accessed via HTTP i.e. proxying HTTPS to HTTP.\nChanging the context path of Jenkins with a reverse proxy is fraught with danger. There are lots of URLs that you need to rewrite correctly, and even if you get the ones in HTML files you may miss some in javascript, CSS or XML resources.",
+            "(assuming\nthat\n~/.ssh/jenkins.pub\nis a public key corresponding to the private\nkey from previous step).\nFinally, create new agent with a configuration like this:\n172.17.0.2\nhere is the IP of a Docker contaner from the previous\nstep,\nfound\nin\ndocker inspect\noutput\n.\nYou could also run the container exposing the ports (e.g.\n-p 2222:22\n)\nand then use\nlocalhost\nas host and\n2222\nas port.\nTesting Confluence integration\nYou’ll need to refer to Confluence REST\nAPI.\nHere\nis the\nlink.\nSamples\nare"
+        ]
+    },
+    {
+        "id": "q-042",
+        "input": "Which Jenkins directories do I need to back up vs. ones I can leave out?",
+        "actual_output": "",
+        "retrieval_context": [
+            "Backup plugin allows archiving and restoring your Jenkins (and Hudson)\nhome directory.\nThis plugin is searching for a new maintainer!\nUnfortunately, the current maintainer has no more time to work on this\nplugin, but there are still\nsome important\nissues\nto fix.\nIf you want to take ownership of this plugin, just don't hesitate\n(please mention that on the mailing list).\nWant periodic backups?\nThis plugin requires that you manually start it to back up your data.",
+            "If this option is enabled, the file\nnextBuildNumber\nwill also be backed up.\nBackup 'config-history' folder\nIf this option is enabled, the directory\nconfig-history\nwill also be backed up. The plugin which creates this folder is the\nJob Configuration History Plugin\n.\nBackup 'userContents'\nJenkins provides a URL where you can put common data (e.g., static HTML, Tools, etc.). You can backup all of this data if you check this option.\nBackup only builds marked to keep",
+            "Settings\nNote:\nThe settings are present in the global configuration since version 2.0\nBackup directory\nSpecify the backup directory. The Jenkins process needs write access to this directory. You can use environment variables like\n${JENKINS_WORKSPACE}\nto specify the path.\nBackup schedule for full backups\nSpecify schedule when a full backup is triggered. Cron notation is used. A full backup backs up all files even if there were no changes.\nBackup schedule for differential backups"
+        ]
+    },
+    {
+        "id": "q-043",
+        "input": "Why does Jenkins keep showing a reverse-proxy-broken error even though pages mostly load?",
+        "actual_output": "",
+        "retrieval_context": [
+            "Background\nFor a reverse proxy to work correctly, it needs to rewrite both the request and the response. Request rewriting involves receiving an inbound HTTP call and then making a forwarding request to Jenkins (sometimes with some HTTP headers modified, sometimes not). Failing to configure the request rewriting is easy to catch, because you just won't see any pages at all.\nBut correct reverse proxying also involves one of two options, EITHER\nrewriting the response (for more information see",
+            "Symptoms\nAn error message is displayed in the \"Manage Jenkins\" page - \"It appears that your reverse proxy set up is broken\"\nBackground",
+            "The recommendation is to ensure that Jenkins is running at the context path that your reverse proxy is serving Jenkins at. You will have the least pain if you keep to this principle."
+        ]
+    },
+    {
+        "id": "q-044",
+        "input": "What is the major change to be aware of when upgrading to Jenkins LTS 2.504.1?",
+        "actual_output": "",
+        "retrieval_context": [
+            "1.0.1 (release 2014-09-04)\ninitial release to address\nJenkins-23333\nthanks to Daniel Beck for his feedback and support :-)\nrequires Jenkins 1.532",
+            "there isn't any big step by upgrading.\nBugfixes\nJENKINS-14893\n: scm sync configuration causes memory leak (thanks mhelff)\nNot nesting RuntimeException into ServletException, fixing spring\nsecurity redirection to login page (thanks ndeloof)\n0.0.6.1 (October 28, 2012)\nBugfixes\nJENKINS-14640\n: Create view form was not handled correctly on 1.466 and above\nJENKINS-15266\n: Reducing SCM Sync commits logs to FINEST level (instead of INFO)\nJENKINS-15285",
+            "3.0.2 (19 October 2021)\nThe minimum version of Jenkins changed to be\n2.249.1\nFix issue JENKINS-66789 (incoming webhooks unexpectedly disabling pipeline branches)\n3.0.1 (8 October 2021)\nFix issue JENKINS-66802 (Builds failing with Jenkinsfiles longer than 500 lines)\nOAuth consumer settings category set to Security\n3.0.0 (21 September 2021)\nThe minimum version of Jenkins changed to be\n2.235.5\nJENKINS-60342 added support for Pull Request triggers"
+        ]
+    },
+    {
+        "id": "q-045",
+        "input": "Which Configuration as Code and agent launch changes must I make when upgrading to Jenkins LTS 2.440.x?",
+        "actual_output": "",
+        "retrieval_context": [
+            "authorization settings; and migration of config.xml in sub-projects for\ndisplay name. Some migration required direct manipulation of config.xml\nin multi-branch projects.\nUpgrading from version 0.1.x or 0.2.x is not supported.\nUpgrade to\nversion\n0.3\nand restart Jenkins before upgrading to the latest version.\nDowngrading to version 0.1.x, 0.2.x, or 0.3.x after upgrading is not\nsupported.\nVersion 0.3.x\nSignificant refactoring in this version required migration of config.xml",
+            "3.0.2 (19 October 2021)\nThe minimum version of Jenkins changed to be\n2.249.1\nFix issue JENKINS-66789 (incoming webhooks unexpectedly disabling pipeline branches)\n3.0.1 (8 October 2021)\nFix issue JENKINS-66802 (Builds failing with Jenkinsfiles longer than 500 lines)\nOAuth consumer settings category set to Security\n3.0.0 (21 September 2021)\nThe minimum version of Jenkins changed to be\n2.235.5\nJENKINS-60342 added support for Pull Request triggers",
+            "Upgrade to\nversion\n0.3\nand restart Jenkins before upgrading to the latest version.\nDowngrading to version 0.1.x, 0.2.x, 0.3.x, or 0.4.x after upgrading is\nnot supported.\nVersion 0.4.x\nRefactoring to depend on the Folders Plugin required migration of\nconfig.xml in multi-branch projects for tracked disabled sub-projects,\ntrigger spec for syncing branches, and project-based matrix\nauthorization settings; and migration of config.xml in sub-projects for"
+        ]
+    },
+    {
+        "id": "q-046",
+        "input": "How does plugins.jenkins.io decide what is 'Trending' and how plugins are categorized?",
+        "actual_output": "",
+        "retrieval_context": [
+            "release and corresponding Jenkins UI elements (model, view, and controller).\nHow to use the plugin\nA Jenkins plugin typically also reports some kind of trend from build to build. Up to now Jenkins core provides only a quite limited concept of rendering such trends as trend charts. The\nJFreeChart framework",
+            "This plugin adds\nJapex\nsupport so that\nJenkins can display trend reports and other useful metrics.\nChange Log\nVersion 1.7 (Feb 14, 2011)\nUpdate link in help\nVersion 1.6 (Dec 30, 2009)\nUpdate version of bundled japex library\nUpdate code for more recent Hudson\nVersion 1.5 (Mar 6, 2007)",
+            "online manual\nprovides more details. This Jenkins plugin allows to define if the build should be marked as \"unstable\" or \"failed\" if architecture violations, cyclic dependencies, etc. are detected. Trends of metrics are displayed in charts and additionally the generated detailed HTML report is available for each build.\nGetting Started"
+        ]
+    },
+    {
+        "id": "q-047",
+        "input": "How does a plugin tell Jenkins that a class implements an extension point?",
+        "actual_output": "",
+        "retrieval_context": [
+            "Jenkins javadoc\n.\nExtension points for plugin developers\nA\nJenkins Extension annotation\nallows Jenkins to discover classes, instantiate them, and register them in global lists of implementations of their supertypes and interfaces. The plugin provides several extension points that plugin developers can use to extend the behavior of the plugin. The Jenkins developer documentation provides more details on\nextensions\nand how to use them.\nJobSelectorExtensionPoint\nThe\nJobSelectorExtensionPoint",
+            "Why\nThis addition will allow more controlled extension enablement beyond\n@Extension(optional=true)\n. For example, it is often common for a plugin to define some additional integration extension that only kicks in when another plugin is present.\nBeyond that, at CloudBees, we reuse Jenkins as the platform for other Jenkins-like services. Those are built on the same Jenkins core, but they do not build and instead do other things, such as \"CloudBees Jenkins Operations Center.\"",
+            "Plugins running in Jenkins >=\n1.648\nget\n1.54\nfrom the parent class loader (in the default class loading strategy). If they include an earlier version in their own classpath, only \"removed\" classes are seen from their referenced JAR.\nIf the plugin is using JCA instead of BC classes directly usually the plugin works, but if ran in an BC\n1.47\nJenkins core, there will be missing algorithms."
+        ]
+    },
+    {
+        "id": "q-048",
+        "input": "What changed for the agent-to-controller security system in Jenkins 2.326?",
+        "actual_output": "",
+        "retrieval_context": [
+            "Allows agents to be launched using a specified command.\nUsage\nThe plugin adds a new agent\nLaunch method\nwhich starts an agent by having Jenkins execute a command from the controller. Use this when the controller is capable of remotely executing a process on another machine, e.g. via SSH or RSH.\nRelease notes\nSee\nGitHub Releases\nfor recent versions\nSee the\nchangelog\nfor version 1.3 and older",
+            "About\nThis component provides a built-in SSH server for Jenkins. It’s an alternative interface for the\nJenkins CLI\n, and commands can be invoked this way using any SSH client.\nNote\nThis is unrelated to\nSSH Build Agents\n. In that case, the agents are the servers, and the Jenkins controller is the client.\nConfiguration\nEnable the built-in SSH server in\nManage Jenkins » Configure Global Security\n.\nAdvanced Configuration\nSystem properties",
+            "Do not inherit permissions: The most restrictive inheritance configuration. Only permissions defined explicitly on this agent or item will be granted. The only exception is Overall/Administer: It is not possible to remove access to an agent or item from Jenkins administrators.\nConfiguration as Code and Job DSL support\nMatrix Authorization Strategy Plugin has full support for use in Configuration as Code and Job DSL.\nFor an example combining the two, see\nthis\nconfiguration-as-code.yml"
+        ]
+    },
+    {
+        "id": "q-049",
+        "input": "What is the difference between a Multibranch Pipeline and an Organization Folder in Jenkins?",
+        "actual_output": "",
+        "retrieval_context": [
+            "- For multiple projects inside a owner (user/group/subgroup).\nMultibranch Pipeline Jobs\nThe Multibranch Pipeline job type enables you to implement different Jenkinsfiles for different branches of the same project. In a Multibranch Pipeline job, Jenkins automatically discovers, manages and executes Pipelines for Branches/Merge Requests/Tags which contain a\nJenkinsfile\nin source control. This eliminates the need for manual Pipeline creation and management.\nTo create a\nMultibranch Pipeline Job\n:",
+            "This plugin allows defining a central Jenkins Pipeline for all jobs in a multibranch pipeline or even organization folder.\nConfiguration\nThe plugin adds:\nA\nProject recognizer\nfor organization folders called\nCommon pipeline definition for markerfile\nA\nMode\nfor multibranch pipelines called\nCommon pipeline definition for markerfile\nBoth have the same options:\nA\nMarkerfile",
+            "Enhances Pipeline plugin to handle branches better by automatically\ngrouping builds from different branches. Supports enable one default\npipeline.\nThis plugin adds a new build configuration mode to multibranch pipeline\njobs.  The new mode is called \"with default Jenkinsfile\".\nRefer to the\nproject README.md\ndocument\nto learn more.\nChangelog\nRefer to the\nCHANGELOG.md\ndocument\nfor plugin release notes."
+        ]
+    },
+    {
+        "id": "q-050",
+        "input": "Where can I find the Javadoc for the Jenkins core APIs my plugin depends on?",
+        "actual_output": "",
+        "retrieval_context": [
+            "Other interesting targets\nAside from\nclean\nand\ntest\ndemonstrated above, here are other targets you can give Maven:\nTarget\nDescription\njavadoc:javadoc\nParses the JavaDoc comments and generates the\ntarget/site/apidocs\ndirectory\nhpi:hpi\nCreates the\ntarget/lenientshutdown.hpi\nfile, for testing the plugin in Jenkins\nLicense\n[[CODE_BLOCK_1]]",
+            "Documentation for this plugin is here:\nhttps://github.com/stackrox/jenkins-plugin",
+            "This plugin is deprecated and was integrated into Jenkins core in\njenkinsci/jenkins#5926\n."
+        ]
     }
 ]

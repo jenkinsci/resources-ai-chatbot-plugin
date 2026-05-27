@@ -1,32 +1,183 @@
+"""Generate retrieval_context for responses.json"""
+
+from __future__ import annotations
+
 import json
+import os
+import sys
+from pathlib import Path
+from typing import Any
 
-#Config: existing file, new file
-input_file="chatbot-core/tests/eval/datasets/golden_dataset.json"
-output_file="chatbot-core/tests/eval/datasets/responses.json"
+#Default dataset paths and RAG retrieval configuration for eval generation.
+CORE_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_GOLDEN_DATASET = CORE_ROOT / "tests/eval/datasets/golden_dataset.json"
+DEFAULT_RESPONSES = CORE_ROOT / "tests/eval/datasets/responses.json"
+DEFAULT_RAG_SOURCES = ["plugins"]
+DEFAULT_TOP_K = 3
 
-# Read existing json
-with open(input_file, "r") as f:
-    data = json.load(f)
-    
-new_data = []
+if str(CORE_ROOT) not in sys.path:
+    sys.path.insert(0,str(CORE_ROOT))
 
-#Loop through each object
-for item in data:
-    input_text = item.get("input")
-    question_id = item.get("additional_metadata", {}).get("id")
-    
-    #New schema
-    new_obj= {
-        "id": question_id,
-        "input": input_text,
+def load_json_list(path: Path) -> list[dict[str, Any]]:
+    """Load a JSON file containing a list of objects."""
+    with path.open(encoding="utf-8") as f:
+        return json.load(f)
+
+def write_json_list(path: Path, data: list[dict[str, Any]]) -> None:
+    """Write a list of objects to a JSON file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(data, indent=4, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+def normalize_context(value: Any) -> list[str]:
+    """Normalize a dataset context field into a list of strings."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value] if value.strip() else []
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    return [str(value)]
+
+def load_seed_records(golden_dataset: Path) -> list[dict[str, str]]:
+    """Load eval question IDs and inputs from the golden dataset."""
+    return[
+        {
+            "id": item["additional_metadata"]["id"],
+            "input": item["input"],
+        }
+        for item in load_json_list(golden_dataset)
+    ]
+
+def parse_rag_sources(raw_sources: str) -> list[str]:
+    """Convert comma-separated RAG source names into a list."""
+    sources = [source.strip() for source in raw_sources.split(",") if source.strip()]
+    if not sources:
+        raise ValueError("--rag-sources must include at least one source name.")
+    return sources
+
+# pylint: disable=too-many-locals
+def retrieve_context_from_rag(
+    question: str,
+    rag_sources: list[str],
+    top_k: int,
+) -> list[str]:
+    """Retrieve relevant context chunks from configured RAG sources."""
+    try:
+        from api.models.embedding_model import EMBEDDING_MODEL # pylint: disable=import-outside-toplevel
+        from rag.retriever.retrieve import get_relevant_documents # pylint: disable=import-outside-toplevel
+        from utils import LoggerFactory # pylint: disable=import-outside-toplevel
+    except ImportError as exc:
+        raise RuntimeError("Could not import chatbot-core RAG retriever modules") from exc
+
+    logger = LoggerFactory.instance().get_logger("eval-retrieval")
+    from rag.retriever.retriever_utils import VECTOR_STORE_DIR # pylint: disable=import-outside-toplevel
+
+    retrieved = []
+
+    for source_name in rag_sources:
+        index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
+        if not os.path.exists(index_path):
+            logger.warning(
+                "Skipping source '%s': FAISS index not found at %s. "
+                "Build the embeddings for this source to include it in retrieval.",
+                source_name,
+                index_path,
+            )
+            continue
+        data, scores = get_relevant_documents(
+            question,
+            EMBEDDING_MODEL,
+            logger=logger,
+            source_name=source_name,
+            top_k=top_k,
+        )
+        for item, score in zip(data, scores):
+            chunk_text = item.get("chunk_text", "")
+            if chunk_text:
+                retrieved.append((float(score), source_name, chunk_text))
+
+    retrieved.sort(key=lambda result: result[0])
+    return [chunk_text for _, _source_name, chunk_text in retrieved]
+
+def build_response_entry(
+    seed: dict[str,str],
+    rag_sources: list[str],
+    top_k: int,
+    allow_empty_retrieval: bool,
+) -> dict[str, Any]:
+    """Build a retrieval-only eval response entry."""
+    question = seed["input"]
+    retrieval_context = retrieve_context_from_rag(
+        question = question,
+        rag_sources= rag_sources,
+        top_k = top_k
+    )
+    if not retrieval_context and not allow_empty_retrieval:
+        raise RuntimeError(
+            f"No RAG context retrieved for {seed['id']}. "
+            "Check FAISS indexes/ runtime dependencies"
+        )
+
+    return {
+        "id" : seed["id"],
+        "input" : question,
         "actual_output": "",
-        "retrieval_context": []
+        "retrieval_context": retrieval_context,
     }
-    
-    new_data.append(new_obj)
-    
-#Write json file
-with open(output_file, "w") as f:
-    json.dump(new_data,f,indent=4)
 
-print(f"Created {output_file}")
+def generate_responses(
+    golden_dataset: Path,
+    rag_sources: list[str],
+    top_k: int,
+    allow_empty_retrieval: bool,
+    max_items: int | None = None,
+) -> list[dict[str, Any]]:
+    """Generate retrieval-only eval responses from the golden dataset."""
+    seed_records = load_seed_records(golden_dataset)
+
+    seen_ids: set[str] = set()
+    responses: list[dict[str, Any]] = []
+
+    selected_records = seed_records[:max_items] if max_items else seed_records
+
+    for seed in selected_records:
+        question_id = seed["id"]
+
+        if question_id in seen_ids:
+            raise ValueError(f"Duplicate eval id found: {question_id}")
+
+        seen_ids.add(question_id)
+
+        responses.append(
+            build_response_entry(
+                seed=seed,
+                rag_sources=rag_sources,
+                top_k=top_k,
+                allow_empty_retrieval=allow_empty_retrieval,
+            )
+        )
+
+    return responses
+
+def main() -> None:
+    """Generate and write the retrieval-only responses dataset."""
+    responses = generate_responses(
+        golden_dataset=DEFAULT_GOLDEN_DATASET,
+        rag_sources=DEFAULT_RAG_SOURCES,
+        top_k=DEFAULT_TOP_K,
+        allow_empty_retrieval=False,
+    )
+
+    write_json_list(DEFAULT_RESPONSES, responses)
+
+    print(
+        f"Created {DEFAULT_RESPONSES} "
+        f"with {len(responses)} retrieval-only entries."
+    )
+
+if __name__ == "__main__":
+    main()
+    
