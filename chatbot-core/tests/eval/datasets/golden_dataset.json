@@ -385,29 +385,258 @@
     }
   },
   {
-    "input": "",
-    "expected_output": "", 
+    "input": "Why does a GitLab merge request webhook trigger a Jenkins build when a user is just assigned to the MR?",
+    "expected_output": "GitLab sends the same webhook payload for every merge request event, including when a user is only assigned. To avoid unnecessary rebuilds, add a conditional stage to the pipeline that inspects the webhook payload and only continues when actual code changes are detected, since GitLab's documentation indicates certain fields are only present when new code is pushed or a suggestion is applied.",
     "context": [
-      "", 
-      ""
+      "Problem is, if there's an Open Merge Request, and after a while someone assigns a user to that Merge Request, that will trigger the webhook and it will build the Jenkins job again, even though it's not necessary.\n\nIs it possible to not have the Jenkins job triggered when a user is assigned to the GitLab Merge Request? (I couldn't find anything online and in Jenkins, it looks exactly the same in terms of the build and environment variables)\n\nThanks ahead!\n\nHi :wave: ,",
+      "Could you write a conditional stage to the pipeline that deals with the webhook?\nThe [documentation](https://docs.gitlab.com/ee/user/project/integrations/webhook_events.html#merge-request-events) says:\n\n> The field [[CODE_SNIPPET_0]] is only available when there are actual code changes, like:\n> * New code is pushed.\n> * A [suggestion](https://docs.gitlab.com/ee/user/project/merge_requests/reviews/suggestions.html) is applied."
     ],
-    "additional_metadata":{
-      "id":"q-02",
-      "category": "", 
-      "source_doc": ""
+    "additional_metadata": {
+      "id": "q-031",
+      "category": "configuration_errors",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
     }
   },
   {
-    "input": "",
-    "expected_output": "", 
+    "input": "How can I make a Jenkins job act as a link or shortcut to another job?",
+    "expected_output": "There is no first-class shortcut job type in Jenkins. One approach is to install the markdown-formatter plugin and the embeddable-build-status plugin, then place a build status badge link to the target job in the description of the referencing job or folder.",
     "context": [
-      "", 
-      ""
+      "You might install the [markdown formatter plugin](https://plugins.jenkins.io/markdown-formatter/) in your Jenkins controller and the [embeddable build status plugin](https://plugins.jenkins.io/embeddable-build-status/) to place a link to the other job in the description of the referencing job or folder.\n\nI have a folder like this that uses embeddable build status links in the page to show the status of key jobs in a much larger folder of jobs"
     ],
-    "additional_metadata":{
-      "id":"q-02",
-      "category": "", 
-      "source_doc": ""
+    "additional_metadata": {
+      "id": "q-032",
+      "category": "plugin_ecosystem",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+    }
+  },
+  {
+    "input": "Why does my Jenkins SSH credential fail to connect to a Linux machine?",
+    "expected_output": "The SSH credential in Jenkins must contain the private key you generated, not the public key. The public key belongs in the target machine's authorized_keys file (unattended access via .ssh/id_rsa), and the matching private key must be stored in the Jenkins SSH credential used by the job.",
+    "context": [
+      "![imagen|509x300](upload://tzqbnPCGSnFbthxhifVjFfcsufN.png)\n\nHi Marc\nAlready on the verge of \"despair\" I have gone back to review the thread... (I am very surprised how in such a large forum about Jenkins, no one can shed light on something, I understand, everyday in Jenkins, like connecting to a linux machine or windows, but well that's another topic...) and what you said ***\"You can look up how to set up unattended access: .ssh/id_rsa as your research point\"***.. I think it's the solution.",
+      "Also the link that @mwp565733 mentioned fits very well to your problem it is exactly the same error message that you see. So you should check your credential in Jenkins that it contains the private key you created and not the public key."
+    ],
+    "additional_metadata": {
+      "id": "q-033",
+      "category": "configuration_errors",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+    }
+  },
+  {
+    "input": "Why does the Jenkins controller randomly disconnect from an agent on Linux?",
+    "expected_output": "Automatic apt upgrades on the agent can upgrade the JDK during a build, which breaks the running Remoting connection between the controller and agent. Disabling automatic updates in 20auto-upgrades (or at least disabling automatic Java updates) stops the agent from being silently restarted underneath Jenkins.",
+    "context": [
+      "EDIT: I did have automatic updates/upgrades switched on in 20auto-upgrades, when apt update/upgrade was used there was a jdk under the \"the following packages will be upgraded...\", when I checked back the main jenkins node I saw that it lost the connection to the agent. Chances are very high that the upgrades were the reason for connection drops. I will test this out more after updating packages and disabling automatic upgrades and will let you know if the connection keeps dropping again.",
+      "[[CODE_BLOCK_0]]\nIf you guys need any more info I'll be glad to provide. \n\nMain Node Jenkins setup:\n\n[[CODE_BLOCK_1]]\n\nCould you check the  java version on the agent before and after the job fails? Sometimes auto updates on java can cause the connection to fail. This can be solved by disabling auto-update on the java."
+    ],
+    "additional_metadata": {
+      "id": "q-034",
+      "category": "configuration_errors",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+    }
+  },
+  {
+    "input": "Why does an `sh` step hang inside a custom Docker image used as a Jenkins agent?",
+    "expected_output": "If the Dockerfile never declares a USER, the container runs as root, and Jenkins cannot interact with the shell. Adding `USER jenkins` (or another non-root user that matches the workspace permissions) as the last instruction in the Dockerfile lets the `sh` step run normally.",
+    "context": [
+      "> The [[[CODE_SNIPPET_9]] instruction](https://docs.docker.com/reference/dockerfile/) in a Dockerfile is a fundamental tool that determines which user will execute commands both during the image build process and when running the container.\n\nSince you never declared that the container should run as the [[CODE_SNIPPET_10]], it runs as the [[CODE_SNIPPET_11]].\n\nThank you so much. I was stuck on it for 2 days.",
+      "Thanks\n\n[quote=\"psquared-dev, post:1, topic:35704\"]\n[[CODE_SNIPPET_7]]\n[/quote]\n\nI think that you need [[CODE_SNIPPET_8]] as the last statement in the Dockerfile.  A [Docker blog post](https://www.docker.com/blog/understanding-the-docker-user-instruction/) says:"
+    ],
+    "additional_metadata": {
+      "id": "q-035",
+      "category": "configuration_errors",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+    }
+  },
+  {
+    "input": "Why does POSTing to `/user/<id>/descriptorByName/jenkins.security.ApiTokenProperty/revoke` return HTTP 400 \"The tokenUuid cannot be empty\"?",
+    "expected_output": "The revoke endpoint requires a non-empty `tokenUuid` form parameter identifying the token to revoke. Sending an empty `tokenUuid=` value (or omitting it) produces a 400 response with the body \"The tokenUuid cannot be empty\", so the caller must look up the UUID of the token and include it in the form body.",
+    "context": [
+      "org.jclouds.http.internal.JavaUrlHttpCommandExecutorService - Receiving response -1829602346: HTTP/1.1 400 Bad Request\n    jclouds.headers - << HTTP/1.1 400 Bad Request\n    jclouds.headers - << Server: Jetty(9.4.39.v20210325)\n    jclouds.headers - << X-Content-Type-Options: nosniff\n    jclouds.headers - << Cache-Control: must-revalidate,no-cache,no-store\n    jclouds.headers - << Content-Type: application/json\n    jclouds.headers - << Content-Length: 161\n    jclouds.wire - << \"{[\\n]\"",
+      "<< \"<title>Error 400 The tokenUuid cannot be empty</title>[\\n]\"\n    << \"</head>[\\n]\"\n    << \"<body><h2>HTTP ERROR 400 The tokenUuid cannot be empty</h2[\\n]\"\n    << \"<table>[\\n]\"\n    << \"<tr><th>URI:</th><td>/user/admin/descriptorByName/jenkins.security.ApiTokenProperty/revoke</td></tr>[\\n]\"\n    << \"<tr><th>STATUS:</th><td>400</td></tr>[\\n]\"\n    << \"<tr><th>MESSAGE:</th><td>The tokenUuid cannot be empty</td></tr>[\\n]\"\n    << \"<tr><th>SERVLET:</th><td>Stapler</td></tr>[\\n]\""
+    ],
+    "additional_metadata": {
+      "id": "q-036",
+      "category": "configuration_errors",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+    }
+  },
+  {
+    "input": "Why does the Jenkins LDAP plugin fail with \"No subject alternative DNS name matching ... found\" when talking to an internal AD?",
+    "expected_output": "The LDAP plugin is trying to validate the TLS certificate presented by the domain controller against the hostname it was given (for example DomainDnsZones.mydomain.loc), and the cert from the internal CA does not list that hostname as a SAN. The fix is to either reissue the AD certificate so its Subject Alternative Names include the actual hostname Jenkins connects to, or to import the internal CA into the JVM truststore so the chain is trusted.",
+    "context": [
+      "I tryied but I obtained:\n\nOops!\nA problem occurred while processing the request\n\nCaused: org.springframework.ldap.PartialResultException: nested exception is javax.naming.PartialResultException [Root exception is javax.naming.CommunicationException: DomainDnsZones.mydomain.loc:636 [Root exception is javax.net.ssl.SSLHandshakeException: No subject alternative DNS name matching DomainDnsZones.mydomain.loc found.]]\n\nI am using an internal CA \n\nCould you give me a suggestion?\nThanks a lot\nMario"
+    ],
+    "additional_metadata": {
+      "id": "q-037",
+      "category": "configuration_errors",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+    }
+  },
+  {
+    "input": "What happens to the workspace when the same Jenkins job runs concurrently on one node?",
+    "expected_output": "Jenkins automatically gives each concurrent run a separate workspace on the same node by appending a suffix to the workspace name. The same rule applies to the ws step. To avoid concurrent runs entirely, pipeline jobs have a configuration option to disallow concurrent builds.",
+    "context": [
+      "\u200b\n\n[quote=\"poddingue, post:5, topic:15073\"]\nAs far as I know, when two builds of the same job are running concurrently, they try to use the same workspace, which can lead to one build being canceled or the builds interfering with each other.\n[/quote]\n\nNo!\nJenkins will take care that you get separate workspaces, at least when they run on the same node. The second run should happen in a workspace with [[CODE_SNIPPET_2]] appended.\n\nThis also applies to using the [[CODE_SNIPPET_3]] step",
+      "Thanks a lot for correcting, @mawinter69 . \ud83e\udd17\n\nbtw, pipeline jobs have a configuration option that disallows concurrent builds and that aborts previous builds.\n\n![image|690x79](upload://9iygKtkOZ2EokXC48OGNJa6Smdf.png)\n\nThank you for help!\nA temporary fix is to [u]disable[/u] concurrent builds, but the issue turned out to be more Kubernetes related than I thought initially."
+    ],
+    "additional_metadata": {
+      "id": "q-038",
+      "category": "jenkins_core",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+    }
+  },
+  {
+    "input": "Why does my global variable documentation not show in the Jenkins UI for a Shared Library?",
+    "expected_output": "The Global Variable Reference for a shared library variable's .txt documentation is only available at the branch level of a multibranch pipeline job, not at the job level.",
+    "context": [
+      "So I have created my variable [[CODE_SNIPPET_0]] and the documentation at [[CODE_SNIPPET_1]]. Put them into [[CODE_SNIPPET_2]] folder of my shared library. Ran the associated job successfully, however the documentation in the Jenkins UI is not present.\n\nDoes this still supposed to work, or not anymore?\n\nNever mind. Was looking at the job level, but the documentation is available only at branch level in multibranch pipeline job.",
+      "https://www.jenkins.io/doc/book/pipeline/shared-libraries/#directory-structure mentions that global variables can be documented in .txt files representing those variables, and this documentation appears in the **Global Variable Reference** window."
+    ],
+    "additional_metadata": {
+      "id": "q-039",
+      "category": "pipeline_syntax",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+    }
+  },
+  {
+    "input": "Why does an ephemeral Docker Android agent fail with `UnsupportedClassVersionError: class file version 55.0`?",
+    "expected_output": "The agent image is running a different Java version than the Jenkins controller. Bytecode version 52.0 means JDK 8 and 55.0 means JDK 11, and the agent and controller must use the same Java version. JDK 8 is also no longer supported since Jenkins 2.357 and 2.361.1 LTS, so the agent image needs to be rebuilt with a matching modern JDK.",
+    "context": [
+      "Cheers\nGianpaolo\n\nHello and welcome to this community @gianpaolof :wave: \n\nYou have to use the same version of Java on the agent and on the controller.\nCould you please check if that's the case?\nBytecode version 52.0 is JDK8, and 55.0 is JDK11. \nPlease note that JDK8 is not supported anymore since Jenkins 2.357 and 2.361.1 LTS.\nIf you need more recent Android Docker images, I have created quite a lot of them there: https://hub.docker.com/repository/docker/gounthar/jenkinsci-docker-android-base",
+      "Starting agent process: cd \u201c/home/jenkins\u201d && java -jar remoting.jar -workDir /home/jenkins -jar-cache /home/jenkins/remoting/jarCache \nError: A JNI error has occurred, please check your installation and try again\n \nException in thread \u201cmain\u201d java.lang.UnsupportedClassVersionError: hudson/remoting/Launcher has been compiled by a more recent version of the Java Runtime (class file version 55.0), this version of the Java Runtime only recognizes class file versions up to 52.0"
+    ],
+    "additional_metadata": {
+      "id": "q-040",
+      "category": "configuration_errors",
+      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+    }
+  },
+  {
+    "input": "How do I run Jenkins behind Caddy as an HTTPS reverse proxy using Docker Compose?",
+    "expected_output": "To run Jenkins behind Caddy, create a docker-compose.yml and a Caddyfile in the same directory. Prerequisites are DNS pointing to the Docker host and ports 80/443 open. After startup, set the Jenkins URL under Manage Jenkins > System > Jenkins Location to your subdomain, or to a sub-path like https://example.com/jenkins/ with JENKINS_OPTS=--prefix=/jenkins if using a sub-path setup.",
+    "context": [
+      "Index\nReverse proxy - Caddy\nThis sets up Jenkins behind Caddy as an HTTPS reverse proxy using Docker Compose.\nPrerequisites\nDNS for your domain pointing to the Docker host\nPorts 80/443 open to the internet\n(Optional, for sub-path) Decide your Jenkins context path (e.g.,\n/jenkins\n)\nFiles\nCreate these two files in the same directory.\ndocker-compose.yml\n[[CODE_BLOCK_0]]\nCaddyfile (subdomain)\n[[CODE_BLOCK_1]]\nCaddyfile (sub-path\n/jenkins\n)\n[[CODE_BLOCK_2]]\nRun\n[[CODE_BLOCK_3]]\nJenkins URL"
+    ],
+    "additional_metadata": {
+      "id": "q-041",
+      "category": "jenkins_core",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+    }
+  },
+  {
+    "input": "Which Jenkins directories do I need to back up vs. ones I can leave out?",
+    "expected_output": "The exploded war file, ./cache (downloaded tools), and ./tools (extracted tools) do not need to be backed up as they can be re-downloaded or re-extracted. The ./plugins/xxx subdirectories will be automatically populated on the next restart. Always validate your backups so you do not discover they are unusable when you actually need them.",
+    "context": [
+      "\u2014\u2009Exploded\nwar\nfile\nTo restore a system, download the latest\nwar\nfile.\n./cache\n\u2014\u2009Downloaded tools\nTo restore a system, download the current version of the tools.\n./tools\n\u2014\u2009Extracted tools\nTo restore a system, extract the tools again.\n./plugins/xxx\n\u2014\u2009Subdirectories of installed plugins\nThese will be automatically populated on the next restart.\nValidating a backup\nYour backup strategy should include validation of each backup.\nYou do not want to learn that your backup is no good when you need it!"
+    ],
+    "additional_metadata": {
+      "id": "q-042",
+      "category": "jenkins_core",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+    }
+  },
+  {
+    "input": "Why does Jenkins keep showing a reverse-proxy-broken error even though pages mostly load?",
+    "expected_output": "Jenkins runs a self-check that depends on the reverse proxy correctly rewriting redirects and forwarding the original protocol. The most likely cause is that response rewriting is misconfigured or `X-Forwarded-Proto` is missing. Rather than rewriting the context path at the proxy, run Jenkins under the same path the proxy expects, for example `java -jar jenkins.war --prefix=/foobar`.",
+    "context": [
+      "so this will always get through provided the request is properly rewritten),\nwhich will then redirect the user to another page in Jenkins (this only works\ncorrectly if you configured the response rewriting correctly), which then returns 200.\nThis error message indicates that this test is failing - and the most\nlikely cause is that the response rewriting is misconfigured.\nSee the\nconfiguration examples\nfor additional tips about\nconfiguring a reverse proxy.\nBe sure to set the\nX-Forwarded-Proto",
+      "Much easier to change Jenkins to run at the context path your reverse proxy is\nexpecting, e.g. if your reverse proxy is forwarding requests at\nhttps://manchu.example.org/foobar/ to Jenkins then you could just use\njava -jar jenkins.war --prefix=/foobar\nto start jenkins using\n/foobar\nas the context path"
+    ],
+    "additional_metadata": {
+      "id": "q-043",
+      "category": "configuration_errors",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+    }
+  },
+  {
+    "input": "What is the major change to be aware of when upgrading to Jenkins LTS 2.504.1?",
+    "expected_output": "As of 2.504.1, Yahoo! UI (YUI) has been removed from Jenkins core (initially removed in weekly 2.493). Plugins that still depend on YUI in their configuration UIs will break. A small number of plugins with over 800 installs (AWS Lambda, SLOCCount, OpenStack Cloud, Fortify on Demand) have not yet removed YUI, and others are tracked in the YUI removal epic.",
+    "context": [
+      "As of Jenkins 2.504.1, Yahoo! UI (YUI) has been removed from Jenkins core.\nThis was initially removed in the weekly 2.493 release and is the result of work done over multiple years.\nPlugins that had previously used YUI must remove its usage accordingly.\nThanks to all of the work from core and plugin maintainers and contributors, there has been great progress made to ensure that components have been updated.\nThe list of plugins can be found in our\ntracking sheet\n.",
+      "The list of plugins can be found in our\ntracking sheet\n.\nAt this time, there are only a few plugins with over 800 installs, not planned for deprecation, that have not removed YUI from their configuration.\nThese plugins are:\nAWS Lambda\nSLOCCount\nOpenStack Cloud\nFortify on Demand\nThere are other plugins, all under 700 installs, that have issues created for them in the Jenkins issue tracker, linked to the overall\nYUI removal epic\n.\nRemove jCIFS and j-Interop"
+    ],
+    "additional_metadata": {
+      "id": "q-044",
+      "category": "jenkins_core",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+    }
+  },
+  {
+    "input": "Which Configuration as Code and agent launch changes must I make when upgrading to Jenkins LTS 2.440.x?",
+    "expected_output": "Replace `diskSpaceMonitor` with `diskSpace` in the JCasC nodeMonitors definition. For agents, the `-jnlpUrl ${JENKINS_URL}/computer/${AGENT_NAME}/jenkins-agent.jnlp` argument to agent.jar is deprecated; use `-url ${JENKINS_URL}` and `-name ${AGENT_NAME}` instead, passing in `-webSocket`, `-tunnel`, and work directory options as needed.",
+    "context": [
+      "The official Docker images are already using the new calling convention.\nReplace diskSpaceMonitor with diskSpace in configuration as code\nImprovements in node monitoring (agents and the controller) include a change in the configuration as code definition for nodeMonitors.\nJenkins LTS 2.426.3 and earlier used diskSpaceMonitor to configure the free space threshold for agents.\nJenkins LTS 2.440.1 and later use diskSpace to configure the free space threshold for agents.",
+      "Upgrading to Jenkins 2.440.1\nUpgrade to the latest version of Remoting\nThe\n-jnlpUrl ${JENKINS_URL}/computer/${AGENT_NAME}/jenkins-agent.jnlp\nargument to the agent JAR has been deprecated; use\n-url ${JENKINS_URL}\nand\n-name ${AGENT_NAME}\ninstead, potentially also passing in\n-webSocket\n,\n-tunnel\n, and/or work directory options as needed."
+    ],
+    "additional_metadata": {
+      "id": "q-045",
+      "category": "configuration_errors",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+    }
+  },
+  {
+    "input": "How does plugins.jenkins.io decide what is 'Trending' and how plugins are categorized?",
+    "expected_output": "Trending is approximated by dividing the previous month's install count by the month before that and showing plugins with the highest ratio in descending order. Categories come from `label-definitions.properties` in the `update-center2` repository, and labels are GitHub topics assigned to a plugin's repository by its maintainers.",
+    "context": [
+      "Currently (2019-10) this just divides the previous month\u2019s install count\nby the month before that.\nPlugins with the greatest numbers are shown in\ndescending order.\nWhat are categories based on?\nCategories are based on\nlabel-definitions.properties\nin the\nupdate-center2\nGitHub repository.\nSee\ncategorize the plugin\nfor further documentation.\nHow are plugins labeled?\nPlugin labels are assigned to plugin repositories by their maintainers as\nGitHub topics\n."
+    ],
+    "additional_metadata": {
+      "id": "q-046",
+      "category": "jenkins_core",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+    }
+  },
+  {
+    "input": "How does a plugin tell Jenkins that a class implements an extension point?",
+    "expected_output": "Mark the implementation class with the `@Extension` annotation. Jenkins discovers and registers `@Extension`-annotated classes that implement any defined extension point (an interface or abstract class) automatically, so they show up wherever the extension point is consumed.",
+    "context": [
+      "To register an implementation, make sure you mark it with\n@Extension\n.\nThe extensions index\nis a useful list of the extension points used in Jenkins and Jenkins plugins.\nMore information can be found in the\nExtensibility section\n.",
+      "Extensions\nThis section is a work in progress.\nWant to help?\nCheck out the\njenkinsci/docs gitter channel\n.\nFor other ways to contribute to the Jenkins project, see\nthis page about participating and contributing\n.\nJenkins defines extension points, which are interfaces or abstract classes that model an aspect of its behavior.\nThe interface or class defines contracts of what needs implementation, and Jenkins allows plugins to contribute those implementations."
+    ],
+    "additional_metadata": {
+      "id": "q-047",
+      "category": "plugin_ecosystem",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+    }
+  },
+  {
+    "input": "What changed for the agent-to-controller security system in Jenkins 2.326?",
+    "expected_output": "Per JEP-235, Jenkins 2.326 removes the ability to disable or customize the agent-to-controller security system, and almost all related configuration code is gone. The notable exception is `jenkins.security.s2m.AdminWhitelistRule`, kept as a stub for Configuration as Code Plugin and Groovy init scripts (it still exposes `#getMasterKillSwitch` and `#setMasterKillSwitch(boolean)`). Several plugins needed updates to remain compatible.",
+    "context": [
+      
+      "Agent \u2192 Controller Security Changes in 2.326\nJenkins 2.326 removes the ability to disable or customize the agent-to-controller security system.\nThis change is specified in\nJEP-235\n.\nPlugin Compatibility\nSeveral plugins are known to be affected by this change.\nFor the following plugins, updates are available as of December 29, 2021:\nCobertura Plugin Plugin\nneeds to be updated to 1.17 or newer.",
+      "Their compatibility fixes are tracked in the Jira epic\nJENKINS-67173\n.\nAPI Compatibility\nAs part of the change in 2.326, almost all code related to the agent-to-controller security system\u2019s configuration has been removed.\nA notable exception is\njenkins.security.s2m.AdminWhitelistRule\nas that is used by\nConfiguration as Code Plugin\nand is also expected to be in frequent use in\nGroovy init scripts\n.\nIt is now a stub retaining the basic API\u2009\u2014\n#getMasterKillSwitch\nand\n#setMasterKillSwitch(boolean)"
+    ],
+    "additional_metadata": {
+      "id": "q-048",
+      "category": "jenkins_core",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+    }
+  },
+  {
+    "input": "What is the difference between a Multibranch Pipeline and an Organization Folder in Jenkins?",
+    "expected_output": "A Multibranch Pipeline implements a different Jenkinsfile for each branch of a single project. An Organization Folder goes one level up and monitors an entire GitHub Organization, Bitbucket Team/Project, GitLab organization, or Gitea organization, automatically creating new Multibranch Pipelines for every repository that contains a Jenkinsfile.",
+    "context": [
+      "use those plugins.\nUsing Organization Folders\nOrganization Folders enable Jenkins to monitor an entire GitHub\nOrganization, Bitbucket Team/Project, GitLab organization, or Gitea organization and automatically create new\nMultibranch Pipelines for repositories which contain branches and pull requests\ncontaining a\nJenkinsfile\n.\nOrganization folders are implemented for:\nGitHub in the\nGitHub Branch Source\nplugin\nBitbucket in the\nBitbucket Branch Source\nplugin\nGitLab in the\nGitLab Branch Source",
+      "Branches and Pull Requests\nIn the\nprevious section\na\nJenkinsfile\nwhich could be\nchecked into source control was implemented. This section covers the concept of\nMultibranch\nPipelines which build on the\nJenkinsfile\nfoundation to provide\nmore dynamic and automatic functionality in Jenkins.\nCreating a Multibranch Pipeline in Jenkins\nCreating a Multibranch Pipeline\nThe\nMultibranch Pipeline\nproject type enables you to invent different\nJenkinsfiles for different branches of the same project."
+    ],
+    "additional_metadata": {
+      "id": "q-049",
+      "category": "pipeline_syntax",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+    }
+  },
+  {
+    "input": "Where can I find the Javadoc for the Jenkins core APIs my plugin depends on?",
+    "expected_output": "Jenkins publishes Javadoc for the latest weekly release and for recent LTS releases of core. Stapler, the request routing framework, has its own separate Javadoc as well. Start by choosing the minimum Jenkins core baseline for your plugin, then read the Javadoc matching that version.",
+    "context": [
+      "Javadoc\nJenkins Core\nThis is the Javadoc for Jenkins core. Javadoc is available for the latest weekly release and for recent LTS releases.\nSee choosing a Jenkins baseline for guidance choosing the minimum Jenkins core version for a plugin.\nWeekly\nLatest Core Javadoc\nLTS\nJenkins Core 2.555.1 Javadoc\nJenkins Core 2.541.3 Javadoc\nJenkins Core 2.528.3 Javadoc\nJenkins Core 2.516.3 Javadoc\nStapler Javadoc"
+    ],
+    "additional_metadata": {
+      "id": "q-050",
+      "category": "jenkins_core",
+      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
     }
   }
 ]
