@@ -18,6 +18,16 @@ DEFAULT_TOP_K = 3
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0,str(CORE_ROOT))
 
+try:
+    from api.models.embedding_model import EMBEDDING_MODEL
+    from rag.retriever.retrieve import get_relevant_documents
+    from rag.retriever.retriever_utils import VECTOR_STORE_DIR
+    from utils import LoggerFactory
+except ImportError as exc:
+    raise RuntimeError("Could not import chatbot-core RAG retriever modules") from exc
+
+logger = LoggerFactory.instance().get_logger("eval-generate-responses")
+
 def load_json_list(path: Path) -> list[dict[str, Any]]:
     """Load a JSON file containing a list of objects."""
     with path.open(encoding="utf-8") as f:
@@ -58,46 +68,44 @@ def parse_rag_sources(raw_sources: str) -> list[str]:
         raise ValueError("--rag-sources must include at least one source name.")
     return sources
 
-# pylint: disable=too-many-locals
+def _retrieve_from_source(
+    question: str,
+    source_name: str,
+    top_k: int
+) -> list[tuple[float, str, str]]:
+    """Retrieve ranked chunks from a single RAG source."""
+    index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
+    if not os.path.exists(index_path):
+        logger.warning(
+            "Skipping source '%s': FAISS index not found at %s. "
+            "Build the embeddings for this source to include it in retrieval.",
+            source_name,
+            index_path,
+        )
+        return []
+    data, scores = get_relevant_documents(
+        question,
+        EMBEDDING_MODEL,
+        logger=logger,
+        source_name=source_name,
+        top_k=top_k,
+    )
+    return [
+        (float(score), source_name, item.get("chunk_text", ""))
+        for item, score in zip(data, scores)
+        if item.get("chunk_text", "").strip()
+    ]
+
 def retrieve_context_from_rag(
     question: str,
     rag_sources: list[str],
     top_k: int,
 ) -> list[str]:
     """Retrieve relevant context chunks from configured RAG sources."""
-    try:
-        from api.models.embedding_model import EMBEDDING_MODEL # pylint: disable=import-outside-toplevel
-        from rag.retriever.retrieve import get_relevant_documents # pylint: disable=import-outside-toplevel
-        from utils import LoggerFactory # pylint: disable=import-outside-toplevel
-    except ImportError as exc:
-        raise RuntimeError("Could not import chatbot-core RAG retriever modules") from exc
-
-    logger = LoggerFactory.instance().get_logger("eval-retrieval")
-    from rag.retriever.retriever_utils import VECTOR_STORE_DIR # pylint: disable=import-outside-toplevel
-
-    retrieved = []
+    retrieved: list[tuple[float, str, str]] = []
 
     for source_name in rag_sources:
-        index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
-        if not os.path.exists(index_path):
-            logger.warning(
-                "Skipping source '%s': FAISS index not found at %s. "
-                "Build the embeddings for this source to include it in retrieval.",
-                source_name,
-                index_path,
-            )
-            continue
-        data, scores = get_relevant_documents(
-            question,
-            EMBEDDING_MODEL,
-            logger=logger,
-            source_name=source_name,
-            top_k=top_k,
-        )
-        for item, score in zip(data, scores):
-            chunk_text = item.get("chunk_text", "")
-            if chunk_text:
-                retrieved.append((float(score), source_name, chunk_text))
+        retrieved.extend(_retrieve_from_source(question, source_name, top_k))
 
     retrieved.sort(key=lambda result: result[0])
     return [chunk_text for _, _source_name, chunk_text in retrieved]
@@ -173,11 +181,11 @@ def main() -> None:
 
     write_json_list(DEFAULT_RESPONSES, responses)
 
-    print(
-        f"Created {DEFAULT_RESPONSES} "
-        f"with {len(responses)} retrieval-only entries."
+    logger.info(
+        "Created %s with %d retrieval-only entries.",
+        DEFAULT_RESPONSES,
+        len(responses),
     )
 
 if __name__ == "__main__":
     main()
-    
