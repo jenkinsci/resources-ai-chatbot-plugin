@@ -392,8 +392,9 @@ def _get_query_context_relevance(query: str, context: str) -> int:
 # pylint: disable=duplicate-code
 def retrieve_context(user_input: str) -> str:
     """
-    Retrieves the most relevant document chunks for a user query
-    and reconstructs them by replacing placeholder tokens with actual code blocks.
+    Retrieves the most relevant document chunks for a user query across every
+    configured source (plugins, jenkins docs, community threads, ...) and
+    reconstructs them by replacing placeholder tokens with actual code blocks.
 
     Args:
         user_input (str): The input query string.
@@ -408,38 +409,53 @@ def retrieve_context(user_input: str) -> str:
             "Dev mode enabled - skipping RAG retrieval. Build indices to enable full RAG.")
         return "Dev mode: RAG indices not built. This is a placeholder context for testing."
 
-    data_retrieved, _ = get_relevant_documents(
-        user_input,
-        EMBEDDING_MODEL,
-        logger=logger,
-        source_name="plugins",
-        top_k=retrieval_config["top_k"]
-    )
-    if not data_retrieved:
-        logger.warning(retrieval_config["empty_context_message"])
-        return "No context available."
+    # Pull the same set of sources the new-architecture tools use.
+    tool_names = CONFIG.get("tool_names")
+    if not tool_names:
+        raise ValueError("tool_names missing from config")
+
+    source_names = list(tool_names.values())
+    top_k = retrieval_config["top_k"]
 
     context_texts = []
-    for item in data_retrieved:
-        item_id = item.get("id", "")
-        text = item.get("chunk_text", "")
-        if not item_id:
-            logger.warning(
-                "Id of retrieved context not found. Skipping element.")
+    for source_name in source_names:
+        data_retrieved, _ = get_relevant_documents(
+            user_input,
+            EMBEDDING_MODEL,
+            logger=logger,
+            source_name=source_name,
+            top_k=top_k,
+        )
+        if not data_retrieved:
+            logger.info("No relevant chunks from source '%s'.", source_name)
             continue
-        if text:
+
+        for item in data_retrieved:
+            item_id = item.get("id", "")
+            text = item.get("chunk_text", "")
+            if not item_id:
+                logger.warning(
+                    "Id of retrieved context not found in source '%s'. Skipping element.",
+                    source_name,
+                )
+                continue
+            if not text:
+                logger.warning(
+                    "Text of chunk with ID %s (source '%s') is missing",
+                    item_id, source_name,
+                )
+                continue
+
             code_iter = iter(item.get("code_blocks", []))
             replace = make_placeholder_replacer(code_iter, item_id, logger)
             text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
+            context_texts.append(f"[Source: {source_name}]\n{text}")
 
-            context_texts.append(text)
-        else:
-            logger.warning("Text of chunk with ID %s is missing", item_id)
-    return (
-        "\n\n".join(context_texts)
-        if context_texts
-        else retrieval_config["empty_context_message"]
-    )
+    if not context_texts:
+        logger.warning(retrieval_config["empty_context_message"])
+        return retrieval_config["empty_context_message"]
+
+    return "\n\n".join(context_texts)
 
 
 def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
