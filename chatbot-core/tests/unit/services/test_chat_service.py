@@ -11,6 +11,14 @@ from api.config.loader import CONFIG
 from api.models.schemas import ChatResponse, FileAttachment, FileType
 
 
+def expected_context_for_all_sources(text: str) -> str:
+    """Build expected context when each configured source returns the same text."""
+    return "\n\n".join(
+        f"[Source: {source_name}]\n{text}"
+        for source_name in CONFIG["tool_names"].values()
+    )
+
+
 def test_get_chatbot_reply_success(
     mock_get_session,
     mock_retrieve_context,
@@ -141,10 +149,11 @@ def test_retrieve_context_with_placeholders(mock_get_relevant_documents):
     assert document["code_blocks"][1] in result
     assert "[[CODE_BLOCK_0]]" not in result
     assert "[[CODE_SNIPPET_1]]" not in result
-    assert result == (
+    expected_text = (
         "Here is a code block: print('Hello, code block'), and here you have "
         "a code snippet: print('Hello, code snippet')"
     )
+    assert result == expected_context_for_all_sources(expected_text)
 
 
 def test_retrieve_context_no_documents(mock_get_relevant_documents):
@@ -179,7 +188,7 @@ def test_retrieve_context_missing_text(mock_get_relevant_documents, caplog):
         result = retrieve_context("Query with missing text")
 
     assert CONFIG["retrieval"]["empty_context_message"] == result
-    assert "Text of chunk with ID doc-111 is missing" in caplog.text
+    assert "Text of chunk with ID doc-111 (source 'plugins') is missing" in caplog.text
 
 
 def test_retrieve_context_with_missing_code(mock_get_relevant_documents, caplog):
@@ -195,9 +204,8 @@ def test_retrieve_context_with_missing_code(mock_get_relevant_documents, caplog)
 
     assert document["code_blocks"][0] in result
     assert "[MISSING_CODE]" in result
-    assert result == (
-        "Snippet 1: print('Only one snippet'), Snippet 2: [MISSING_CODE]"
-    )
+    expected_text = "Snippet 1: print('Only one snippet'), Snippet 2: [MISSING_CODE]"
+    assert result == expected_context_for_all_sources(expected_text)
     assert "More placeholders than code blocks in chunk with ID doc-111" in caplog.text
 
 
