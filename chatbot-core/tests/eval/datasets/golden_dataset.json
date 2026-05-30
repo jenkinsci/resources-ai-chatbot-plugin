@@ -12,7 +12,7 @@
     }
   },
   {
-    "input": "Why does the kubectl container hang or exit immediately in a Jenkins Kuberenetes plugin pipeline?",
+    "input": "Why does the kubectl container hang or exit immediately in a Jenkins Kubernetes plugin pipeline?",
     "expected_output": "The kubectl container exits immediately when using 'cat' if the image lacks a standard cat binary, and hangs when using 'sleep' as the command. The Kubernetes plugin requires 'cat' with tty: true to pass commands into the container. The fix is to use 'command: cat' with 'tty: true' and add 'runAsUser: 1000' under the container's securityContext.",
     "context": [
       "[quote=\"lknite, post:3, topic:3316\"]\ne ‘cat’ command exited immediately, causing the ‘kubectl’ container to exit immediately\n[/quote]\n\nSo I'm thinking that means it either doesn't have cat, or it's a non standard version. Without being at a computer I can't check.\n\nI know the default command is cat to allow it to pass commands in and out of the container. I've never really looked how or why it works.",
@@ -51,7 +51,7 @@
     }
   },
   {
-    "input": "How to disable auto update of Jenkins and Plugins on Jenkins restart when running on Kuberenetes?",
+    "input": "How to disable auto update of Jenkins and Plugins on Jenkins restart when running on Kubernetes?",
     "expected_output": "Set `installPlugins: false` in the Jenkins Helm chart values to prevent the plugins from reinstalling plugins on restart. If a PVC is mounted for Jenkins Home, plugins won't need to be reinstalled every time. Alternatively, bake plugins into a custom controller image using the plugin-installation-manager-tool during Docker build, and use renovate to manage plugin version updates.",
     "context":[
       "installPlugins: false\n\nYes I was looking at that but hoped I could fix this problem without having to rebuild the whole controller image each time a new plugin needs to be added  - compared to storing them on a pvc and managing from values file.\n\nBut will give it a try, thanks! \n\nWould you then still keep the explicit versions in the plugins.txt file that is being read during the docker build?",
