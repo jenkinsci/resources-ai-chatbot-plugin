@@ -16,8 +16,8 @@
     "docx": "^9.5.1",
     "jspdf": "^3.0.4",
     "lucide-react": "^1.14.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "react-use-websocket": "^4.13.0",
     "uuid": "^13.0.0"
   },
@@ -28,9 +28,9 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.2",
     "@types/jest": "^30.0.0",
-    "@types/react": "^19.2.7",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.1.2",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^6.0.2",
     "eslint": "^9.25.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
@@ -44,6 +44,6 @@
     "ts-node": "^10.9.2",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.59.1",
-    "vite": "^6.3.5"
+    "vite": "^8.0.16"
   }
 }
