@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./chatbot-core
+      dockerfile: Dockerfile
+    container_name: chatbot-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Model files - mount from host or use named volume
+      - ./chatbot-core/api/models:/app/api/models:ro
+      # FAISS indices and embeddings - persistent storage
+      - chatbot-data:/app/data
+      # Optional: mount config for runtime configuration changes
+      - ./chatbot-core/api/config/config.yml:/app/api/config/config.yml:ro
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - chatbot-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=/api/chatbot
+    container_name: chatbot-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - chatbot-network
+
+volumes:
+  # Persistent volume for FAISS indices, embeddings, and other data
+  chatbot-data:
+    driver: local
+
+networks:
+  chatbot-network:
+    driver: bridge
