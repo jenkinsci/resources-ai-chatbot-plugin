@@ -143,3 +143,40 @@ def test_run_indexing_successful(
         mock_logger
     )
     assert mock_logger.info.call_count >= 1
+
+
+def test_run_indexing_removes_existing_outputs_when_no_vectors(mocker, tmp_path):
+    """Test run_indexing removes stale outputs when no vectors are produced."""
+    mock_logger = mocker.Mock()
+    index_path = tmp_path / "plugins_index.idx"
+    metadata_path = tmp_path / "plugins_metadata.pkl"
+    index_path.write_text("stale index", encoding="utf-8")
+    metadata_path.write_text("stale metadata", encoding="utf-8")
+
+    mocker.patch.object(store_embeddings, "VECTOR_STORE_DIR", str(tmp_path))
+    mocker.patch(
+        "rag.vectorstore.store_embeddings.embed_chunks",
+        return_value=([], [])
+    )
+    mock_build_index = mocker.patch(
+        "rag.vectorstore.store_embeddings.build_faiss_ivf_index"
+    )
+    mock_save_faiss_index = mocker.patch(
+        "rag.vectorstore.store_embeddings.save_faiss_index"
+    )
+    mock_save_metadata = mocker.patch(
+        "rag.vectorstore.store_embeddings.save_metadata"
+    )
+
+    store_embeddings.run_indexing(
+        nlist=4,
+        nprobe=2,
+        logger=mock_logger,
+        source_name="plugins"
+    )
+
+    assert not index_path.exists()
+    assert not metadata_path.exists()
+    mock_build_index.assert_not_called()
+    mock_save_faiss_index.assert_not_called()
+    mock_save_metadata.assert_not_called()

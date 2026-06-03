@@ -35,6 +35,11 @@ logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
 retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
+SOURCE_TOP_K_CONFIG_KEYS = {
+    "plugins": "top_k_plugins",
+    "docs": "top_k_docs",
+    "discourse": "top_k_discourse",
+}
 
 LOG_ANALYSIS_PATTERN = re.compile(
     r"Here are the last \d+ characters of the log:\s*```\s*(.*?)\s*```\s*(.*)",
@@ -411,14 +416,16 @@ def retrieve_context(user_input: str) -> str:
 
     # Pull the same set of sources the new-architecture tools use.
     tool_names = CONFIG.get("tool_names")
-    if not tool_names:
+    if not isinstance(tool_names, dict) or not tool_names:
         raise ValueError("tool_names missing from config")
 
     source_names = list(tool_names.values())
-    top_k = retrieval_config["top_k"]
 
     context_texts = []
     for source_name in source_names:
+        top_k_config_key = SOURCE_TOP_K_CONFIG_KEYS.get(
+            source_name, "top_k")
+        top_k = retrieval_config[top_k_config_key]
         data_retrieved, _ = get_relevant_documents(
             user_input,
             EMBEDDING_MODEL,
@@ -432,13 +439,13 @@ def retrieve_context(user_input: str) -> str:
 
         for item in data_retrieved:
             item_id = item.get("id", "")
-            text = item.get("chunk_text", "")
             if not item_id:
                 logger.warning(
                     "Id of retrieved context not found in source '%s'. Skipping element.",
                     source_name,
                 )
                 continue
+            text = item.get("chunk_text", "")
             if not text:
                 logger.warning(
                     "Text of chunk with ID %s (source '%s') is missing",

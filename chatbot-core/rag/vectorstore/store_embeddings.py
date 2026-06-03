@@ -77,9 +77,14 @@ def run_indexing(nlist, nprobe, logger, source_name):
 
     if len(vectors) == 0:
         logger.warning(
-            "No vectors produced for source '%s' (chunk file: %s). Skipping index build.",
+            "No vectors produced for source '%s' (chunk file: %s). "
+            "Removing existing index and metadata.",
             source_name, chunk_file
         )
+        for path in (index_path, metadata_path):
+            if os.path.exists(path):
+                os.remove(path)
+                logger.info("Removed stale embedding output at %s", path)
         return
 
     vectors_np = np.array(vectors).astype("float32")
