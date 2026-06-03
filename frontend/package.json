@@ -16,8 +16,8 @@
     "docx": "^9.5.1",
     "jspdf": "^3.0.4",
     "lucide-react": "^1.14.0",
-    "react": "^19.2.5",
-    "react-dom": "^19.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "react-use-websocket": "^4.13.0",
     "uuid": "^13.0.0"
   },
