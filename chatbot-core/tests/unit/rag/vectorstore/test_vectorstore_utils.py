@@ -27,6 +27,7 @@ def test_save_faiss_index_on_oserror(mocker, tmp_path):
     mock_logger = mocker.Mock()
     mocker.patch("faiss.write_index", side_effect=OSError("Os error details"))
     path = tmp_path / "index.faiss"
+    path.touch()
 
     save_faiss_index(mock_index, str(path), mock_logger)
 
@@ -40,6 +41,7 @@ def test_load_faiss_index_success(mocker, tmp_path):
     mock_read_index = mocker.patch("faiss.read_index", return_value=mock_index)
     mock_logger = mocker.Mock()
     path = tmp_path / "index.faiss"
+    path.touch()
 
     result = load_faiss_index(str(path), mock_logger)
 
@@ -57,8 +59,7 @@ def test_load_faiss_index_file_not_found(mocker, tmp_path):
 
     result = load_faiss_index(str(path), mock_logger)
 
-    mock_logger.error.assert_called_once()
-    assert "File error while loading FAISS index" in mock_logger.error.call_args[0][0]
+    mock_logger.warning.assert_called_once()
     assert result is None
 
 
@@ -67,6 +68,7 @@ def test_load_faiss_index_oserror(mocker, tmp_path):
     mock_logger = mocker.Mock()
     mocker.patch("faiss.read_index", side_effect=OSError("OS error details"))
     path = tmp_path / "malformed_index.faiss"
+    path.touch()
 
     result = load_faiss_index(str(path), mock_logger)
 
