@@ -20,6 +20,7 @@ from typing import List, Optional
 from fastapi import (
     APIRouter,
     HTTPException,
+    Request,
     Response,
     WebSocket,
     WebSocketDisconnect,
@@ -181,7 +182,7 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
     response_model=SessionResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def start_chat(response: Response):
+def start_chat(request: Request, response: Response):
     """
     Create a new chat session.
 
@@ -189,9 +190,12 @@ def start_chat(response: Response):
     chatbot interactions.
     """
     session_id = init_session()
-    response.headers["Location"] = (
-        f"/sessions/{session_id}/message"
-    )
+    response.headers["Location"] = request.url_for(
+        "delete_chat", session_id=session_id
+    ).path
+    response.headers["Content-Location"] = request.url_for(
+        "chatbot_reply", session_id=session_id
+    ).path
     return SessionResponse(session_id=session_id)
 
 @router.delete(

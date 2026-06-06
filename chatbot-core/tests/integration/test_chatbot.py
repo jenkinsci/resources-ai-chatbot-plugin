@@ -18,7 +18,11 @@ def test_create_session(client):
     data = response.json()
     assert "session_id" in data
     assert isinstance(data["session_id"], str)
-    assert response.headers["Location"] == f"/sessions/{data['session_id']}/message"
+    assert response.headers["location"] == f"/sessions/{data['session_id']}"
+    assert (
+        response.headers["content-location"]
+        == f"/sessions/{data['session_id']}/message"
+    )
 
 
 def test_reply_to_existing_session(client, mock_llm_provider, mock_get_relevant_documents):
