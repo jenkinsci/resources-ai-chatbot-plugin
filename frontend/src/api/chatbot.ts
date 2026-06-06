@@ -168,6 +168,35 @@ export const deleteChatSession = async (sessionId: string): Promise<void> => {
 };
 
 /**
+ * Fetches the message history for a session from the backend.
+ * Maps the backend format (role/content) to the frontend Message model (sender/text).
+ *
+ * @param sessionId - The session id to fetch history for
+ * @returns A Promise resolving to an array of Messages
+ */
+export const fetchSessionHistory = async (
+  sessionId: string,
+): Promise<Message[]> => {
+  const data = await callChatbotApi<{
+    session_id: string;
+    messages: { role: string; content: string }[];
+  }>(
+    `sessions/${sessionId}/message`,
+    { method: "GET" },
+    { session_id: "", messages: [] },
+    CHATBOT_API_TIMEOUTS_MS.FETCH_HISTORY,
+  );
+
+  return data.messages.map((msg) => ({
+    id: uuidv4(),
+    sender: (msg.role === "human"
+      ? "user"
+      : "jenkins-bot") as Message["sender"],
+    text: msg.content,
+  }));
+};
+
+/**
  * Utility function to create a Message object from the bot,
  * using a UUID as the message ID.
  *

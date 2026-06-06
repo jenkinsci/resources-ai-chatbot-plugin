@@ -20,6 +20,7 @@ jest.mock("../api/chatbot", () => ({
   }),
   createChatSession: jest.fn().mockResolvedValue("new-session-id"),
   deleteChatSession: jest.fn().mockResolvedValue(undefined),
+  fetchSessionHistory: jest.fn().mockResolvedValue([]),
   fetchSupportedExtensions: jest.fn().mockResolvedValue(null),
   validateFile: jest.fn().mockReturnValue({ isValid: true }),
   fileToAttachment: jest.fn().mockReturnValue({
@@ -81,7 +82,7 @@ jest.mock("../components/Messages", () => ({
 describe("Chatbot component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    sessionStorage.clear();
+    localStorage.clear();
   });
 
   it("renders toggle button", () => {
@@ -159,7 +160,7 @@ describe("Chatbot component", () => {
   });
 
   it("sends a message and shows bot reply", async () => {
-    sessionStorage.setItem(
+    localStorage.setItem(
       "chatbot-sessions",
       JSON.stringify([
         {
@@ -171,7 +172,7 @@ describe("Chatbot component", () => {
         },
       ]),
     );
-    sessionStorage.setItem("chatbot-last-session-id", "session-1");
+    localStorage.setItem("chatbot-last-session-id", "session-1");
 
     render(<Chatbot />);
     fireEvent.click(
@@ -198,8 +199,8 @@ describe("Chatbot component", () => {
 
     window.dispatchEvent(new Event("beforeunload"));
 
-    expect(sessionStorage.getItem("chatbot-sessions")).toBeDefined();
-    expect(sessionStorage.getItem("chatbot-last-session-id")).toBeDefined();
+    expect(localStorage.getItem("chatbot-sessions")).toBeDefined();
+    expect(localStorage.getItem("chatbot-last-session-id")).toBeDefined();
   });
 
   it("logs error when createChatSession returns empty id", async () => {
