@@ -3,16 +3,16 @@ Embeds document chunks, builds a FAISS IVF index,
 and stores both the index and associated metadata to disk.
 """
 
+import argparse
 import os
 import numpy as np
 import faiss
 from rag.embedding import embed_chunks
+from rag.embedding.embed_chunks import SOURCE_CHUNK_FILES
 from rag.vectorstore.vectorstore_utils import save_faiss_index, save_metadata
 from utils import LoggerFactory
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
-INDEX_PATH = os.path.join(VECTOR_STORE_DIR, "plugins_index.idx")
-METADATA_PATH = os.path.join(VECTOR_STORE_DIR, "plugins_metadata.pkl")
 
 N_LIST = 256
 N_PROBE = 20
@@ -51,32 +51,71 @@ def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
     return index
 
 
-def run_indexing(nlist, nprobe, logger):
+def run_indexing(nlist, nprobe, logger, source_name):
     """
-    Main pipeline: embed documents, build FAISS index, and save index + metadata.
+    Main pipeline: embed documents for one source, build FAISS index,
+    and save index + metadata under {source_name}_index.idx / _metadata.pkl
+    so the retriever (which keys files by source_name) can load them.
 
     Args:
         nlist (int): Number of clusters for FAISS IVF index.
         nprobe (int): Number of clusters to search during queries.
+        source_name (str): Source key from SOURCE_CHUNK_FILES.
     """
-    logger.info("Starting document embedding...")
-    vectors, metadata = embed_chunks(logger)
+    if source_name not in SOURCE_CHUNK_FILES:
+        raise ValueError(
+            f"Unknown source '{source_name}'. "
+            f"Expected one of: {sorted(SOURCE_CHUNK_FILES)}"
+        )
+
+    chunk_file = SOURCE_CHUNK_FILES[source_name]
+    index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
+    metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+
+    logger.info("Starting document embedding for source '%s'...", source_name)
+    vectors, metadata = embed_chunks(logger, chunk_files=[chunk_file])
+
+    if len(vectors) == 0:
+        logger.warning(
+            "No vectors produced for source '%s' (chunk file: %s). "
+            "Removing existing index and metadata.",
+            source_name, chunk_file
+        )
+        for path in (index_path, metadata_path):
+            if os.path.exists(path):
+                os.remove(path)
+                logger.info("Removed stale embedding output at %s", path)
+        return
+
     vectors_np = np.array(vectors).astype("float32")
 
     index = build_faiss_ivf_index(vectors_np, nlist=nlist, nprobe=nprobe, logger=logger)
 
-    save_faiss_index(index, INDEX_PATH, logger)
-    save_metadata(metadata, METADATA_PATH, logger)
+    save_faiss_index(index, index_path, logger)
+    save_metadata(metadata, metadata_path, logger)
 
-    logger.info(f"Stored {len(vectors)} vectors to FAISS (IVFFlat) at {INDEX_PATH}")
+    logger.info("Stored %d vectors to FAISS (IVFFlat) at %s", len(vectors), index_path)
 
 
 def main():
     """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="Build a FAISS index for one source (plugins, docs, discourse) "
+                    "or all of them if --source is omitted."
+    )
+    parser.add_argument(
+        "--source",
+        choices=sorted(SOURCE_CHUNK_FILES),
+        help="Source to index. If omitted, indexes every source in SOURCE_CHUNK_FILES.",
+    )
+    args = parser.parse_args()
+
     logger_factory = LoggerFactory.instance()
     logger = logger_factory.get_logger("embedding-storage")
 
-    run_indexing(nlist=N_LIST, nprobe=N_PROBE, logger=logger)
+    sources = [args.source] if args.source else list(SOURCE_CHUNK_FILES)
+    for source_name in sources:
+        run_indexing(nlist=N_LIST, nprobe=N_PROBE, logger=logger, source_name=source_name)
 
 if __name__ == "__main__":
     main()
