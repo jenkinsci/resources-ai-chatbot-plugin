@@ -14,7 +14,9 @@ retrieved context with local Ollama.
 
 import argparse
 from dataclasses import dataclass
+from importlib import import_module
 import json
+import logging
 import os
 import sys
 from pathlib import Path
@@ -36,15 +38,7 @@ if str(CORE_ROOT) not in sys.path:
 # Use test configuration to avoid local LLM initialization.
 os.environ.setdefault("PYTEST_VERSION", "eval-runner")
 
-try:
-    from api.prompts.prompts import SYSTEM_INSTRUCTION
-    from api.services import chat_service
-    from utils import LoggerFactory
-except ImportError as exc:
-    raise RuntimeError("Could not import chatbot-core eval modules") from exc
-
-logger = LoggerFactory.instance().get_logger("eval-generate-responses")
-execute_search_tools = getattr(chat_service, "_execute_search_tools")
+logger = logging.getLogger("eval-generate-responses")
 
 
 @dataclass(frozen=True)
@@ -53,12 +47,10 @@ class GenerationConfig:
     Output-generation settings.
 
     Args:
-        retrieval_only (bool): Whether to skip output generation.
         response_model (str): Ollama model for output generation.
         ollama_url (str): Ollama base URL.
     """
 
-    retrieval_only: bool
     response_model: str
     ollama_url: str
 
@@ -125,8 +117,19 @@ def retrieve_context_from_tools(question: str) -> list[str]:
 
     Returns:
         list[str]: Retrieved context as a single-item list, or an empty list
-        when no context is returned.
+            when no context is returned.
+
+    Raises:
+        RuntimeError: If the production chatbot retrieval module cannot be imported.
+        AttributeError: If _execute_search_tools is missing from the chat service module.
     """
+    try:
+        chat_service = import_module("api.services.chat_service")
+    except ImportError as exc:
+        raise RuntimeError("Could not import chatbot retrieval modules") from exc
+
+    execute_search_tools = getattr(chat_service, "_execute_search_tools")
+
     # Use the input question as both query and keywords so each retrieval tool
     # can run without LLM-generated tool parameters.
     tool_calls = [
@@ -173,9 +176,19 @@ def build_response_prompt(question: str, retrieval_context: list[str]) -> str:
 
     Returns:
         str: Prompt for the response-generation model.
+
+    Raises:
+        RuntimeError: If the production chatbot prompt cannot be imported.
+        AttributeError: If SYSTEM_INSTRUCTION is missing from the prompt module.
     """
+    try:
+        prompts = import_module("api.prompts.prompts")
+    except ImportError as exc:
+        raise RuntimeError("Could not import chatbot response prompt") from exc
+
+    system_instruction = getattr(prompts, "SYSTEM_INSTRUCTION")
     context_text = "\n\n".join(retrieval_context).strip()
-    return f"""{SYSTEM_INSTRUCTION}
+    return f"""{system_instruction}
             Chat History:
 
             Context (Documentation & Knowledge Base):
@@ -243,7 +256,7 @@ def generate_output_with_ollama(
 def build_response_entry(
     seed: dict[str, str],
     allow_empty_retrieval: bool,
-    generation_config: GenerationConfig,
+    generation_config: GenerationConfig | None,
 ) -> dict[str, Any]:
     """
     Build an eval response entry.
@@ -252,7 +265,8 @@ def build_response_entry(
         seed (dict[str, str]): Eval seed record with ID and input question.
         allow_empty_retrieval (bool): Whether to allow entries with empty
             retrieval context.
-        generation_config (GenerationConfig): Output-generation settings.
+        generation_config (GenerationConfig | None): Output-generation settings,
+            or None to leave actual_output empty.
 
     Returns:
         dict[str, Any]: Response entry with actual_output and retrieved context.
@@ -270,7 +284,7 @@ def build_response_entry(
         )
 
     actual_output = ""
-    if not generation_config.retrieval_only:
+    if generation_config is not None:
         actual_output = generate_output_with_ollama(
             question=question,
             retrieval_context=retrieval_context,
@@ -286,11 +300,101 @@ def build_response_entry(
     }
 
 
+def select_records(
+    records: list[dict[str, Any]],
+    offset: int,
+    limit: int | None,
+) -> list[dict[str, Any]]:
+    """
+    Select a contiguous range of records for one workflow shard.
+
+    Args:
+        records (list[dict[str, Any]]): Full list of response or dataset records.
+        offset (int): Zero-based starting index.
+        limit (int | None): Optional number of records to select.
+
+    Returns:
+        list[dict[str, Any]]: Selected records for the shard.
+
+    Raises:
+        ValueError: If offset is outside the records range, limit is invalid,
+            or fewer records than requested are available.
+    """
+    if offset < 0 or offset >= len(records):
+        raise ValueError(f"offset must be between 0 and {len(records) - 1}")
+    if limit is not None and limit < 1:
+        raise ValueError("limit must be positive")
+
+    selected = records[offset:] if limit is None else records[offset : offset + limit]
+    if limit is not None and len(selected) != limit:
+        raise ValueError(
+            f"Requested {limit} records at offset {offset}, found {len(selected)}"
+        )
+    return selected
+
+
+def generate_outputs_from_responses(
+    source_responses: Path,
+    generation_config: GenerationConfig,
+    offset: int = 0,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Fill actual_output using an existing retrieval-context response artifact.
+
+    Args:
+        source_responses (Path): Path to the responses JSON file containing retrieval_context.
+        generation_config (GenerationConfig): Output-generation settings.
+        offset (int): Zero-based response offset.
+        limit (int | None): Optional number of records to process.
+
+    Returns:
+        list[dict[str, Any]]: Generated response entries with actual_output.
+
+    Raises:
+        ValueError: If a response entry has an invalid id, input, or retrieval_context.
+    """
+    source_records = load_json_list(source_responses)
+    selected_records = select_records(source_records, offset, limit)
+    generated_records: list[dict[str, Any]] = []
+
+    for source_record in selected_records:
+        question_id = source_record.get("id")
+        question = source_record.get("input")
+        retrieval_context = source_record.get("retrieval_context")
+        if not isinstance(question_id, str) or not question_id:
+            raise ValueError("Every response entry must contain a valid id")
+        if not isinstance(question, str) or not question:
+            raise ValueError(f"{question_id}: input is invalid")
+        if not isinstance(retrieval_context, list) or not all(
+            isinstance(context, str) and context.strip()
+            for context in retrieval_context
+        ):
+            raise ValueError(f"{question_id}: retrieval_context is empty or invalid")
+
+        generated_records.append(
+            {
+                "id": question_id,
+                "input": question,
+                "actual_output": generate_output_with_ollama(
+                    question=question,
+                    retrieval_context=retrieval_context,
+                    model=generation_config.response_model,
+                    ollama_url=generation_config.ollama_url,
+                ),
+                "retrieval_context": retrieval_context,
+            }
+        )
+
+    return generated_records
+
+
 def generate_responses(
     golden_dataset: Path,
     allow_empty_retrieval: bool,
-    generation_config: GenerationConfig,
-    max_items: int | None = None,
+    generation_config: GenerationConfig | None,
+    offset: int = 0,
+    limit: int | None = None,
 ) -> list[dict[str, Any]]:
     """
     Generate eval responses from the golden dataset.
@@ -298,8 +402,10 @@ def generate_responses(
     Args:
         golden_dataset (Path): Path to the golden dataset JSON file.
         allow_empty_retrieval (bool): Whether to allow empty retrieval context.
-        generation_config (GenerationConfig): Output-generation settings.
-        max_items (int | None): Optional maximum number of records to process.
+        generation_config (GenerationConfig | None): Output-generation settings,
+            or None for retrieval-only mode.
+        offset (int): Zero-based dataset offset.
+        limit (int | None): Optional number of records to process.
 
     Returns:
         list[dict[str, Any]]: Generated response entries.
@@ -312,7 +418,7 @@ def generate_responses(
     seen_ids: set[str] = set()
     responses: list[dict[str, Any]] = []
 
-    selected_records = seed_records[:max_items] if max_items else seed_records
+    selected_records = select_records(seed_records, offset, limit)
 
     for seed in selected_records:
         question_id = seed["id"]
@@ -356,10 +462,22 @@ def parse_args() -> argparse.Namespace:
         help="Path where generated responses JSON should be written.",
     )
     parser.add_argument(
-        "--max-items",
+        "--source-responses",
+        type=Path,
+        default=None,
+        help="Retrieval-complete responses artifact used by --generation-only.",
+    )
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Zero-based record offset used for sharded execution.",
+    )
+    parser.add_argument(
+        "--limit",
         type=int,
         default=None,
-        help="Optional maximum number of golden records to process.",
+        help="Optional number of records to process from the offset.",
     )
     parser.add_argument(
         "--allow-empty-retrieval",
@@ -370,6 +488,11 @@ def parse_args() -> argparse.Namespace:
         "--retrieval-only",
         action="store_true",
         help="Only fill retrieval_context and leave actual_output empty.",
+    )
+    parser.add_argument(
+        "--generation-only",
+        action="store_true",
+        help="Fill actual_output from an existing retrieval-complete artifact.",
     )
     parser.add_argument(
         "--response-model",
@@ -387,17 +510,30 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Generate and write the responses dataset."""
     args = parse_args()
+    if args.retrieval_only and args.generation_only:
+        raise ValueError("--retrieval-only and --generation-only are mutually exclusive")
+
     generation_config = GenerationConfig(
-        retrieval_only=args.retrieval_only,
         response_model=args.response_model,
         ollama_url=args.ollama_url,
     )
-    responses = generate_responses(
-        golden_dataset=args.golden_dataset,
-        allow_empty_retrieval=args.allow_empty_retrieval,
-        generation_config=generation_config,
-        max_items=args.max_items,
-    )
+    if args.generation_only:
+        source_responses = args.source_responses or args.responses
+        responses = generate_outputs_from_responses(
+            source_responses=source_responses,
+            generation_config=generation_config,
+            offset=args.offset,
+            limit=args.limit,
+        )
+    else:
+        responses = generate_responses(
+            golden_dataset=args.golden_dataset,
+            allow_empty_retrieval=args.allow_empty_retrieval,
+            generation_config=None if args.retrieval_only else generation_config,
+            offset=args.offset,
+            limit=args.limit,
+        )
+
 
     write_json_list(args.responses, responses)
 

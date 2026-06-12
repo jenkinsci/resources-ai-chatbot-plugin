@@ -53,3 +53,61 @@ jobs:
                   logs/data-pipeline.log
                 if-no-files-found: error
                 retention-days: 7
+
+    fill-retrieval-context:
+        needs: build-vector-database
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+
+        steps:
+            - name: Check out pull request
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with: 
+                python-version: "3.13"
+
+            - name: Install Backend Dependencies
+              run: make setup-backend
+
+            - name: Download retrieval vector database
+              uses: actions/download-artifact@v4
+              with:
+                name: retrieval-vector-database-${{ github.run_id }}
+                path: .
+
+            - name: Fill retrieval_context
+              run: |
+                chatbot-core/venv/bin/python \
+                  chatbot-core/tests/eval/runners/generate_responses.py \
+                  --retrieval-only \
+                  --responses artifact/retrieval/responses.json
+            
+            - name: Validate Retrieval Context
+              shell: bash
+              run: |
+                python3 - <<'PY'
+                import json
+                from pathlib import Path
+
+                path = Path("artifacts/retrieval/responses.json")
+                responses = json.loads(path.read_text(encoding="utf-8"))
+                if len(responses) != 50:
+                    raise SystemExit(f"Expected 50 responses, found {len(responses)}")
+                missing = [
+                    entry.get("id", "<unknown>")
+                    for entry in responses
+                    if not entry.get("retrieval_context")
+                ]
+                if missing:
+                    raise SystemExit("Missing retrieval context for: " + ", ".join(missing))
+                PY
+
+            - name: Upload retrieval-complete responses
+              uses: actions/upload-artifact@v4
+              with:
+                name: retrieval-responses-${{ github.run_id }}
+                path: artifacts/retrieval/responses.json
+                if-no-files-found: error
+                retention-days: 7
