@@ -1,0 +1,55 @@
+name: Database
+
+"on":
+    pull_request:
+        types:
+            - opened
+            - reopened
+            - synchronize
+            - labeled
+    workflow_dispatch:
+    
+permissions: 
+    contents: read
+
+concurrency:
+  group: llm-as-judge-eval-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+    build-vector-database:
+        if: >-
+          github.event_name == 'workflow_dispatch' || 
+          contains(github.event.pull_request.labels.*.name, 'eval')
+        runs-on: ubuntu-24.04
+        timeout-minutes: 120
+
+        steps:
+            - name: Check out pull request
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                python-version: "3.13"
+            
+            - name: Build retrieval vector database
+              run: make run-data-pipeline
+            
+            - name: Verify retrieval artifacts
+              shell: bash
+              run: |
+                for source in docs plugins discourse; do
+                  test -s "chatbot-core/data/embeddings/${source}_index.idx"
+                  test -s "chatbot-core/data/embeddings/${source}_metadata.pkl"
+                done
+            
+            - name: Upload retrieval vector database
+              uses: actions/upload-artifact@v4
+              with:
+                name: retrieval-vector-database-${{ github.run_id }}
+                path: |
+                  chatbot-core/data/embeddings/
+                  logs/data-pipeline.log
+                if-no-files-found: error
+                retention-days: 7
