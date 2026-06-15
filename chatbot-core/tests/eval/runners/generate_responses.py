@@ -26,11 +26,11 @@ from urllib.error import HTTPError, URLError
 
 # Default dataset paths for eval generation.
 CORE_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_EVAL_CONFIG = CORE_ROOT / "tests/eval/config.json"
 DEFAULT_GOLDEN_DATASET = CORE_ROOT / "tests/eval/datasets/golden_dataset.json"
 DEFAULT_RESPONSES = CORE_ROOT / "tests/eval/datasets/responses.json"
-DEFAULT_RESPONSE_MODEL = "qwen3:4b"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-RESPONSE_TEMPERATURE = 0.2
+DEFAULT_REQUEST_TIMEOUT = 300.0
 
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
@@ -39,6 +39,29 @@ if str(CORE_ROOT) not in sys.path:
 os.environ.setdefault("PYTEST_VERSION", "eval-runner")
 
 logger = logging.getLogger("eval-generate-responses")
+has_valid_retrieval_context = import_module(
+    "runners.validate_responses"
+).has_valid_retrieval_context
+
+
+def load_eval_config(path: Path = DEFAULT_EVAL_CONFIG) -> dict[str, Any]:
+    """
+    Load the eval pipeline configuration used by local runs and CI.
+
+    Args:
+        path (Path): Path to the eval configuration JSON file.
+
+    Returns:
+        dict[str, Any]: Parsed eval configuration.
+    """
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+EVAL_CONFIG = load_eval_config()
+DEFAULT_RESPONSE_MODEL = str(EVAL_CONFIG["response_model"])
+DEFAULT_MAX_TOKENS = int(EVAL_CONFIG["response_max_tokens"])
+DEFAULT_NUM_CTX = int(EVAL_CONFIG["response_num_ctx"])
+DEFAULT_TEMPERATURE = float(EVAL_CONFIG["response_temperature"])
 
 
 @dataclass(frozen=True)
@@ -49,10 +72,18 @@ class GenerationConfig:
     Args:
         response_model (str): Ollama model for output generation.
         ollama_url (str): Ollama base URL.
+        max_tokens (int): Maximum generated tokens per response.
+        num_ctx (int): Ollama context window size.
+        temperature (float): Sampling temperature.
+        request_timeout (float): HTTP request timeout in seconds.
     """
 
     response_model: str
     ollama_url: str
+    max_tokens: int = DEFAULT_MAX_TOKENS
+    num_ctx: int = DEFAULT_NUM_CTX
+    temperature: float = DEFAULT_TEMPERATURE
+    request_timeout: float = DEFAULT_REQUEST_TIMEOUT
 
 
 def load_json_list(path: Path) -> list[dict[str, Any]]:
@@ -117,11 +148,7 @@ def retrieve_context_from_tools(question: str) -> list[str]:
 
     Returns:
         list[str]: Retrieved context as a single-item list, or an empty list
-            when no context is returned.
-
-    Raises:
-        RuntimeError: If the production chatbot retrieval module cannot be imported.
-        AttributeError: If _execute_search_tools is missing from the chat service module.
+        when no context is returned.
     """
     try:
         chat_service = import_module("api.services.chat_service")
@@ -176,10 +203,6 @@ def build_response_prompt(question: str, retrieval_context: list[str]) -> str:
 
     Returns:
         str: Prompt for the response-generation model.
-
-    Raises:
-        RuntimeError: If the production chatbot prompt cannot be imported.
-        AttributeError: If SYSTEM_INSTRUCTION is missing from the prompt module.
     """
     try:
         prompts = import_module("api.prompts.prompts")
@@ -203,8 +226,7 @@ def build_response_prompt(question: str, retrieval_context: list[str]) -> str:
 def generate_output_with_ollama(
     question: str,
     retrieval_context: list[str],
-    model: str,
-    ollama_url: str,
+    generation_config: GenerationConfig,
 ) -> str:
     """
     Generate actual_output with an Ollama model.
@@ -212,8 +234,7 @@ def generate_output_with_ollama(
     Args:
         question (str): Eval input question.
         retrieval_context (list[str]): Context used to ground the answer.
-        model (str): Ollama model name.
-        ollama_url (str): Base URL for Ollama.
+        generation_config (GenerationConfig): Ollama generation settings.
 
     Returns:
         str: Generated answer text.
@@ -222,15 +243,19 @@ def generate_output_with_ollama(
         RuntimeError: If Ollama is unavailable or returns an invalid response.
     """
     payload = {
-        "model": model,
+        "model": generation_config.response_model,
         "prompt": build_response_prompt(question, retrieval_context),
         "stream": False,
+        "keep_alive": "30m",
         "options": {
-            "temperature": RESPONSE_TEMPERATURE,
+            "num_predict": generation_config.max_tokens,
+            "num_ctx": generation_config.num_ctx,
+            "temperature": generation_config.temperature,
+            "seed": 42,
         },
     }
     data = json.dumps(payload).encode("utf-8")
-    endpoint = ollama_url.rstrip("/") + "/api/generate"
+    endpoint = generation_config.ollama_url.rstrip("/") + "/api/generate"
     req = request.Request(
         endpoint,
         data=data,
@@ -239,12 +264,15 @@ def generate_output_with_ollama(
     )
 
     try:
-        with request.urlopen(req, timeout=120) as response:  # nosec B310
+        with request.urlopen(
+            req, timeout=generation_config.request_timeout
+        ) as response:  # nosec B310
             result = json.loads(response.read().decode("utf-8"))
     except (HTTPError, URLError, TimeoutError) as exc:
         raise RuntimeError(
             "Could not generate eval output with Ollama. "
-            f"Ensure Ollama is running and '{model}' is pulled."
+            f"Ensure Ollama is running and '{generation_config.response_model}' "
+            "is pulled."
         ) from exc
 
     generated = result.get("response")
@@ -288,8 +316,7 @@ def build_response_entry(
         actual_output = generate_output_with_ollama(
             question=question,
             retrieval_context=retrieval_context,
-            model=generation_config.response_model,
-            ollama_url=generation_config.ollama_url,
+            generation_config=generation_config,
         )
 
     return {
@@ -305,21 +332,7 @@ def select_records(
     offset: int,
     limit: int | None,
 ) -> list[dict[str, Any]]:
-    """
-    Select a contiguous range of records for one workflow shard.
-
-    Args:
-        records (list[dict[str, Any]]): Full list of response or dataset records.
-        offset (int): Zero-based starting index.
-        limit (int | None): Optional number of records to select.
-
-    Returns:
-        list[dict[str, Any]]: Selected records for the shard.
-
-    Raises:
-        ValueError: If offset is outside the records range, limit is invalid,
-            or fewer records than requested are available.
-    """
+    """Select a contiguous range of records for one workflow shard."""
     if offset < 0 or offset >= len(records):
         raise ValueError(f"offset must be between 0 and {len(records) - 1}")
     if limit is not None and limit < 1:
@@ -339,21 +352,7 @@ def generate_outputs_from_responses(
     offset: int = 0,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    """
-    Fill actual_output using an existing retrieval-context response artifact.
-
-    Args:
-        source_responses (Path): Path to the responses JSON file containing retrieval_context.
-        generation_config (GenerationConfig): Output-generation settings.
-        offset (int): Zero-based response offset.
-        limit (int | None): Optional number of records to process.
-
-    Returns:
-        list[dict[str, Any]]: Generated response entries with actual_output.
-
-    Raises:
-        ValueError: If a response entry has an invalid id, input, or retrieval_context.
-    """
+    """Fill actual_output using retrieval context stored in a response artifact."""
     source_records = load_json_list(source_responses)
     selected_records = select_records(source_records, offset, limit)
     generated_records: list[dict[str, Any]] = []
@@ -366,10 +365,7 @@ def generate_outputs_from_responses(
             raise ValueError("Every response entry must contain a valid id")
         if not isinstance(question, str) or not question:
             raise ValueError(f"{question_id}: input is invalid")
-        if not isinstance(retrieval_context, list) or not all(
-            isinstance(context, str) and context.strip()
-            for context in retrieval_context
-        ):
+        if not has_valid_retrieval_context(retrieval_context):
             raise ValueError(f"{question_id}: retrieval_context is empty or invalid")
 
         generated_records.append(
@@ -379,8 +375,7 @@ def generate_outputs_from_responses(
                 "actual_output": generate_output_with_ollama(
                     question=question,
                     retrieval_context=retrieval_context,
-                    model=generation_config.response_model,
-                    ollama_url=generation_config.ollama_url,
+                    generation_config=generation_config,
                 ),
                 "retrieval_context": retrieval_context,
             }
@@ -504,6 +499,30 @@ def parse_args() -> argparse.Namespace:
         default=os.getenv("OLLAMA_BASE_URL", DEFAULT_OLLAMA_URL),
         help="Ollama base URL used for output generation.",
     )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=DEFAULT_MAX_TOKENS,
+        help="Maximum generated tokens per response.",
+    )
+    parser.add_argument(
+        "--num-ctx",
+        type=int,
+        default=DEFAULT_NUM_CTX,
+        help="Ollama context window size.",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=DEFAULT_TEMPERATURE,
+        help="Ollama sampling temperature.",
+    )
+    parser.add_argument(
+        "--request-timeout",
+        type=float,
+        default=DEFAULT_REQUEST_TIMEOUT,
+        help="Ollama request timeout in seconds.",
+    )
     return parser.parse_args()
 
 
@@ -516,6 +535,10 @@ def main() -> None:
     generation_config = GenerationConfig(
         response_model=args.response_model,
         ollama_url=args.ollama_url,
+        max_tokens=args.max_tokens,
+        num_ctx=args.num_ctx,
+        temperature=args.temperature,
+        request_timeout=args.request_timeout,
     )
     if args.generation_only:
         source_responses = args.source_responses or args.responses
@@ -533,7 +556,6 @@ def main() -> None:
             offset=args.offset,
             limit=args.limit,
         )
-
 
     write_json_list(args.responses, responses)
 

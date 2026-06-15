@@ -1,0 +1,369 @@
+name: LLM-as-a-Judge
+
+"on":
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: llm-as-judge-eval-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build-vector-database:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'eval')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build retrieval vector database
+        run: make run-data-pipeline
+
+      - name: Verify retrieval artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for source in docs plugins discourse; do
+            test -s "chatbot-core/data/embeddings/${source}_index.idx"
+            test -s "chatbot-core/data/embeddings/${source}_metadata.pkl"
+          done
+
+      - name: Upload retrieval vector database
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-vector-database-${{ github.run_id }}
+          path: |
+            chatbot-core/data/embeddings/
+            logs/data-pipeline.log
+          if-no-files-found: error
+          retention-days: 7
+
+  fill-retrieval-context:
+    needs: build-vector-database
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend dependencies
+        run: make IS_CPU_REQ=1 setup-backend
+
+      - name: Download retrieval vector database
+        uses: actions/download-artifact@v4
+        with:
+          name: retrieval-vector-database-${{ github.run_id }}
+          path: .
+
+      - name: Fill retrieval_context
+        run: |
+          chatbot-core/venv/bin/python \
+            chatbot-core/tests/eval/runners/generate_responses.py \
+            --retrieval-only \
+            --responses artifacts/retrieval/responses.json
+
+      - name: Validate retrieval context
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          config = json.loads(
+              Path("chatbot-core/tests/eval/config.json").read_text(encoding="utf-8")
+          )
+          expected_count = config["question_count"]
+          path = Path("artifacts/retrieval/responses.json")
+          responses = json.loads(path.read_text(encoding="utf-8"))
+          if len(responses) != expected_count:
+              raise SystemExit(
+                  f"Expected {expected_count} responses, found {len(responses)}"
+              )
+          missing = [
+              entry.get("id", "<unknown>")
+              for entry in responses
+              if not entry.get("retrieval_context")
+          ]
+          if missing:
+              raise SystemExit("Missing retrieval context for: " + ", ".join(missing))
+          PY
+
+      - name: Upload retrieval-complete responses
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-responses-${{ github.run_id }}
+          path: artifacts/retrieval/responses.json
+          if-no-files-found: error
+          retention-days: 7
+
+  prepare-response-matrix:
+    needs: fill-retrieval-context
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      question_count: ${{ steps.plan.outputs.question_count }}
+      shard_count: ${{ steps.plan.outputs.shard_count }}
+      max_parallel: ${{ steps.config.outputs.max_parallel }}
+      response_model: ${{ steps.config.outputs.response_model }}
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Load eval config
+        id: config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+
+          config = json.loads(
+              Path("chatbot-core/tests/eval/config.json").read_text(encoding="utf-8")
+          )
+          print(f"question_count={config['question_count']}")
+          print(f"shard_size={config['shard_size']}")
+          print(f"max_parallel={config['max_parallel']}")
+          print(f"response_model={config['response_model']}")
+          PY
+
+      - name: Plan response shards
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 chatbot-core/tests/eval/runners/build_shard_matrix.py \
+            --dataset chatbot-core/tests/eval/datasets/golden_dataset.json \
+            --question-count "${{ steps.config.outputs.question_count }}" \
+            --shard-size "${{ steps.config.outputs.shard_size }}" \
+            --github-output "$GITHUB_OUTPUT"
+
+  generate-responses:
+    needs:
+      - fill-retrieval-context
+      - prepare-response-matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(needs.prepare-response-matrix.outputs.max_parallel) }}
+      matrix:
+        include: ${{ fromJSON(needs.prepare-response-matrix.outputs.matrix) }}
+    env:
+      RESULTS_DIR: artifacts/generated/shard-${{ matrix.shard }}
+      RESPONSE_MODEL: ${{ needs.prepare-response-matrix.outputs.response_model }}
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend dependencies
+        run: make IS_CPU_REQ=1 setup-backend
+
+      - name: Download retrieval-context responses
+        uses: actions/download-artifact@v4
+        with:
+          name: retrieval-responses-${{ github.run_id }}
+          path: artifacts/retrieval
+
+      - name: Install Ollama
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RESULTS_DIR"
+          curl -fsSL https://ollama.com/install.sh -o /tmp/install-ollama.sh
+          sh /tmp/install-ollama.sh 2>&1 | tee "$RESULTS_DIR/ollama-install.log"
+
+      - name: Start Ollama service
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup ollama serve > "$RESULTS_DIR/ollama-server.log" 2>&1 &
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:11434/api/tags > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Ollama did not become ready within 60 seconds." >&2
+          exit 1
+
+      - name: Pull response generation model
+        run: ollama pull "$RESPONSE_MODEL" 2>&1 | tee "$RESULTS_DIR/model-pull.log"
+
+      - name: Generate responses for shard
+        id: generation
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          chatbot-core/venv/bin/python \
+            chatbot-core/tests/eval/runners/generate_responses.py \
+            --generation-only \
+            --source-responses artifacts/retrieval/responses.json \
+            --responses "$RESULTS_DIR/responses.json" \
+            --response-model "$RESPONSE_MODEL" \
+            --offset '${{ matrix.offset }}' \
+            --limit '${{ matrix.limit }}' \
+            2>&1 | tee "$RESULTS_DIR/generation.log"
+
+      - name: Validate generated shard
+        id: validation
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          expected_count = int("${{ matrix.limit }}")
+          path = Path(os.environ["RESULTS_DIR"]) / "responses.json"
+          responses = json.loads(path.read_text(encoding="utf-8"))
+          if len(responses) != expected_count:
+              raise SystemExit(f"Expected {expected_count} responses, found {len(responses)}")
+          missing = [
+              entry.get("id", "<unknown>")
+              for entry in responses
+              if not entry.get("actual_output")
+          ]
+          if missing:
+              raise SystemExit("Missing actual_output for: " + ", ".join(missing))
+          PY
+
+      - name: Upload shard outputs and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: response-shard-${{ matrix.shard }}
+          path: ${{ env.RESULTS_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce shard success
+        if: always()
+        env:
+          GENERATION_OUTCOME: ${{ steps.generation.outcome }}
+          VALIDATION_OUTCOME: ${{ steps.validation.outcome }}
+        run: |
+          if [[ "$GENERATION_OUTCOME" != "success" || "$VALIDATION_OUTCOME" != "success" ]]; then
+            echo "Response generation or validation failed." >&2
+            exit 1
+          fi
+
+  merge-responses:
+    if: always() && needs.prepare-response-matrix.result == 'success'
+    needs:
+      - prepare-response-matrix
+      - generate-responses
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Download retrieval-context responses
+        uses: actions/download-artifact@v4
+        with:
+          name: retrieval-responses-${{ github.run_id }}
+          path: artifacts/retrieval
+
+      - name: Download generated response shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: response-shard-*
+          path: artifacts/shards
+
+      - name: Merge generated response shards
+        id: merge
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          retrieval_path = Path("artifacts/retrieval/responses.json")
+          base_responses = json.loads(retrieval_path.read_text(encoding="utf-8"))
+
+          shard_root = Path("artifacts/shards")
+          shard_files = sorted(shard_root.rglob("responses.json"))
+          merged_by_id = {entry["id"]: entry for entry in base_responses}
+
+          seen_ids = set()
+          for shard_file in shard_files:
+              shard_responses = json.loads(shard_file.read_text(encoding="utf-8"))
+              for entry in shard_responses:
+                  question_id = entry["id"]
+                  if question_id in seen_ids:
+                      raise SystemExit(f"Duplicate response id across shards: {question_id}")
+                  seen_ids.add(question_id)
+                  merged_by_id[question_id] = entry
+
+          expected_count = int("${{ needs.prepare-response-matrix.outputs.question_count }}")
+          if len(merged_by_id) != expected_count:
+              raise SystemExit(
+                  f"Expected {expected_count} merged responses, found {len(merged_by_id)}"
+              )
+
+          ordered_ids = [entry["id"] for entry in base_responses]
+          merged = [merged_by_id[question_id] for question_id in ordered_ids]
+
+          output_path = Path("artifacts/combined/responses.json")
+          output_path.parent.mkdir(parents=True, exist_ok=True)
+          output_path.write_text(json.dumps(merged, indent=4, ensure_ascii=False) + "\n", encoding="utf-8")
+          PY
+
+      - name: Upload combined responses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-responses-${{ github.run_id }}
+          path: artifacts/combined/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce complete response generation
+        if: always()
+        env:
+          MATRIX_RESULT: ${{ needs.generate-responses.result }}
+          MERGE_OUTCOME: ${{ steps.merge.outcome }}
+        run: |
+          if [[ "$MATRIX_RESULT" != "success" || "$MERGE_OUTCOME" != "success" ]]; then
+            echo "One or more response shards or the merge failed." >&2
+            exit 1
+          fi
