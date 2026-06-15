@@ -129,6 +129,13 @@ jobs:
       shard_count: ${{ steps.plan.outputs.shard_count }}
       max_parallel: ${{ steps.config.outputs.max_parallel }}
       response_model: ${{ steps.config.outputs.response_model }}
+      judge_model: ${{ steps.config.outputs.judge_model }}
+      response_max_tokens: ${{ steps.config.outputs.response_max_tokens }}
+      response_num_ctx: ${{ steps.config.outputs.response_num_ctx }}
+      response_temperature: ${{ steps.config.outputs.response_temperature }}
+      judge_max_tokens: ${{ steps.config.outputs.judge_max_tokens }}
+      judge_num_ctx: ${{ steps.config.outputs.judge_num_ctx }}
+      metric_threshold: ${{ steps.config.outputs.metric_threshold }}
 
     steps:
       - name: Check out pull request
@@ -150,6 +157,13 @@ jobs:
           print(f"shard_size={config['shard_size']}")
           print(f"max_parallel={config['max_parallel']}")
           print(f"response_model={config['response_model']}")
+          print(f"judge_model={config['judge_model']}")
+          print(f"response_max_tokens={config['response_max_tokens']}")
+          print(f"response_num_ctx={config['response_num_ctx']}")
+          print(f"response_temperature={config['response_temperature']}")
+          print(f"judge_max_tokens={config['judge_max_tokens']}")
+          print(f"judge_num_ctx={config['judge_num_ctx']}")
+          print(f"metric_threshold={config['metric_threshold']}")
           PY
 
       - name: Plan response shards
@@ -177,6 +191,12 @@ jobs:
     env:
       RESULTS_DIR: artifacts/generated/shard-${{ matrix.shard }}
       RESPONSE_MODEL: ${{ needs.prepare-response-matrix.outputs.response_model }}
+      JUDGE_MODEL: ${{ needs.prepare-response-matrix.outputs.judge_model }}
+      DEEPEVAL_DISABLE_DOTENV: "1"
+      DEEPEVAL_TELEMETRY_OPT_OUT: "1"
+      DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE: "900"
+      DEEPEVAL_JUDGE_NUM_CTX: ${{ needs.prepare-response-matrix.outputs.judge_num_ctx }}
+      DEEPEVAL_JUDGE_NUM_PREDICT: ${{ needs.prepare-response-matrix.outputs.judge_max_tokens }}
 
     steps:
       - name: Check out pull request
@@ -186,9 +206,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+          cache: pip
+          cache-dependency-path: chatbot-core/tests/eval/requirements-eval.txt
 
       - name: Install backend dependencies
         run: make IS_CPU_REQ=1 setup-backend
+
+      - name: Initialize shard results
+        run: mkdir -p "$RESULTS_DIR"
+
+      - name: Install evaluation dependencies
+        run: |
+          python3 -m pip install -r chatbot-core/tests/eval/requirements-eval.txt \
+            2>&1 | tee "$RESULTS_DIR/dependency-install.log"
 
       - name: Download retrieval-context responses
         uses: actions/download-artifact@v4
@@ -200,7 +230,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RESULTS_DIR"
           curl -fsSL https://ollama.com/install.sh -o /tmp/install-ollama.sh
           sh /tmp/install-ollama.sh 2>&1 | tee "$RESULTS_DIR/ollama-install.log"
 
@@ -218,8 +247,10 @@ jobs:
           echo "Ollama did not become ready within 60 seconds." >&2
           exit 1
 
-      - name: Pull response generation model
-        run: ollama pull "$RESPONSE_MODEL" 2>&1 | tee "$RESULTS_DIR/model-pull.log"
+      - name: Pull response and judge models
+        run: |
+          ollama pull "$RESPONSE_MODEL" 2>&1 | tee "$RESULTS_DIR/response-model-pull.log"
+          ollama pull "$JUDGE_MODEL" 2>&1 | tee "$RESULTS_DIR/judge-model-pull.log"
 
       - name: Generate responses for shard
         id: generation
@@ -233,6 +264,9 @@ jobs:
             --source-responses artifacts/retrieval/responses.json \
             --responses "$RESULTS_DIR/responses.json" \
             --response-model "$RESPONSE_MODEL" \
+            --max-tokens '${{ needs.prepare-response-matrix.outputs.response_max_tokens }}' \
+            --num-ctx '${{ needs.prepare-response-matrix.outputs.response_num_ctx }}' \
+            --temperature '${{ needs.prepare-response-matrix.outputs.response_temperature }}' \
             --offset '${{ matrix.offset }}' \
             --limit '${{ matrix.limit }}' \
             2>&1 | tee "$RESULTS_DIR/generation.log"
@@ -241,27 +275,29 @@ jobs:
         id: validation
         if: always()
         continue-on-error: true
+        run: |
+          python3 chatbot-core/tests/eval/runners/validate_responses.py \
+            "$RESULTS_DIR/responses.json" \
+            --expected-count '${{ matrix.limit }}' \
+            2>&1 | tee "$RESULTS_DIR/validation.log"
+
+      - name: Evaluate generated shard
+        id: evaluation
+        if: steps.validation.outcome == 'success'
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          expected_count = int("${{ matrix.limit }}")
-          path = Path(os.environ["RESULTS_DIR"]) / "responses.json"
-          responses = json.loads(path.read_text(encoding="utf-8"))
-          if len(responses) != expected_count:
-              raise SystemExit(f"Expected {expected_count} responses, found {len(responses)}")
-          missing = [
-              entry.get("id", "<unknown>")
-              for entry in responses
-              if not entry.get("actual_output")
-          ]
-          if missing:
-              raise SystemExit("Missing actual_output for: " + ", ".join(missing))
-          PY
+          python3 chatbot-core/tests/eval/runners/run_evaluation.py \
+            --responses "$RESULTS_DIR/responses.json" \
+            --goldens chatbot-core/tests/eval/datasets/golden_dataset.json \
+            --output-dir "$RESULTS_DIR" \
+            --response-model "$RESPONSE_MODEL" \
+            --judge-model "$JUDGE_MODEL" \
+            --expected-count '${{ matrix.limit }}' \
+            --threshold '${{ needs.prepare-response-matrix.outputs.metric_threshold }}' \
+            --identifier "chatbot-${{ github.run_id }}-shard-${{ matrix.shard }}" \
+            2>&1 | tee "$RESULTS_DIR/deepeval.log"
 
       - name: Upload shard outputs and logs
         if: always()
@@ -277,9 +313,10 @@ jobs:
         env:
           GENERATION_OUTCOME: ${{ steps.generation.outcome }}
           VALIDATION_OUTCOME: ${{ steps.validation.outcome }}
+          EVALUATION_OUTCOME: ${{ steps.evaluation.outcome }}
         run: |
-          if [[ "$GENERATION_OUTCOME" != "success" || "$VALIDATION_OUTCOME" != "success" ]]; then
-            echo "Response generation or validation failed." >&2
+          if [[ "$GENERATION_OUTCOME" != "success" || "$VALIDATION_OUTCOME" != "success" || "$EVALUATION_OUTCOME" != "success" ]]; then
+            echo "Response generation, validation, or evaluation failed." >&2
             exit 1
           fi
 
@@ -306,47 +343,23 @@ jobs:
           pattern: response-shard-*
           path: artifacts/shards
 
-      - name: Merge generated response shards
-        id: merge
+      - name: Aggregate responses and evaluation results
+        id: aggregate
         continue-on-error: true
-        shell: bash
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
+          python3 chatbot-core/tests/eval/runners/aggregate_evaluations.py \
+            --source artifacts/retrieval/responses.json \
+            --shards-dir artifacts/shards \
+            --output-dir artifacts/combined \
+            --question-count '${{ needs.prepare-response-matrix.outputs.question_count }}' \
+            --expected-shards '${{ needs.prepare-response-matrix.outputs.shard_count }}'
 
-          retrieval_path = Path("artifacts/retrieval/responses.json")
-          base_responses = json.loads(retrieval_path.read_text(encoding="utf-8"))
-
-          shard_root = Path("artifacts/shards")
-          shard_files = sorted(shard_root.rglob("responses.json"))
-          merged_by_id = {entry["id"]: entry for entry in base_responses}
-
-          seen_ids = set()
-          for shard_file in shard_files:
-              shard_responses = json.loads(shard_file.read_text(encoding="utf-8"))
-              for entry in shard_responses:
-                  question_id = entry["id"]
-                  if question_id in seen_ids:
-                      raise SystemExit(f"Duplicate response id across shards: {question_id}")
-                  seen_ids.add(question_id)
-                  merged_by_id[question_id] = entry
-
-          expected_count = int("${{ needs.prepare-response-matrix.outputs.question_count }}")
-          if len(merged_by_id) != expected_count:
-              raise SystemExit(
-                  f"Expected {expected_count} merged responses, found {len(merged_by_id)}"
-              )
-
-          ordered_ids = [entry["id"] for entry in base_responses]
-          merged = [merged_by_id[question_id] for question_id in ordered_ids]
-
-          output_path = Path("artifacts/combined/responses.json")
-          output_path.parent.mkdir(parents=True, exist_ok=True)
-          output_path.write_text(json.dumps(merged, indent=4, ensure_ascii=False) + "\n", encoding="utf-8")
-          PY
+      - name: Publish evaluation report
+        if: always()
+        run: |
+          if [[ -f artifacts/combined/evaluation-report.md ]]; then
+            cat artifacts/combined/evaluation-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload combined responses
         if: always()
@@ -361,9 +374,9 @@ jobs:
         if: always()
         env:
           MATRIX_RESULT: ${{ needs.generate-responses.result }}
-          MERGE_OUTCOME: ${{ steps.merge.outcome }}
+          AGGREGATE_OUTCOME: ${{ steps.aggregate.outcome }}
         run: |
-          if [[ "$MATRIX_RESULT" != "success" || "$MERGE_OUTCOME" != "success" ]]; then
-            echo "One or more response shards or the merge failed." >&2
+          if [[ "$MATRIX_RESULT" != "success" || "$AGGREGATE_OUTCOME" != "success" ]]; then
+            echo "One or more eval shards or final aggregation failed." >&2
             exit 1
           fi
