@@ -198,7 +198,7 @@ jobs:
       - fill-retrieval-context
       - prepare-response-matrix
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(needs.prepare-response-matrix.outputs.max_parallel) }}

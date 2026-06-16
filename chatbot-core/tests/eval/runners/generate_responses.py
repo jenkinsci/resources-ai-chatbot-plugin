@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 from urllib import request
@@ -39,6 +40,18 @@ if str(CORE_ROOT) not in sys.path:
 os.environ.setdefault("PYTEST_VERSION", "eval-runner")
 
 logger = logging.getLogger("eval-generate-responses")
+
+
+def configure_logging() -> None:
+    """
+    Configure runner logs for live GitHub Actions output.
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z",
+        stream=sys.stdout,
+    )
 
 
 def load_retrieval_context_validator() -> Any:
@@ -371,7 +384,7 @@ def generate_outputs_from_responses(
     selected_records = select_records(source_records, offset, limit)
     generated_records: list[dict[str, Any]] = []
 
-    for source_record in selected_records:
+    for index, source_record in enumerate(selected_records, start=1):
         question_id = source_record.get("id")
         question = source_record.get("input")
         retrieval_context = source_record.get("retrieval_context")
@@ -382,15 +395,33 @@ def generate_outputs_from_responses(
         if not has_valid_retrieval_context(retrieval_context):
             raise ValueError(f"{question_id}: retrieval_context is empty or invalid")
 
+        logger.info(
+            "[%d/%d] Generating %s input_chars=%d context_chars=%d",
+            index,
+            len(selected_records),
+            question_id,
+            len(question),
+            sum(len(value) for value in retrieval_context),
+        )
+        started = time.perf_counter()
+        actual_output = generate_output_with_ollama(
+            question=question,
+            retrieval_context=retrieval_context,
+            generation_config=generation_config,
+        )
+        logger.info(
+            "%s completed in %.3f seconds output_chars=%d",
+            question_id,
+            time.perf_counter() - started,
+            len(actual_output),
+        )
+        logger.info("%s actual_output:\n%s", question_id, actual_output)
+
         generated_records.append(
             {
                 "id": question_id,
                 "input": question,
-                "actual_output": generate_output_with_ollama(
-                    question=question,
-                    retrieval_context=retrieval_context,
-                    generation_config=generation_config,
-                ),
+                "actual_output": actual_output,
                 "retrieval_context": retrieval_context,
             }
         )
@@ -429,7 +460,7 @@ def generate_responses(
 
     selected_records = select_records(seed_records, offset, limit)
 
-    for seed in selected_records:
+    for index, seed in enumerate(selected_records, start=1):
         question_id = seed["id"]
 
         if question_id in seen_ids:
@@ -437,6 +468,13 @@ def generate_responses(
 
         seen_ids.add(question_id)
 
+        logger.info(
+            "[%d/%d] Building response entry %s",
+            index,
+            len(selected_records),
+            question_id,
+        )
+        started = time.perf_counter()
         responses.append(
             build_response_entry(
                 seed=seed,
@@ -444,6 +482,8 @@ def generate_responses(
                 generation_config=generation_config,
             )
         )
+        elapsed = time.perf_counter() - started
+        logger.info("%s completed in %.3f seconds", question_id, elapsed)
 
     return responses
 
@@ -542,6 +582,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """Generate and write the responses dataset."""
+    configure_logging()
     args = parse_args()
     if args.retrieval_only and args.generation_only:
         raise ValueError("--retrieval-only and --generation-only are mutually exclusive")
