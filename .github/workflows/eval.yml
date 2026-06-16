@@ -34,7 +34,16 @@ jobs:
           python-version: "3.13"
 
       - name: Build retrieval vector database
-        run: make run-data-pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          {
+            make -j2 run-data-collection
+            make -j2 run-data-preprocessing
+            make -j2 run-data-chunking
+            make -j2 run-data-storage
+          } 2>&1 | tee logs/data-pipeline.log
 
       - name: Verify retrieval artifacts
         shell: bash
