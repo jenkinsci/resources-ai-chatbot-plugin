@@ -106,7 +106,14 @@ jobs:
           missing = [
               entry.get("id", "<unknown>")
               for entry in responses
-              if not entry.get("retrieval_context")
+              if not (
+                  isinstance(entry.get("retrieval_context"), list)
+                  and entry["retrieval_context"]
+                  and all(
+                      isinstance(value, str) and value.strip()
+                      for value in entry["retrieval_context"]
+                  )
+              )
           ]
           if missing:
               raise SystemExit("Missing retrieval context for: " + ", ".join(missing))

@@ -39,9 +39,23 @@ if str(CORE_ROOT) not in sys.path:
 os.environ.setdefault("PYTEST_VERSION", "eval-runner")
 
 logger = logging.getLogger("eval-generate-responses")
-has_valid_retrieval_context = import_module(
-    "runners.validate_responses"
-).has_valid_retrieval_context
+
+
+def load_retrieval_context_validator() -> Any:
+    """
+    Load the shared retrieval-context validator in both local and CI contexts.
+
+    Returns:
+        Any: Callable retrieval-context validation helper.
+    """
+    try:
+        module = import_module("runners.validate_responses")
+    except ModuleNotFoundError:
+        module = import_module("tests.eval.runners.validate_responses")
+    return module.has_valid_retrieval_context
+
+
+has_valid_retrieval_context = load_retrieval_context_validator()
 
 
 def load_eval_config(path: Path = DEFAULT_EVAL_CONFIG) -> dict[str, Any]:
