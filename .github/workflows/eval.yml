@@ -270,7 +270,6 @@ jobs:
 
       - name: Generate responses for shard
         id: generation
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -289,8 +288,6 @@ jobs:
 
       - name: Validate generated shard
         id: validation
-        if: always()
-        continue-on-error: true
         run: |
           python3 chatbot-core/tests/eval/runners/validate_responses.py \
             "$RESULTS_DIR/responses.json" \
@@ -299,8 +296,6 @@ jobs:
 
       - name: Evaluate generated shard
         id: evaluation
-        if: steps.validation.outcome == 'success'
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -324,20 +319,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Enforce shard success
-        if: always()
-        env:
-          GENERATION_OUTCOME: ${{ steps.generation.outcome }}
-          VALIDATION_OUTCOME: ${{ steps.validation.outcome }}
-          EVALUATION_OUTCOME: ${{ steps.evaluation.outcome }}
-        run: |
-          if [[ "$GENERATION_OUTCOME" != "success" || "$VALIDATION_OUTCOME" != "success" || "$EVALUATION_OUTCOME" != "success" ]]; then
-            echo "Response generation, validation, or evaluation failed." >&2
-            exit 1
-          fi
-
   merge-responses:
-    if: always() && needs.prepare-response-matrix.result == 'success'
     needs:
       - prepare-response-matrix
       - generate-responses
@@ -361,7 +343,6 @@ jobs:
 
       - name: Aggregate responses and evaluation results
         id: aggregate
-        continue-on-error: true
         run: |
           python3 chatbot-core/tests/eval/runners/aggregate_evaluations.py \
             --source artifacts/retrieval/responses.json \
@@ -385,14 +366,3 @@ jobs:
           path: artifacts/combined/
           if-no-files-found: error
           retention-days: 14
-
-      - name: Enforce complete response generation
-        if: always()
-        env:
-          MATRIX_RESULT: ${{ needs.generate-responses.result }}
-          AGGREGATE_OUTCOME: ${{ steps.aggregate.outcome }}
-        run: |
-          if [[ "$MATRIX_RESULT" != "success" || "$AGGREGATE_OUTCOME" != "success" ]]; then
-            echo "One or more eval shards or final aggregation failed." >&2
-            exit 1
-          fi
