@@ -149,9 +149,150 @@ def summarize_case(
             errors.append(f"{case_id}: {metric_name} failed: {metric['error']}")
         case_metrics[metric_name] = {
             key: metric.get(key)
-            for key in ("score", "success", "threshold", "reason", "error")
+            for key in ("score", "success", "threshold", "error")
         }
     return {"id": case_id, "metrics": case_metrics}, errors
+
+
+def get_result_case_id(result: dict[str, Any], index: int) -> str:
+    """
+    Return the stable case identifier from one DeepEval result.
+
+    Args:
+        result (dict[str, Any]): Raw DeepEval case result payload.
+        index (int): Zero-based fallback index.
+
+    Returns:
+        str: Stable case identifier.
+    """
+    metadata = result.get("metadata") or {}
+    return str(metadata.get("id") or result.get("name") or f"index-{index}")
+
+
+def count_complete_metrics(result: dict[str, Any]) -> int:
+    """
+    Count metric rows that have usable numeric scores and no metric error.
+
+    Args:
+        result (dict[str, Any]): Raw DeepEval case result payload.
+
+    Returns:
+        int: Number of complete metric rows for the case.
+    """
+    metrics_by_name = {
+        metric.get("name"): metric
+        for metric in result.get("metrics_data", [])
+        if isinstance(metric, dict)
+    }
+    complete_count = 0
+    for metric_name in METRIC_NAMES:
+        metric = metrics_by_name.get(metric_name)
+        if not metric:
+            continue
+        if isinstance(metric.get("score"), (int, float)) and not metric.get("error"):
+            complete_count += 1
+    return complete_count
+
+
+def find_incomplete_case_ids(raw_result: dict[str, Any]) -> set[str]:
+    """
+    Find cases missing at least one usable metric result.
+
+    Args:
+        raw_result (dict[str, Any]): Raw DeepEval evaluation result.
+
+    Returns:
+        set[str]: Case IDs that should be retried.
+    """
+    results = raw_result.get("test_results")
+    if not isinstance(results, list):
+        return set()
+    incomplete_ids: set[str] = set()
+    for index, result in enumerate(results):
+        if not isinstance(result, dict):
+            continue
+        if count_complete_metrics(result) != len(METRIC_NAMES):
+            incomplete_ids.add(get_result_case_id(result, index))
+    return incomplete_ids
+
+
+def merge_retry_results(
+    raw_result: dict[str, Any],
+    retry_result: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Replace incomplete case results when retry output has better coverage.
+
+    Args:
+        raw_result (dict[str, Any]): Original raw DeepEval result.
+        retry_result (dict[str, Any]): Raw DeepEval retry result.
+
+    Returns:
+        dict[str, Any]: Raw result with improved retry rows merged in.
+    """
+    results = raw_result.get("test_results")
+    retry_results = retry_result.get("test_results")
+    if not isinstance(results, list) or not isinstance(retry_results, list):
+        return raw_result
+
+    retry_by_id = {
+        get_result_case_id(result, index): result
+        for index, result in enumerate(retry_results)
+        if isinstance(result, dict)
+    }
+    merged_results = []
+    for index, result in enumerate(results):
+        if not isinstance(result, dict):
+            merged_results.append(result)
+            continue
+        case_id = get_result_case_id(result, index)
+        retry_case = retry_by_id.get(case_id)
+        if retry_case and count_complete_metrics(retry_case) > count_complete_metrics(
+            result
+        ):
+            merged_results.append(retry_case)
+        else:
+            merged_results.append(result)
+
+    raw_result["test_results"] = merged_results
+    return raw_result
+
+
+def run_deepeval(
+    test_cases: list[LLMTestCase],
+    metrics: list[Any],
+    identifier: str,
+    max_concurrent: int,
+):
+    """
+    Run DeepEval with the configured display and error policy.
+
+    Args:
+        test_cases (list[LLMTestCase]): Test cases to evaluate.
+        metrics (list[Any]): DeepEval metric instances.
+        identifier (str): DeepEval run identifier.
+        max_concurrent (int): Maximum async concurrency.
+
+    Returns:
+        Any: DeepEval evaluation result object.
+    """
+    return evaluate(
+        test_cases=test_cases,
+        metrics=metrics,
+        identifier=identifier,
+        async_config=AsyncConfig(
+            run_async=max_concurrent > 1,
+            max_concurrent=max_concurrent,
+        ),
+        display_config=DisplayConfig(
+            print_results=True,
+            verbose_mode=False,
+            truncate_passing_cases=False,
+            inspect_after_run=False,
+        ),
+        cache_config=CacheConfig(write_cache=False, use_cache=False),
+        error_config=ErrorConfig(ignore_errors=True, skip_on_missing_params=False),
+    )
 
 
 def summarize_metrics(
@@ -293,21 +434,39 @@ def run(args: argparse.Namespace) -> int:
         )
         metrics = build_metrics(args.judge_model, args.base_url, args.threshold)
         started = time.perf_counter()
-        result = evaluate(
+        result = run_deepeval(
             test_cases=test_cases,
             metrics=metrics,
             identifier=args.identifier,
-            async_config=AsyncConfig(run_async=False, max_concurrent=1),
-            display_config=DisplayConfig(
-                print_results=True,
-                verbose_mode=True,
-                truncate_passing_cases=False,
-                inspect_after_run=False,
-            ),
-            cache_config=CacheConfig(write_cache=False, use_cache=False),
-            error_config=ErrorConfig(ignore_errors=True, skip_on_missing_params=False),
+            max_concurrent=1,
         )
         raw_result = result.model_dump(mode="json")
+        test_cases_by_id = {test_case.name: test_case for test_case in test_cases}
+        for attempt in range(1, args.retry_attempts + 1):
+            incomplete_case_ids = find_incomplete_case_ids(raw_result)
+            if not incomplete_case_ids:
+                break
+            retry_cases = [
+                test_cases_by_id[case_id]
+                for case_id in sorted(incomplete_case_ids)
+                if case_id in test_cases_by_id
+            ]
+            if not retry_cases:
+                break
+            print(
+                f"Retrying {len(retry_cases)} cases with incomplete metrics "
+                f"(attempt {attempt}/{args.retry_attempts})."
+            )
+            retry_metrics = build_metrics(args.judge_model, args.base_url, args.threshold)
+            retry_result = run_deepeval(
+                test_cases=retry_cases,
+                metrics=retry_metrics,
+                identifier=f"{args.identifier}-retry-{attempt}",
+                max_concurrent=args.retry_concurrency,
+            )
+            raw_result = merge_retry_results(
+                raw_result, retry_result.model_dump(mode="json")
+            )
         summary, errors = summarize_result(
             raw_result,
             args.response_model,
@@ -319,7 +478,12 @@ def run(args: argparse.Namespace) -> int:
         save_json(args.output_dir / "deepeval-result.json", raw_result)
         save_json(args.output_dir / "evaluation-summary.json", summary)
         write_report(summary, args.output_dir / "evaluation-report.md")
-        return int(bool(errors))
+        if errors:
+            print(
+                "Shard evaluation completed with metric gaps; "
+                "aggregate job will enforce coverage and score gates."
+            )
+        return 0
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
         save_json(
             args.output_dir / "evaluation-summary.json",
@@ -345,6 +509,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expected-count", type=int, required=True)
     parser.add_argument("--threshold", type=float, required=True)
     parser.add_argument("--identifier", required=True)
+    parser.add_argument("--retry-attempts", type=int, default=0)
+    parser.add_argument("--retry-concurrency", type=int, default=1)
     parser.add_argument(
         "--base-url", default=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
     )

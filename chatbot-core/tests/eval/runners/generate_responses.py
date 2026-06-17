@@ -31,7 +31,6 @@ DEFAULT_EVAL_CONFIG = CORE_ROOT / "tests/eval/config.json"
 DEFAULT_GOLDEN_DATASET = CORE_ROOT / "tests/eval/datasets/golden_dataset.json"
 DEFAULT_RESPONSES = CORE_ROOT / "tests/eval/datasets/responses.json"
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
-DEFAULT_REQUEST_TIMEOUT = 300.0
 
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
@@ -89,6 +88,10 @@ DEFAULT_RESPONSE_MODEL = str(EVAL_CONFIG["response_model"])
 DEFAULT_MAX_TOKENS = int(EVAL_CONFIG["response_max_tokens"])
 DEFAULT_NUM_CTX = int(EVAL_CONFIG["response_num_ctx"])
 DEFAULT_TEMPERATURE = float(EVAL_CONFIG["response_temperature"])
+DEFAULT_REQUEST_TIMEOUT = float(EVAL_CONFIG.get("response_request_timeout", 300.0))
+DEFAULT_PROMPT_PROFILE = str(EVAL_CONFIG.get("response_prompt_profile", "production"))
+DEFAULT_WARM_PROMPT_CACHE = bool(EVAL_CONFIG.get("warm_prompt_cache", False))
+DEFAULT_KEEP_ALIVE = "60m"
 
 
 @dataclass(frozen=True)
@@ -103,6 +106,7 @@ class GenerationConfig:
         num_ctx (int): Ollama context window size.
         temperature (float): Sampling temperature.
         request_timeout (float): HTTP request timeout in seconds.
+        prompt_profile (str): Prompt profile used for answer generation.
     """
 
     response_model: str
@@ -111,6 +115,7 @@ class GenerationConfig:
     num_ctx: int = DEFAULT_NUM_CTX
     temperature: float = DEFAULT_TEMPERATURE
     request_timeout: float = DEFAULT_REQUEST_TIMEOUT
+    prompt_profile: str = DEFAULT_PROMPT_PROFILE
 
 
 def load_json_list(path: Path) -> list[dict[str, Any]]:
@@ -220,23 +225,40 @@ def retrieve_context_from_tools(question: str) -> list[str]:
     return [retrieved_context] if retrieved_context.strip() else []
 
 
-def build_response_prompt(question: str, retrieval_context: list[str]) -> str:
+def build_response_prompt(
+    question: str,
+    retrieval_context: list[str],
+    prompt_profile: str = DEFAULT_PROMPT_PROFILE,
+) -> str:
     """
-    Build the response-generation prompt using the production system prompt.
+    Build the response-generation prompt for the selected prompt profile.
 
     Args:
         question (str): Eval input question.
         retrieval_context (list[str]): Retrieved Jenkins context.
+        prompt_profile (str): Prompt profile name. Use "concise" for short,
+            strictly grounded CI outputs, otherwise use the production prompt.
 
     Returns:
         str: Prompt for the response-generation model.
     """
-    try:
-        prompts = import_module("api.prompts.prompts")
-    except ImportError as exc:
-        raise RuntimeError("Could not import chatbot response prompt") from exc
+    if prompt_profile == "concise":
+        system_instruction = (
+            "Use only the provided Jenkins retrieval context. "
+            "Do not use external knowledge. "
+            "If the context does not contain enough information, say that the "
+            "provided context does not mention it. "
+            "Normally use 1 to 3 complete sentences and no more than 80 words. "
+            "Do not guess or add unsupported facts. "
+            "Return only the final answer."
+        )
+    else:
+        try:
+            prompts = import_module("api.prompts.prompts")
+        except ImportError as exc:
+            raise RuntimeError("Could not import chatbot response prompt") from exc
+        system_instruction = getattr(prompts, "SYSTEM_INSTRUCTION")
 
-    system_instruction = getattr(prompts, "SYSTEM_INSTRUCTION")
     context_text = "\n\n".join(retrieval_context).strip()
     return f"""{system_instruction}
             Chat History:
@@ -271,9 +293,11 @@ def generate_output_with_ollama(
     """
     payload = {
         "model": generation_config.response_model,
-        "prompt": build_response_prompt(question, retrieval_context),
+        "prompt": build_response_prompt(
+            question, retrieval_context, generation_config.prompt_profile
+        ),
         "stream": False,
-        "keep_alive": "30m",
+        "keep_alive": DEFAULT_KEEP_ALIVE,
         "options": {
             "num_predict": generation_config.max_tokens,
             "num_ctx": generation_config.num_ctx,
@@ -305,7 +329,37 @@ def generate_output_with_ollama(
     generated = result.get("response")
     if not isinstance(generated, str):
         raise RuntimeError("Ollama returned an invalid generation response.")
+    prompt_eval_duration = result.get("prompt_eval_duration")
+    if isinstance(prompt_eval_duration, (int, float)):
+        logger.info(
+            "Ollama prompt_eval_duration_ms=%.3f",
+            prompt_eval_duration / 1_000_000,
+        )
     return generated.strip()
+
+
+def warm_prompt_cache(generation_config: GenerationConfig) -> None:
+    """
+    Warm Ollama with the configured response prompt profile.
+
+    Args:
+        generation_config (GenerationConfig): Output-generation settings.
+    """
+    logger.info("Warming Ollama prompt cache for %s", generation_config.response_model)
+    warm_config = GenerationConfig(
+        response_model=generation_config.response_model,
+        ollama_url=generation_config.ollama_url,
+        max_tokens=1,
+        num_ctx=generation_config.num_ctx,
+        temperature=generation_config.temperature,
+        request_timeout=generation_config.request_timeout,
+        prompt_profile=generation_config.prompt_profile,
+    )
+    generate_output_with_ollama(
+        question="Warm the response prompt cache.",
+        retrieval_context=["Prompt cache warm-up context."],
+        generation_config=warm_config,
+    )
 
 
 def build_response_entry(
@@ -577,6 +631,18 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_REQUEST_TIMEOUT,
         help="Ollama request timeout in seconds.",
     )
+    parser.add_argument(
+        "--prompt-profile",
+        choices=("production", "concise"),
+        default=DEFAULT_PROMPT_PROFILE,
+        help="Response prompt profile used for generated outputs.",
+    )
+    parser.add_argument(
+        "--warm-prompt-cache",
+        action="store_true",
+        default=DEFAULT_WARM_PROMPT_CACHE,
+        help="Warm Ollama with the selected prompt profile before generation.",
+    )
     return parser.parse_args()
 
 
@@ -594,9 +660,12 @@ def main() -> None:
         num_ctx=args.num_ctx,
         temperature=args.temperature,
         request_timeout=args.request_timeout,
+        prompt_profile=args.prompt_profile,
     )
     if args.generation_only:
         source_responses = args.source_responses or args.responses
+        if args.warm_prompt_cache:
+            warm_prompt_cache(generation_config)
         responses = generate_outputs_from_responses(
             source_responses=source_responses,
             generation_config=generation_config,

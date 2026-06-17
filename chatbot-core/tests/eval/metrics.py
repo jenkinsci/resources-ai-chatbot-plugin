@@ -42,6 +42,7 @@ def build_metrics(
         "model": judge_model,
         "threshold": threshold,
         "async_mode": False,
+        "include_reason": False,
     }
     return [
         FaithfulnessMetric(**metric_kwargs),

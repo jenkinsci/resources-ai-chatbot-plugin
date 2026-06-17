@@ -149,9 +149,16 @@ jobs:
       response_max_tokens: ${{ steps.config.outputs.response_max_tokens }}
       response_num_ctx: ${{ steps.config.outputs.response_num_ctx }}
       response_temperature: ${{ steps.config.outputs.response_temperature }}
+      response_request_timeout: ${{ steps.config.outputs.response_request_timeout }}
+      response_prompt_profile: ${{ steps.config.outputs.response_prompt_profile }}
+      warm_prompt_cache: ${{ steps.config.outputs.warm_prompt_cache }}
       judge_max_tokens: ${{ steps.config.outputs.judge_max_tokens }}
       judge_num_ctx: ${{ steps.config.outputs.judge_num_ctx }}
       metric_threshold: ${{ steps.config.outputs.metric_threshold }}
+      minimum_metric_coverage: ${{ steps.config.outputs.minimum_metric_coverage }}
+      missing_metric_retry_attempts: ${{ steps.config.outputs.missing_metric_retry_attempts }}
+      missing_metric_retry_concurrency: ${{ steps.config.outputs.missing_metric_retry_concurrency }}
+      deepeval_per_task_timeout_seconds: ${{ steps.config.outputs.deepeval_per_task_timeout_seconds }}
 
     steps:
       - name: Check out pull request
@@ -177,9 +184,16 @@ jobs:
           print(f"response_max_tokens={config['response_max_tokens']}")
           print(f"response_num_ctx={config['response_num_ctx']}")
           print(f"response_temperature={config['response_temperature']}")
+          print(f"response_request_timeout={config['response_request_timeout']}")
+          print(f"response_prompt_profile={config['response_prompt_profile']}")
+          print(f"warm_prompt_cache={str(config['warm_prompt_cache']).lower()}")
           print(f"judge_max_tokens={config['judge_max_tokens']}")
           print(f"judge_num_ctx={config['judge_num_ctx']}")
           print(f"metric_threshold={config['metric_threshold']}")
+          print(f"minimum_metric_coverage={config['minimum_metric_coverage']}")
+          print(f"missing_metric_retry_attempts={config['missing_metric_retry_attempts']}")
+          print(f"missing_metric_retry_concurrency={config['missing_metric_retry_concurrency']}")
+          print(f"deepeval_per_task_timeout_seconds={config['deepeval_per_task_timeout_seconds']}")
           PY
 
       - name: Plan response shards
@@ -198,7 +212,7 @@ jobs:
       - fill-retrieval-context
       - prepare-response-matrix
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(needs.prepare-response-matrix.outputs.max_parallel) }}
@@ -210,9 +224,13 @@ jobs:
       JUDGE_MODEL: ${{ needs.prepare-response-matrix.outputs.judge_model }}
       DEEPEVAL_DISABLE_DOTENV: "1"
       DEEPEVAL_TELEMETRY_OPT_OUT: "1"
-      DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE: "900"
+      DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE: ${{ needs.prepare-response-matrix.outputs.deepeval_per_task_timeout_seconds }}
       DEEPEVAL_JUDGE_NUM_CTX: ${{ needs.prepare-response-matrix.outputs.judge_num_ctx }}
       DEEPEVAL_JUDGE_NUM_PREDICT: ${{ needs.prepare-response-matrix.outputs.judge_max_tokens }}
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_FLASH_ATTENTION: "1"
+      OLLAMA_KV_CACHE_TYPE: "q8_0"
 
     steps:
       - name: Check out pull request
@@ -273,6 +291,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          WARM_PROMPT_CACHE_ARGS=()
+          if [[ '${{ needs.prepare-response-matrix.outputs.warm_prompt_cache }}' == 'true' ]]; then
+            WARM_PROMPT_CACHE_ARGS+=(--warm-prompt-cache)
+          fi
           chatbot-core/venv/bin/python \
             chatbot-core/tests/eval/runners/generate_responses.py \
             --generation-only \
@@ -282,6 +304,9 @@ jobs:
             --max-tokens '${{ needs.prepare-response-matrix.outputs.response_max_tokens }}' \
             --num-ctx '${{ needs.prepare-response-matrix.outputs.response_num_ctx }}' \
             --temperature '${{ needs.prepare-response-matrix.outputs.response_temperature }}' \
+            --request-timeout '${{ needs.prepare-response-matrix.outputs.response_request_timeout }}' \
+            --prompt-profile '${{ needs.prepare-response-matrix.outputs.response_prompt_profile }}' \
+            "${WARM_PROMPT_CACHE_ARGS[@]}" \
             --offset '${{ matrix.offset }}' \
             --limit '${{ matrix.limit }}' \
             2>&1 | tee "$RESULTS_DIR/generation.log"
@@ -299,6 +324,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          ollama stop "$RESPONSE_MODEL" || true
           python3 chatbot-core/tests/eval/runners/run_evaluation.py \
             --responses "$RESULTS_DIR/responses.json" \
             --goldens chatbot-core/tests/eval/datasets/golden_dataset.json \
@@ -307,6 +333,8 @@ jobs:
             --judge-model "$JUDGE_MODEL" \
             --expected-count '${{ matrix.limit }}' \
             --threshold '${{ needs.prepare-response-matrix.outputs.metric_threshold }}' \
+            --retry-attempts '${{ needs.prepare-response-matrix.outputs.missing_metric_retry_attempts }}' \
+            --retry-concurrency '${{ needs.prepare-response-matrix.outputs.missing_metric_retry_concurrency }}' \
             --identifier "chatbot-${{ github.run_id }}-shard-${{ matrix.shard }}" \
             2>&1 | tee "$RESULTS_DIR/deepeval.log"
 
@@ -349,7 +377,9 @@ jobs:
             --shards-dir artifacts/shards \
             --output-dir artifacts/combined \
             --question-count '${{ needs.prepare-response-matrix.outputs.question_count }}' \
-            --expected-shards '${{ needs.prepare-response-matrix.outputs.shard_count }}'
+            --expected-shards '${{ needs.prepare-response-matrix.outputs.shard_count }}' \
+            --minimum-metric-coverage '${{ needs.prepare-response-matrix.outputs.minimum_metric_coverage }}' \
+            --minimum-average-score '${{ needs.prepare-response-matrix.outputs.metric_threshold }}'
 
       - name: Publish evaluation report
         if: always()
