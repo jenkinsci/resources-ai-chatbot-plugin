@@ -38,6 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p logs
+          make IS_CPU_REQ=1 setup-backend
           {
             make -j2 run-data-collection
             make -j2 run-data-preprocessing
