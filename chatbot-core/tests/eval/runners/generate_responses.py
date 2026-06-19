@@ -243,21 +243,41 @@ def build_response_prompt(
         str: Prompt for the response-generation model.
     """
     if prompt_profile == "concise":
-        system_instruction = (
-            "Use only the provided Jenkins retrieval context. "
-            "Do not use external knowledge. "
-            "If the context does not contain enough information, say that the "
-            "provided context does not mention it. "
-            "Normally use 1 to 3 complete sentences and no more than 80 words. "
-            "Do not guess or add unsupported facts. "
-            "Return only the final answer."
-        )
-    else:
-        try:
-            prompts = import_module("api.prompts.prompts")
-        except ImportError as exc:
-            raise RuntimeError("Could not import chatbot response prompt") from exc
-        system_instruction = getattr(prompts, "SYSTEM_INSTRUCTION")
+        context_text = "\n\n".join(retrieval_context).strip()
+        prompt_parts = [
+            "Role:",
+            "You are a Jenkins documentation assistant that answers only from "
+            "provided retrieval context.",
+            "",
+            "Context:",
+            "The following Jenkins documentation, plugin documentation, and "
+            "community snippets were retrieved for the user question.",
+            context_text,
+            "",
+            "Task:",
+            "Answer the user question using only facts explicitly present in "
+            "the context above.",
+            "If the context only partially answers the question, state only the "
+            "supported part.",
+            "If the context does not mention the answer, say: "
+            '"The provided context does not mention this."',
+            "Do not infer causes, fixes, UI steps, versions, plugin behavior, "
+            "or recommendations unless the context directly states them.",
+            "Output 1 to 2 complete sentences, no more than 60 words, and "
+            "return only the final answer.",
+            "",
+            "User Question:",
+            question.strip(),
+            "",
+            "Final Answer:",
+        ]
+        return "\n".join(prompt_parts)
+
+    try:
+        prompts = import_module("api.prompts.prompts")
+    except ImportError as exc:
+        raise RuntimeError("Could not import chatbot response prompt") from exc
+    system_instruction = getattr(prompts, "SYSTEM_INSTRUCTION")
 
     context_text = "\n\n".join(retrieval_context).strip()
     return f"""{system_instruction}
