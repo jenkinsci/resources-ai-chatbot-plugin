@@ -96,38 +96,11 @@ jobs:
             --responses artifacts/retrieval/responses.json
 
       - name: Validate retrieval context
-        shell: bash
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          config = json.loads(
-              Path("chatbot-core/tests/eval/config.json").read_text(encoding="utf-8")
-          )
-          expected_count = config["question_count"]
-          path = Path("artifacts/retrieval/responses.json")
-          responses = json.loads(path.read_text(encoding="utf-8"))
-          if len(responses) != expected_count:
-              raise SystemExit(
-                  f"Expected {expected_count} responses, found {len(responses)}"
-              )
-          missing = [
-              entry.get("id", "<unknown>")
-              for entry in responses
-              if not (
-                  isinstance(entry.get("retrieval_context"), list)
-                  and entry["retrieval_context"]
-                  and all(
-                      isinstance(value, str) and value.strip()
-                      for value in entry["retrieval_context"]
-                  )
-              )
-          ]
-          if missing:
-              raise SystemExit("Missing retrieval context for: " + ", ".join(missing))
-          PY
+          python3 chatbot-core/tests/eval/runners/validate_responses.py \
+            artifacts/retrieval/responses.json \
+            --config chatbot-core/tests/eval/config.json \
+            --retrieval-only
 
       - name: Upload retrieval-complete responses
         uses: actions/upload-artifact@v4
@@ -167,35 +140,10 @@ jobs:
 
       - name: Load eval config
         id: config
-        shell: bash
         run: |
-          set -euo pipefail
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          from pathlib import Path
-
-          config = json.loads(
-              Path("chatbot-core/tests/eval/config.json").read_text(encoding="utf-8")
-          )
-          print(f"question_count={config['question_count']}")
-          print(f"shard_size={config['shard_size']}")
-          print(f"max_parallel={config['max_parallel']}")
-          print(f"response_model={config['response_model']}")
-          print(f"judge_model={config['judge_model']}")
-          print(f"response_max_tokens={config['response_max_tokens']}")
-          print(f"response_num_ctx={config['response_num_ctx']}")
-          print(f"response_temperature={config['response_temperature']}")
-          print(f"response_request_timeout={config['response_request_timeout']}")
-          print(f"response_prompt_profile={config['response_prompt_profile']}")
-          print(f"warm_prompt_cache={str(config['warm_prompt_cache']).lower()}")
-          print(f"judge_max_tokens={config['judge_max_tokens']}")
-          print(f"judge_num_ctx={config['judge_num_ctx']}")
-          print(f"metric_threshold={config['metric_threshold']}")
-          print(f"minimum_metric_coverage={config['minimum_metric_coverage']}")
-          print(f"missing_metric_retry_attempts={config['missing_metric_retry_attempts']}")
-          print(f"missing_metric_retry_concurrency={config['missing_metric_retry_concurrency']}")
-          print(f"deepeval_per_task_timeout_seconds={config['deepeval_per_task_timeout_seconds']}")
-          PY
+          python3 chatbot-core/tests/eval/runners/export_config_outputs.py \
+            --config chatbot-core/tests/eval/config.json \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Plan response shards
         id: plan
