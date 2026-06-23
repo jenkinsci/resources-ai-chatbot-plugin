@@ -10,6 +10,7 @@ name: LLM-as-a-Judge
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -17,12 +18,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-vector-database:
+  get-retrieval-cache:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.labels.*.name, 'eval')
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    outputs:
+      artifact_name: ${{ steps.cache.outputs.artifact_name }}
+      cache_found: ${{ steps.cache.outputs.cache_found }}
+      run_id: ${{ steps.cache.outputs.run_id }}
 
     steps:
       - name: Check out pull request
@@ -33,40 +37,32 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Build retrieval vector database
-        shell: bash
+      - name: Resolve retrieval vector cache
+        id: cache
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          mkdir -p logs
-          make IS_CPU_REQ=1 setup-backend
-          {
-            make -j2 run-data-collection
-            make -j2 run-data-preprocessing
-            make -j2 run-data-chunking
-            make -j2 run-data-storage
-          } 2>&1 | tee logs/data-pipeline.log
+          python3 chatbot-core/tests/eval/runners/get_retrieval_cache_run.py \
+            --github-output "$GITHUB_OUTPUT"
 
-      - name: Verify retrieval artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          for source in docs plugins discourse; do
-            test -s "chatbot-core/data/embeddings/${source}_index.idx"
-            test -s "chatbot-core/data/embeddings/${source}_metadata.pkl"
-          done
-
-      - name: Upload retrieval vector database
-        uses: actions/upload-artifact@v4
-        with:
-          name: retrieval-vector-database-${{ github.run_id }}
-          path: |
-            chatbot-core/data/embeddings/
-            logs/data-pipeline.log
-          if-no-files-found: error
-          retention-days: 7
+  build-vector-database:
+    needs: get-retrieval-cache
+    if: needs.get-retrieval-cache.outputs.cache_found != 'true'
+    uses: ./.github/workflows/build-retrieval-cache.yml
+    with:
+      retention_days: 2
 
   fill-retrieval-context:
-    needs: build-vector-database
+    needs:
+      - get-retrieval-cache
+      - build-vector-database
+    if: >-
+      always() &&
+      needs.get-retrieval-cache.result == 'success' &&
+      (
+        needs.build-vector-database.result == 'success' ||
+        needs.build-vector-database.result == 'skipped'
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -82,10 +78,21 @@ jobs:
       - name: Install backend dependencies
         run: make IS_CPU_REQ=1 setup-backend
 
-      - name: Download retrieval vector database
+      - name: Download cached retrieval vector database
+        if: needs.get-retrieval-cache.outputs.cache_found == 'true'
         uses: actions/download-artifact@v4
         with:
-          name: retrieval-vector-database-${{ github.run_id }}
+          name: ${{ needs.get-retrieval-cache.outputs.artifact_name }}
+          path: .
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.get-retrieval-cache.outputs.run_id }}
+
+      - name: Download fallback retrieval vector database
+        if: needs.get-retrieval-cache.outputs.cache_found != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-vector-database.outputs.artifact_name }}
           path: .
 
       - name: Fill retrieval_context
