@@ -55,33 +55,28 @@ def github_api_get(path: str, token: str) -> dict[str, Any]:
     return payload
 
 
-def list_successful_workflow_runs(
+def list_recent_workflow_runs(
     repository: str,
-    workflow: str,
-    branch: str,
+    branch: str | None,
     token: str,
 ) -> list[dict[str, Any]]:
     """
-    List recent successful workflow runs for the retrieval cache workflow.
+    List recent workflow runs that could contain the retrieval cache artifact.
 
     Args:
         repository (str): Repository in OWNER/REPO format.
-        workflow (str): Workflow file name or workflow ID.
-        branch (str): Branch that produced trusted cache artifacts.
+        branch (str | None): Optional branch used to narrow the run search.
         token (str): GitHub token with Actions read access.
 
     Returns:
-        list[dict[str, Any]]: Recent successful workflow run records.
+        list[dict[str, Any]]: Recent workflow run records.
     """
-    query = parse.urlencode(
-        {
-            "branch": branch,
-            "status": "success",
-            "per_page": 20,
-        }
-    )
+    query_params: dict[str, str | int] = {"per_page": 20}
+    if branch:
+        query_params["branch"] = branch
+    query = parse.urlencode(query_params)
     payload = github_api_get(
-        f"/repos/{repository}/actions/workflows/{workflow}/runs?{query}",
+        f"/repos/{repository}/actions/runs?{query}",
         token,
     )
     runs = payload.get("workflow_runs", [])
@@ -126,8 +121,7 @@ def run_has_artifact(
 
 def resolve_run_id(
     repository: str,
-    workflow: str,
-    branch: str,
+    branch: str | None,
     artifact_name: str,
     token: str,
 ) -> int:
@@ -136,8 +130,7 @@ def resolve_run_id(
 
     Args:
         repository (str): Repository in OWNER/REPO format.
-        workflow (str): Workflow file name or workflow ID.
-        branch (str): Branch that produced trusted cache artifacts.
+        branch (str | None): Optional branch used to narrow the run search.
         artifact_name (str): Required artifact name.
         token (str): GitHub token with Actions read access.
 
@@ -147,7 +140,7 @@ def resolve_run_id(
     Raises:
         RuntimeError: If no valid cache artifact can be found.
     """
-    for run in list_successful_workflow_runs(repository, workflow, branch, token):
+    for run in list_recent_workflow_runs(repository, branch, token):
         run_id = run.get("id")
         if isinstance(run_id, int) and run_has_artifact(
             repository,
@@ -158,8 +151,8 @@ def resolve_run_id(
             return run_id
 
     raise RuntimeError(
-        f"No non-expired '{artifact_name}' artifact found in recent successful "
-        f"'{workflow}' runs on branch '{branch}'. Run the cache workflow manually."
+        f"No non-expired '{artifact_name}' artifact found in recent workflow "
+        "runs. The fallback cache build will run."
     )
 
 
@@ -193,8 +186,7 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--repository", default=os.getenv("GITHUB_REPOSITORY"))
-    parser.add_argument("--workflow", default="build-retrieval-cache.yml")
-    parser.add_argument("--branch", default="main")
+    parser.add_argument("--branch")
     parser.add_argument("--artifact-name", default=default_artifact_name())
     parser.add_argument("--github-output", type=Path, required=True)
     return parser.parse_args()
@@ -217,7 +209,6 @@ def main() -> int:
 
         run_id = resolve_run_id(
             repository=args.repository,
-            workflow=args.workflow,
             branch=args.branch,
             artifact_name=args.artifact_name,
             token=token,

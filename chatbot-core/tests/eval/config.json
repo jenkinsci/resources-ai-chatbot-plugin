@@ -9,7 +9,7 @@
     "response_num_ctx": 16384,
     "response_request_timeout": 900,
     "response_prompt_profile": "concise",
-    "response_keep_alive": "-1",
+    "response_keep_alive": "60m",
     "warm_prompt_cache": true,
     "judge_max_tokens": 4028,
     "judge_num_ctx": 16384,
