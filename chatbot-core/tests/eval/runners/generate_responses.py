@@ -90,8 +90,22 @@ DEFAULT_NUM_CTX = int(EVAL_CONFIG["response_num_ctx"])
 DEFAULT_TEMPERATURE = float(EVAL_CONFIG["response_temperature"])
 DEFAULT_REQUEST_TIMEOUT = float(EVAL_CONFIG.get("response_request_timeout", 300.0))
 DEFAULT_PROMPT_PROFILE = str(EVAL_CONFIG.get("response_prompt_profile", "production"))
+DEFAULT_KEEP_ALIVE = str(EVAL_CONFIG.get("response_keep_alive", "60m"))
 DEFAULT_WARM_PROMPT_CACHE = bool(EVAL_CONFIG.get("warm_prompt_cache", False))
-DEFAULT_KEEP_ALIVE = "60m"
+
+
+@dataclass(frozen=True)
+class OllamaRuntimeConfig:
+    """
+    Ollama server runtime settings.
+
+    Args:
+        ollama_url (str): Ollama base URL.
+        keep_alive (str): Ollama keep_alive setting for the response model.
+    """
+
+    ollama_url: str
+    keep_alive: str = DEFAULT_KEEP_ALIVE
 
 
 @dataclass(frozen=True)
@@ -101,7 +115,7 @@ class GenerationConfig:
 
     Args:
         response_model (str): Ollama model for output generation.
-        ollama_url (str): Ollama base URL.
+        runtime (OllamaRuntimeConfig): Ollama server runtime settings.
         max_tokens (int): Maximum generated tokens per response.
         num_ctx (int): Ollama context window size.
         temperature (float): Sampling temperature.
@@ -110,7 +124,7 @@ class GenerationConfig:
     """
 
     response_model: str
-    ollama_url: str
+    runtime: OllamaRuntimeConfig
     max_tokens: int = DEFAULT_MAX_TOKENS
     num_ctx: int = DEFAULT_NUM_CTX
     temperature: float = DEFAULT_TEMPERATURE
@@ -249,14 +263,9 @@ def build_response_prompt(
             "You are a Jenkins documentation assistant that answers only from "
             "provided retrieval context.",
             "",
-            "Context:",
-            "The following Jenkins documentation, plugin documentation, and "
-            "community snippets were retrieved for the user question.",
-            context_text,
-            "",
             "Task:",
             "Answer the user question using only facts explicitly present in "
-            "the context above.",
+            "the retrieval context.",
             "If the context only partially answers the question, state only the "
             "supported part.",
             "If the context does not mention the answer, say: "
@@ -265,6 +274,11 @@ def build_response_prompt(
             "or recommendations unless the context directly states them.",
             "Output 1 to 2 complete sentences, no more than 60 words, and "
             "return only the final answer.",
+            "",
+            "Context:",
+            "The following Jenkins documentation, plugin documentation, and "
+            "community snippets were retrieved for the user question.",
+            context_text,
             "",
             "User Question:",
             question.strip(),
@@ -317,7 +331,7 @@ def generate_output_with_ollama(
             question, retrieval_context, generation_config.prompt_profile
         ),
         "stream": False,
-        "keep_alive": DEFAULT_KEEP_ALIVE,
+        "keep_alive": generation_config.runtime.keep_alive,
         "options": {
             "num_predict": generation_config.max_tokens,
             "num_ctx": generation_config.num_ctx,
@@ -326,7 +340,7 @@ def generate_output_with_ollama(
         },
     }
     data = json.dumps(payload).encode("utf-8")
-    endpoint = generation_config.ollama_url.rstrip("/") + "/api/generate"
+    endpoint = generation_config.runtime.ollama_url.rstrip("/") + "/api/generate"
     req = request.Request(
         endpoint,
         data=data,
@@ -349,13 +363,37 @@ def generate_output_with_ollama(
     generated = result.get("response")
     if not isinstance(generated, str):
         raise RuntimeError("Ollama returned an invalid generation response.")
-    prompt_eval_duration = result.get("prompt_eval_duration")
-    if isinstance(prompt_eval_duration, (int, float)):
-        logger.info(
-            "Ollama prompt_eval_duration_ms=%.3f",
-            prompt_eval_duration / 1_000_000,
-        )
+    log_ollama_timings(result)
     return generated.strip()
+
+
+def log_ollama_timings(result: dict[str, Any]) -> None:
+    """
+    Log Ollama timing fields used to inspect prompt-cache behavior.
+
+    Args:
+        result (dict[str, Any]): JSON response returned by Ollama generate API.
+    """
+    timing_fields = {
+        "load_duration_ms": result.get("load_duration"),
+        "prompt_eval_count": result.get("prompt_eval_count"),
+        "prompt_eval_duration_ms": result.get("prompt_eval_duration"),
+        "eval_count": result.get("eval_count"),
+        "eval_duration_ms": result.get("eval_duration"),
+    }
+    formatted: dict[str, int | float] = {}
+    for key, value in timing_fields.items():
+        if not isinstance(value, (int, float)):
+            continue
+        formatted[key] = value / 1_000_000 if key.endswith("_ms") else value
+    if formatted:
+        logger.info(
+            "Ollama timings %s",
+            " ".join(
+                f"{key}={value:.3f}" if isinstance(value, float) else f"{key}={value}"
+                for key, value in formatted.items()
+            ),
+        )
 
 
 def warm_prompt_cache(generation_config: GenerationConfig) -> None:
@@ -368,7 +406,7 @@ def warm_prompt_cache(generation_config: GenerationConfig) -> None:
     logger.info("Warming Ollama prompt cache for %s", generation_config.response_model)
     warm_config = GenerationConfig(
         response_model=generation_config.response_model,
-        ollama_url=generation_config.ollama_url,
+        runtime=generation_config.runtime,
         max_tokens=1,
         num_ctx=generation_config.num_ctx,
         temperature=generation_config.temperature,
@@ -658,6 +696,11 @@ def parse_args() -> argparse.Namespace:
         help="Response prompt profile used for generated outputs.",
     )
     parser.add_argument(
+        "--keep-alive",
+        default=DEFAULT_KEEP_ALIVE,
+        help="Ollama keep_alive value for the response model.",
+    )
+    parser.add_argument(
         "--warm-prompt-cache",
         action="store_true",
         default=DEFAULT_WARM_PROMPT_CACHE,
@@ -675,7 +718,10 @@ def main() -> None:
 
     generation_config = GenerationConfig(
         response_model=args.response_model,
-        ollama_url=args.ollama_url,
+        runtime=OllamaRuntimeConfig(
+            ollama_url=args.ollama_url,
+            keep_alive=args.keep_alive,
+        ),
         max_tokens=args.max_tokens,
         num_ctx=args.num_ctx,
         temperature=args.temperature,

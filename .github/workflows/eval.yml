@@ -132,6 +132,7 @@ jobs:
       response_temperature: ${{ steps.config.outputs.response_temperature }}
       response_request_timeout: ${{ steps.config.outputs.response_request_timeout }}
       response_prompt_profile: ${{ steps.config.outputs.response_prompt_profile }}
+      response_keep_alive: ${{ steps.config.outputs.response_keep_alive }}
       warm_prompt_cache: ${{ steps.config.outputs.warm_prompt_cache }}
       judge_max_tokens: ${{ steps.config.outputs.judge_max_tokens }}
       judge_num_ctx: ${{ steps.config.outputs.judge_num_ctx }}
@@ -262,6 +263,7 @@ jobs:
             --temperature '${{ needs.prepare-response-matrix.outputs.response_temperature }}' \
             --request-timeout '${{ needs.prepare-response-matrix.outputs.response_request_timeout }}' \
             --prompt-profile '${{ needs.prepare-response-matrix.outputs.response_prompt_profile }}' \
+            --keep-alive '${{ needs.prepare-response-matrix.outputs.response_keep_alive }}' \
             "${WARM_PROMPT_CACHE_ARGS[@]}" \
             --offset '${{ matrix.offset }}' \
             --limit '${{ matrix.limit }}' \

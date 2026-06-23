@@ -18,6 +18,7 @@ OUTPUT_KEYS = (
     "response_temperature",
     "response_request_timeout",
     "response_prompt_profile",
+    "response_keep_alive",
     "warm_prompt_cache",
     "judge_max_tokens",
     "judge_num_ctx",
