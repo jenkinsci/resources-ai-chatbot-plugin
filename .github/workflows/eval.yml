@@ -119,6 +119,7 @@ jobs:
 
   prepare-response-matrix:
     needs: fill-retrieval-context
+    if: always() && needs.fill-retrieval-context.result == 'success'
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
@@ -168,6 +169,10 @@ jobs:
     needs:
       - fill-retrieval-context
       - prepare-response-matrix
+    if: >-
+      always() &&
+      needs.fill-retrieval-context.result == 'success' &&
+      needs.prepare-response-matrix.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     strategy:
@@ -300,6 +305,10 @@ jobs:
     needs:
       - prepare-response-matrix
       - generate-responses
+    if: >-
+      always() &&
+      needs.prepare-response-matrix.result == 'success' &&
+      needs.generate-responses.result == 'success'
     runs-on: ubuntu-24.04
 
     steps:
