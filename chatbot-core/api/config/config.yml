@@ -1,14 +1,14 @@
 api:
   prefix: "/api/chatbot"
 
-is_test_mode: false
+is_test_mode: false 
 
 session:
   timeout_hours: 24
   cleanup_interval_seconds: 3600
 
 llm:
-  model_path: "api/models/mistral/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+  model_path: "api/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
   max_tokens: 512
   max_tokens_query_classifier: 5
   max_tokens_retriever_agent: 35
