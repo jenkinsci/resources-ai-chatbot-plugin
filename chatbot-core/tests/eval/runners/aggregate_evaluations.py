@@ -78,6 +78,38 @@ def summarize_metric_cases(
     return summary, average_score, coverage
 
 
+def collect_shard_summaries(
+    shards_dir: Path,
+    expected_shards: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    """
+    Load shard summaries and separate non-fatal shard warnings.
+
+    Args:
+        shards_dir (Path): Directory containing per-shard evaluation outputs.
+        expected_shards (int): Number of shard summaries expected on disk.
+
+    Returns:
+        tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]: Loaded
+        shard summaries, flattened case summaries, and non-fatal warnings.
+
+    Raises:
+        ValueError: If the expected shard summaries are not present.
+    """
+    summary_files = sorted(shards_dir.glob("*/evaluation-summary.json"))
+    if len(summary_files) != expected_shards:
+        raise ValueError(
+            f"Expected {expected_shards} evaluation summaries, found {len(summary_files)}"
+        )
+
+    shard_summaries = [load_json(path) for path in summary_files]
+    cases = [case for summary in shard_summaries for case in summary.get("cases", [])]
+    warnings = [
+        error for summary in shard_summaries for error in summary.get("errors", [])
+    ]
+    return shard_summaries, cases, warnings
+
+
 def aggregate_scores(
     shards_dir: Path,
     question_count: int,
@@ -97,18 +129,13 @@ def aggregate_scores(
         minimum_average_score (float): Required average score for each metric.
 
     Returns:
-        tuple[dict[str, Any], list[str]]: Aggregate summary payload and any
+        tuple[dict[str, Any], list[str]]: Aggregate summary payload and fatal
         validation errors discovered while combining shard results.
     """
-    summary_files = sorted(shards_dir.glob("*/evaluation-summary.json"))
-    if len(summary_files) != expected_shards:
-        raise ValueError(
-            f"Expected {expected_shards} evaluation summaries, found {len(summary_files)}"
-        )
-
-    shard_summaries = [load_json(path) for path in summary_files]
-    cases = [case for summary in shard_summaries for case in summary.get("cases", [])]
-    errors = [error for summary in shard_summaries for error in summary.get("errors", [])]
+    shard_summaries, cases, warnings = collect_shard_summaries(
+        shards_dir, expected_shards
+    )
+    errors: list[str] = []
     metrics: dict[str, Any] = {}
     for metric_name in METRIC_NAMES:
         metric_summary, average_score, coverage = summarize_metric_cases(
@@ -137,6 +164,7 @@ def aggregate_scores(
             "minimum_average_score": minimum_average_score,
             "metrics": metrics,
             "cases": cases,
+            "warnings": warnings,
             "errors": errors,
             "shards": shard_summaries,
         },
@@ -175,6 +203,9 @@ def write_report(summary: dict[str, Any], path: Path) -> None:
     if summary["errors"]:
         lines.extend(["", "## Errors", ""])
         lines.extend(f"- {error}" for error in summary["errors"])
+    if summary.get("warnings"):
+        lines.extend(["", "## Warnings", ""])
+        lines.extend(f"- {warning}" for warning in summary["warnings"])
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -220,6 +251,8 @@ def main() -> int:
     write_report(summary, args.output_dir / "evaluation-report.md")
     if summary["errors"]:
         print("Aggregation completed with errors.")
+        for error in summary["errors"]:
+            print(f"- {error}")
         return 1
     print(f"Aggregated {args.question_count} evaluated responses.")
     return 0
