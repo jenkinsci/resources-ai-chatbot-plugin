@@ -55,73 +55,57 @@ def github_api_get(path: str, token: str) -> dict[str, Any]:
     return payload
 
 
-def list_recent_workflow_runs(
+def list_repository_artifacts(
     repository: str,
-    branch: str | None,
+    artifact_name: str,
     token: str,
 ) -> list[dict[str, Any]]:
     """
-    List recent workflow runs that could contain the retrieval cache artifact.
+    List recent repository artifacts matching the retrieval cache artifact name.
 
     Args:
         repository (str): Repository in OWNER/REPO format.
-        branch (str | None): Optional branch used to narrow the run search.
-        token (str): GitHub token with Actions read access.
-
-    Returns:
-        list[dict[str, Any]]: Recent workflow run records.
-    """
-    query_params: dict[str, str | int] = {"per_page": 20}
-    if branch:
-        query_params["branch"] = branch
-    query = parse.urlencode(query_params)
-    payload = github_api_get(
-        f"/repos/{repository}/actions/runs?{query}",
-        token,
-    )
-    runs = payload.get("workflow_runs", [])
-    if not isinstance(runs, list):
-        raise RuntimeError("GitHub API workflow_runs payload is invalid")
-    return [run for run in runs if isinstance(run, dict)]
-
-
-def run_has_artifact(
-    repository: str,
-    run_id: int,
-    artifact_name: str,
-    token: str,
-) -> bool:
-    """
-    Check whether a workflow run has the required non-expired artifact.
-
-    Args:
-        repository (str): Repository in OWNER/REPO format.
-        run_id (int): Workflow run identifier.
         artifact_name (str): Artifact name to find.
         token (str): GitHub token with Actions read access.
 
     Returns:
-        bool: True when the run has a matching artifact that is not expired.
+        list[dict[str, Any]]: Recent repository artifact records.
     """
+    query = parse.urlencode({"name": artifact_name, "per_page": 100})
     payload = github_api_get(
-        f"/repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100",
+        f"/repos/{repository}/actions/artifacts?{query}",
         token,
     )
     artifacts = payload.get("artifacts", [])
     if not isinstance(artifacts, list):
         raise RuntimeError("GitHub API artifacts payload is invalid")
+    return [artifact for artifact in artifacts if isinstance(artifact, dict)]
 
-    return any(
-        isinstance(artifact, dict)
-        and artifact.get("name") == artifact_name
-        and artifact.get("expired") is False
-        for artifact in artifacts
-    )
+
+def get_artifact_run_id(artifact: dict[str, Any], artifact_name: str) -> int | None:
+    """
+    Return the owning workflow run ID for a usable cache artifact.
+
+    Args:
+        artifact (dict[str, Any]): Repository artifact payload from GitHub.
+        artifact_name (str): Artifact name to find.
+
+    Returns:
+        int | None: Owning workflow run ID when the artifact is usable.
+    """
+    if artifact.get("name") != artifact_name or artifact.get("expired") is not False:
+        return None
+
+    workflow_run = artifact.get("workflow_run")
+    if not isinstance(workflow_run, dict):
+        return None
+
+    run_id = workflow_run.get("id")
+    return run_id if isinstance(run_id, int) else None
 
 
 def resolve_run_id(
     repository: str,
-    branch: str | None,
     artifact_name: str,
     token: str,
 ) -> int:
@@ -130,7 +114,6 @@ def resolve_run_id(
 
     Args:
         repository (str): Repository in OWNER/REPO format.
-        branch (str | None): Optional branch used to narrow the run search.
         artifact_name (str): Required artifact name.
         token (str): GitHub token with Actions read access.
 
@@ -140,18 +123,13 @@ def resolve_run_id(
     Raises:
         RuntimeError: If no valid cache artifact can be found.
     """
-    for run in list_recent_workflow_runs(repository, branch, token):
-        run_id = run.get("id")
-        if isinstance(run_id, int) and run_has_artifact(
-            repository,
-            run_id,
-            artifact_name,
-            token,
-        ):
+    for artifact in list_repository_artifacts(repository, artifact_name, token):
+        run_id = get_artifact_run_id(artifact, artifact_name)
+        if run_id is not None:
             return run_id
 
     raise RuntimeError(
-        f"No non-expired '{artifact_name}' artifact found in recent workflow "
+        f"No non-expired '{artifact_name}' artifact found in repository "
         "runs. The fallback cache build will run."
     )
 
@@ -186,7 +164,6 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--repository", default=os.getenv("GITHUB_REPOSITORY"))
-    parser.add_argument("--branch")
     parser.add_argument("--artifact-name", default=default_artifact_name())
     parser.add_argument("--github-output", type=Path, required=True)
     return parser.parse_args()
@@ -209,7 +186,6 @@ def main() -> int:
 
         run_id = resolve_run_id(
             repository=args.repository,
-            branch=args.branch,
             artifact_name=args.artifact_name,
             token=token,
         )

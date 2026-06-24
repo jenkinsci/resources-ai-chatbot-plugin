@@ -438,7 +438,7 @@ def run(args: argparse.Namespace) -> int:
             test_cases=test_cases,
             metrics=metrics,
             identifier=args.identifier,
-            max_concurrent=1,
+            max_concurrent=2,
         )
         raw_result = result.model_dump(mode="json")
         test_cases_by_id = {test_case.name: test_case for test_case in test_cases}
