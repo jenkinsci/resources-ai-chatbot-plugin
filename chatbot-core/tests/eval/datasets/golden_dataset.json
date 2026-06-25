@@ -1,29 +1,29 @@
 [
   {
-    "input": "Can I trigger multiple deployment jobs from a single Jenkins job?",
-    "expected_output": "Yes, you can trigger multiple deployment jobs from a single Jenkins job using the `build` step provided by the Pipeline Build Step plugin. Each downstream job can be called sequentially with its own parameters, allowing you to deploy multiple applications from one pipeline.",
-    "context": [
-      "Can you make a job that triggers other jobs? Absolutely. the \"build\" action in pipeline will do it. Can you make a job that does multiple things? Sure, don't see why not, super easy to do in pipeline, and less easy to do in freestyle."
-    ],
-    "additional_metadata": {
-      "id": "q-001",
-      "category": "pipeline_syntax",
-      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
-    }
-  },
+  "input": "Can I trigger multiple deployment jobs from a single Jenkins job?",
+  "expected_output": "Yes. In Pipeline, use the build action to trigger other jobs. A Pipeline job can also do multiple things from one job, and this is easier to do in Pipeline than in freestyle jobs.",
+  "context": [
+    "this is a very confusing sentence for me and i think its because our definitions don't match.\nCan you make a job that triggers other jobs? Absolutely. the \"build\" action in pipeline will do it. Can you make a job that does multiple things? Sure, don't see why not, super easy to do in pipeline, and less easy to do in freestyle.\n\nWhere's your issue? What have you tried?"
+  ],
+  "additional_metadata": {
+    "id": "q-001",
+    "category": "pipeline_syntax",
+    "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+  }
+},
   {
-    "input": "Why does the kubectl container hang or exit immediately in a Jenkins Kubernetes plugin pipeline?",
-    "expected_output": "The kubectl container exits immediately when using 'cat' if the image lacks a standard cat binary, and hangs when using 'sleep' as the command. The Kubernetes plugin requires 'cat' with tty: true to pass commands into the container. The fix is to use 'command: cat' with 'tty: true' and add 'runAsUser: 1000' under the container's securityContext.",
-    "context": [
-      "[quote=\"lknite, post:3, topic:3316\"]\ne ‘cat’ command exited immediately, causing the ‘kubectl’ container to exit immediately\n[/quote]\n\nSo I'm thinking that means it either doesn't have cat, or it's a non standard version. Without being at a computer I can't check.\n\nI know the default command is cat to allow it to pass commands in and out of the container. I've never really looked how or why it works.",
-      "I wouldn't call it unstable, i would call it picky. I think it needs cat, or something like it, to translate java code into the container. Not sure about the specifics though. Its how the docker stuff works, not really k8s specific\n\ncan you please publish your files and pipeline with the correct configurations?\n\nWas have the same issue. The fix for me was adding [[CODE_SNIPPET_5]].  \n\n[[CODE_BLOCK_4]]"
-    ],
-    "additional_metadata": {
-      "id": "q-002",
-      "category": "build_failure",
-      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
-    }
-  },
+  "input": "Why does the kubectl container hang or exit immediately in a Jenkins Kubernetes plugin pipeline?",
+  "expected_output": "The kubectl container can exit immediately when the cat command exits immediately. The likely cause is that the image either does not have cat or has a non-standard cat implementation. The Kubernetes container execution is picky because cat, or something like it, is used to pass commands in and out of the container.",
+  "context": [
+    "[quote=\"lknite, post:3, topic:3316\"]\ne ‘cat’ command exited immediately, causing the ‘kubectl’ container to exit immediately\n[/quote]\n\nSo I'm thinking that means it either doesn't have cat, or it's a non standard version. Without being at a computer I can't check.\n\nI know the default command is cat to allow it to pass commands in and out of the container. I've never really looked how or why it works.",
+    "I wouldn't call it unstable, i would call it picky. I think it needs cat, or something like it, to translate java code into the container. Not sure about the specifics though. Its how the docker stuff works, not really k8s specific\n\ncan you please publish your files and pipeline with the correct configurations?\n\nWas have the same issue. The fix for me was adding [[CODE_SNIPPET_5]].  \n\n[[CODE_BLOCK_4]]"
+  ],
+  "additional_metadata": {
+    "id": "q-002",
+    "category": "build_failure",
+    "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+  }
+},
   {
     "input": "Why is Jenkins on Kubernetes getting BitBucket connection timeout errors?",
     "expected_output": "The Bitbucket connection timeout is likely caused by a firewall misconfiguration. Routing traffic without the firewall resolves the issue. Even if bitbucket.org is allowed, the firewall may still be dropping or throttling traffic inconsistently.",
@@ -64,18 +64,18 @@
     }
   },
   {
-    "input": "Why is the GitLab API Token not showing in the credentials dropdown in Jenkins?",
-    "expected_output": "The GitLab API token is not shown in the Git Plugin becuase it does not accept GitLab API credential types. It only accepts username/password credentials for HTTP/HTTPS for SSH access. To fix this, create a username/password type credential and set the username to token_name and the password to the token_value.",
-    "context":[
-      "![image|690x289](upload://f3rN5B8lMxSOR9Fnk1V2q6GIWNL.png)\n\nIt is most likely is that the credential type that you created is not the credential type that is expected in that context.  \n\nThe git plugin accepts username / password credentials for HTTP and HTTPS repository access and it accepts SSH private key credentials for SSH repository access.  It does not accept any other credential types.  It does not accept a GitLab API token credential.",
-      "Thank you for clarifying the types of credentials supported by the git plugin!\n\nAh! This looks like the same problem with the repositories of my students. The user experience is very poor in this case, I think we should rethink the UI here. \n\nThe user selects \"create credentials\", the user creates a new \"token\", the dialog closes, but nothing to see, even no error message that the newly created token is not valid.\n\nHello,\n\nHow did you resolve it?"
-    ],
-    "additional_metadata": {
-      "id": "q-006",
-      "category": "plugin_ecosystem",
-      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
-    }
-  },
+  "input": "Why is the GitLab API Token not showing in the credentials dropdown in Jenkins?",
+  "expected_output": "The GitLab API token is not shown because the Git plugin does not accept GitLab API token credentials. For HTTP and HTTPS repository access, the Git plugin accepts username/password credentials. For SSH repository access, it accepts SSH private key credentials.",
+  "context": [
+    "![image|690x289](upload://f3rN5B8lMxSOR9Fnk1V2q6GIWNL.png)\n\nIt is most likely is that the credential type that you created is not the credential type that is expected in that context.  \n\nThe git plugin accepts username / password credentials for HTTP and HTTPS repository access and it accepts SSH private key credentials for SSH repository access.  It does not accept any other credential types.  It does not accept a GitLab API token credential.",
+    "Thank you for clarifying the types of credentials supported by the git plugin!\n\nAh! This looks like the same problem with the repositories of my students. The user experience is very poor in this case, I think we should rethink the UI here. \n\nThe user selects \"create credentials\", the user creates a new \"token\", the dialog closes, but nothing to see, even no error message that the newly created token is not valid.\n\nHello,\n\nHow did you resolve it?"
+  ],
+  "additional_metadata": {
+    "id": "q-006",
+    "category": "plugin_ecosystem",
+    "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+  }
+},
   {
     "input": "Why does the File Parameter Plugin pipeline fail on Windows nodes?",
     "expected_output": "The pipeline fails because `sh` is not available on Windows. Replace `sh 'cat $FILE'` with `bat \"type $FILE\" to access the file on Windows nodes. ",
@@ -90,17 +90,17 @@
     }
   },
   {
-    "input": "Why do my Jenkins Jobs fail when I close my laptop? Not shutdown.",
-    "expected_output": "Closing the laptop likely puts it to sleep, disconnecting it as a Jenkins agent. The Maven job type is not safe for agent disconnection and will fail when the agent goes offline. Switching to pipeline jobs is recommended as they are able to survive an agent disconnection.",
-    "context":[
-      "Does your laptop maybe go into sleep after closing it? Is your laptop an agent of your Jenkins? Anyway you're using a the maven job type that is know to be problematic and contrary to pipeline jobs is not safe for disconnection of the agent. pipeline jobs are able to survive an agent disconnection."
-    ],
-    "additional_metadata": {
-      "id": "q-008",
-      "category": "build_failure",
-      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
-    }
-  },
+  "input": "Why do my Jenkins Jobs fail when I close my laptop? Not shutdown.",
+  "expected_output": "Closing the laptop likely puts it to sleep and disconnects it as a Jenkins agent. The Maven job type is known to be problematic and is not safe for agent disconnection, while Pipeline jobs can survive an agent disconnection.",
+  "context": [
+    "Does your laptop maybe go into sleep after closing it? Is your laptop an agent of your Jenkins?\nAnyway you're using a the maven job type that is know to be problematic and contrary to pipeline jobs is not safe for disconnection of the agent. pipeline jobs are able to survive an agent disconnection.\n\nHi @mawinter69 \nThank you for your response! I want to clarify that I’ve set up a node as a Jenkins agent, which is connected to system services"
+  ],
+  "additional_metadata": {
+    "id": "q-008",
+    "category": "build_failure",
+    "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+  }
+},
   {
     "input": "How to change USERNAME and USERPROFILE in Jenkins system properties on Windows?",
     "expected_output": "USERNAME and USERPROFILE in Jenkins system properties are determined by the user account running Jenkins as a service. To change them, update the login information in the Windows service definition. It is recommended to use a dedicated service account instead of LocalSystem.",
@@ -115,19 +115,19 @@
     }
   },
   {
-    "input": "In Jenkins, does project, job and item mean the same thing?",
-    "expected_output": "Yes, in Jenkins, Project, Job, and Item all refer to the same concept. In the user interface a project has the same meaning as a job. 'Job' is the older term while 'Project' is the preferred current term per the Jenkins glossary. 'New Item' was renamed from 'New Job' because it now also covers creating folders and other things, not just jobs.",
-    "context": [
-      "Project = Job =  Item.\n\nIn the user interface a project has the same meaning as a job. \n\n*New item* is not a good choice as an action name: it originally was named *New Job* (or *New Project* :wink:) but since you can also create new folders (or other things) it has been renamed to *New Item*. Which is technically correct, but the user interface should not focus on technical implementations...",
-      "We have a [\"Jenkins glossary\"](https://www.jenkins.io/doc/book/glossary/#job) that also provides some guidance on terms and usage.  In this case, it notes that \"Job\" and \"Project\" are referring to the same thing, with \"Job\" being the older term and \"Project\" the preferred current term.\n\nIt may say that but I don’t remember seeing project in use anywhere =/",
-      "In Jenkins, \nwhether the [[CODE_SNIPPET_0]] equals to [[CODE_SNIPPET_1]]?\n\nand when create a Job, there is the Tab:  New Item.\n\nso the Item refers to Job right? \n\nProject = Job =  Item.\n\nIn the user interface a project has the same meaning as a job."
-    ],
-    "additional_metadata": {
-      "id": "q-010",
-      "category": "jenkins_core",
-      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
-    }
-  },
+  "input": "In Jenkins, does project, job and item mean the same thing?",
+  "expected_output": "Yes. In Jenkins, Project, Job, and Item refer to the same concept in this context. The UI uses project with the same meaning as job, the glossary says Job is the older term and Project is preferred, and New Item replaced New Job because the action can create folders and other item types too.",
+  "context": [
+    "Project = Job =  Item.\n\nIn the user interface a project has the same meaning as a job. \n\n*New item* is not a good choice as an action name: it originally was named *New Job* (or *New Project* :wink:) but since you can also create new folders (or other things) it has been renamed to *New Item*. Which is technically correct, but the user interface should not focus on technical implementations...",
+    "We have a [\"Jenkins glossary\"](https://www.jenkins.io/doc/book/glossary/#job) that also provides some guidance on terms and usage.  In this case, it notes that \"Job\" and \"Project\" are referring to the same thing, with \"Job\" being the older term and \"Project\" the preferred current term.\n\nIt may say that but I don’t remember seeing project in use anywhere =/",
+    "In Jenkins, \nwhether the [[CODE_SNIPPET_0]] equals to [[CODE_SNIPPET_1]]?\n\nand when create a Job, there is the Tab:  New Item.\n\nso the Item refers to Job right? \n\nProject = Job =  Item.\n\nIn the user interface a project has the same meaning as a job."
+  ],
+  "additional_metadata": {
+    "id": "q-010",
+    "category": "jenkins_core",
+    "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+  }
+},
   {
     "input": "What backup methods are available for Jenkins?",
     "expected_output": "There are three main backup methods for Jenkins: filesystem snapshots, backup plugins, and shell scripts. Filesystem snapshots provide maximum consistency and speed, supported by LVM, btrfs, ZFS, and many cloud providers. Several backup plugins are available via Manage Jenkins > Plugins, though only the thinBackup plugin is currently maintained. You can also write a custom shell script to copy the required files to a backup location and schedule it using cron.",
@@ -157,17 +157,17 @@
     }
   },
   {
-    "input": "What are the benefits of using Docker as agents in a Jenkins Pipeline?",
-    "expected_output": "Using Docker containers as agents allow the pipeline to define the environment and tools they required without having to configure various system tools and dependencies on agents manually. This approach allows you to use practically any tool which can be packaged in a Docker container, making pipelines more portable and flexible.",
-    "context": [
-      "Docker\nimages and containers to\nrun inside. This allows the Pipeline to define the environment\nand tools required without having to configure various system tools\nand dependencies on agents manually. This approach allows you to use\npractically any tool which can be\npackaged in a Docker container\n.\nFor more agent specification options, consult the\nsyntax reference\n.\nJenkinsfile (Declarative Pipeline)\n[[CODE_BLOCK_0]]\nToggle Scripted Pipeline\n(Advanced)\nJenkinsfile (Scripted Pipeline)"
-    ],
-    "additional_metadata": {
-      "id": "q-013",
-      "category": "jenkins_core",
-      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
-    }
-  },
+  "input": "What are the benefits of using Docker as agents in a Jenkins Pipeline?",
+  "expected_output": "Using Docker containers as Jenkins Pipeline agents lets the Pipeline define the required environment and tools without manually configuring system tools and dependencies on agents. It also lets the Pipeline use practically any tool that can be packaged in a Docker container.",
+  "context": [
+    "Docker\nimages and containers to\nrun inside. This allows the Pipeline to define the environment\nand tools required without having to configure various system tools\nand dependencies on agents manually. This approach allows you to use\npractically any tool which can be\npackaged in a Docker container\n.\nFor more agent specification options, consult the\nsyntax reference\n.\nJenkinsfile (Declarative Pipeline)\n[[CODE_BLOCK_0]]\nToggle Scripted Pipeline\n(Advanced)\nJenkinsfile (Scripted Pipeline)"
+  ],
+  "additional_metadata": {
+    "id": "q-013",
+    "category": "jenkins_core",
+    "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+  }
+},
   {
     "input": "Which plugins help filter potentially unsafe environment variables in Jenkins?",
     "expected_output": "Three plugins help filter unsafe environment variables in Jenkins: - Safe Batch Environment Filter automatically filters Batch build steps if environment variables contain Batch metacharacters. - Generic Build Step Environment Filters provides generic filter implementation for other script interpreters. -Pipeline: Keep environment Step filters out unused environment variables in pipelines to prevent a Global Configuration from failing build steps.",
@@ -194,18 +194,18 @@
     }
   },
   {
-    "input": "How can you combine retry and timeout steps in a Jenkins Pipeline?",
-    "expected_output": "The retry and timeout wrapper steps can be composed together in a Jenkins Pipeline. For example, if we wanted to retry our deployment 5 times, but never spend more than 3 minutes in total before failing the stage, you can nest retry inside timeout or vice versa. Wrapper steps such as timeout and retry may contain other steps, including each other.",
-    "context": [
-      "[[CODE_BLOCK_5]]\nThe \"Deploy\" stage retries the\nflakey-deploy.sh\nscript 3 times, and then\nwaits for up to 3 minutes for the\nhealth-check.sh\nscript to execute. If the\nhealth check script does not complete in 3 minutes, the Pipeline will be marked\nas having failed in the \"Deploy\" stage.\n\"Wrapper\" steps such as\ntimeout\nand\nretry\nmay contain other steps,\nincluding\ntimeout\nor\nretry\n.\nHow do I retry a Jenkins Job?\nWe can compose these steps together. For example, if we wanted to retry our",
-      " We can compose these steps together. For example, if we wanted to retry our\ndeployment 5 times, but never want to spend more than 3 minutes in total before\nfailing the stage:\nJenkinsfile (Declarative Pipeline)\n[[CODE_BLOCK_6]]\nToggle Scripted Pipeline\n(Advanced)\nJenkinsfile (Scripted Pipeline)\n[[CODE_BLOCK_7]]\nFinishing up\nWhen the Pipeline has finished executing, you may need to run clean-up steps or\nperform some actions based on the outcome of the Pipeline. These actions can be"
-    ],
-    "additional_metadata": {
-      "id": "q-016",
-      "category": "pipeline_syntax",
-      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
-    }
-  },
+  "input": "How can you combine retry and timeout steps in a Jenkins Pipeline?",
+  "expected_output": "Use the timeout and retry wrapper steps together. To retry a deployment five times while limiting total time to three minutes, put retry inside timeout as shown in the Pipeline example. Wrapper steps such as timeout and retry may contain other steps, including each other.",
+  "context": [
+    "[[CODE_BLOCK_5]]\nThe \"Deploy\" stage retries the\nflakey-deploy.sh\nscript 3 times, and then\nwaits for up to 3 minutes for the\nhealth-check.sh\nscript to execute. If the\nhealth check script does not complete in 3 minutes, the Pipeline will be marked\nas having failed in the \"Deploy\" stage.\n\"Wrapper\" steps such as\ntimeout\nand\nretry\nmay contain other steps,\nincluding\ntimeout\nor\nretry\n.\nHow do I retry a Jenkins Job?\nWe can compose these steps together. For example, if we wanted to retry our",
+    "We can compose these steps together. For example, if we wanted to retry our\ndeployment 5 times, but never want to spend more than 3 minutes in total before\nfailing the stage:\nJenkinsfile (Declarative Pipeline)\n[[CODE_BLOCK_6]]\nToggle Scripted Pipeline\n(Advanced)\nJenkinsfile (Scripted Pipeline)\n[[CODE_BLOCK_7]]\nFinishing up\nWhen the Pipeline has finished executing, you may need to run clean-up steps or\nperform some actions based on the outcome of the Pipeline. These actions can be"
+  ],
+  "additional_metadata": {
+    "id": "q-016",
+    "category": "pipeline_syntax",
+    "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+  }
+},
   {
     "input": "Why should Jenkins builds be isolated from each other?",
     "expected_output": "Builds need to be isolated from each other because build scripts running on the same agents may be able to access data related to other unrelated projects and potentially manipulate their build results. Even without malicious intent, badly set up build scripts can accidentally delete unrelated data or cause resource exhaustion on the static agent, delaying other builds.",
@@ -220,17 +220,18 @@
     }
   },
   {
-    "input": "What are the two ways to write CLI commands in a Jenkins plugin?",
-    "expected_output": "There are two ways to write CLI commands in a Jenkins plugin. The first is annotating a method with @CLIMethod, which is the easiest approach when exposing behaviors of model objects as CLI commands. The second is extending CLICommand as a subtype and annotating it with @Extension, which provides lower-level control and is suitable for commands that require more serious terminal interaction and remote code execution.",
-    "context": [
-      "Writing commands can be done in two ways.\nAnnotating a method with CLIMethod\nIf you are exposing behaviors of your model objects as CLI commands, the easiest way to achieve it is to put\n@CLIMethod\non a method of your model object. See\nQueue.clear()\nas an example.\nIn addition to the command name as specified in the annotation, you also need to define \"CLI.command-name.shortDescription\" as a message resource, which captures one line human-readable explanation of the command (see"
-    ],
-    "additional_metadata": {
-      "id": "q-018",
-      "category": "plugin_ecosystem",
-      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
-    }
-  },
+  "input": "What are the two ways to write CLI commands in a Jenkins plugin?",
+  "expected_output": "There are two ways to write CLI commands in a Jenkins plugin. The first is to annotate a model object method with @CLIMethod, which is the easiest approach for exposing model object behavior as CLI commands. The second is to implement a CLI command as a subtype of CLICommand and annotate it with @Extension, which gives lower-level control for serious terminal interaction and remote code execution.",
+  "context": [
+    "Writing commands can be done in two ways.\nAnnotating a method with CLIMethod\nIf you are exposing behaviors of your model objects as CLI commands, the easiest way to achieve it is to put\n@CLIMethod\non a method of your model object. See\nQueue.clear()\nas an example.\nIn addition to the command name as specified in the annotation, you also need to define \"CLI.command-name.shortDescription\" as a message resource, which captures one line human-readable explanation of the command (see",
+    "Extending CLICommand\nYou can also implement a CLI command as a subtype of\nCLICommand\n, and put\nExtension\n.\nYou can use existing implementations in the core, such as\nGroovyCommand\n, as a starting point.\nCLICommand\nexposes a lower-level control of the CLI set up (such as a\nChannel\n.)\nThis approach is suitable for the commands that require more serious terminal interaction and remote code execution.\nSee the\njavadoc of CLICommand\nfor more details."
+  ],
+  "additional_metadata": {
+    "id": "q-018",
+    "category": "plugin_ecosystem",
+    "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+  }
+},
   {
     "input": "What are the prerequisites to start using the Adobe Cloud Manager Jenkins plugin?",
     "expected_output": "Before using any builders or steps in the Adobe Cloud Manager plugin, Jenkins needs to be configured to authenticate to an Adobe IO project. This involves three steps: creating an Adobe IO API Integration, adding the credentials to Jenkins, and configuring an Adobe IO Project.",
@@ -244,18 +245,18 @@
     }
   },
   {
-    "input": "What can you manage using the CA Service Virtualization Jenkins plugin?", 
-    "expected_output": "The CA Service Virtualization Jenkins plugin lets you manage virtual services and provision tests from the Jenkins UI. Key features include creating, deploying, starting, stopping, and undeploying virtual services, deploying tests and test suites, viewing built-in test reports, using global or dynamic CA SV connection settings, storing credentials in Jenkins Credentials store, leveraging Jenkins parameters to parametrize CA SV build steps, and full support for Jenkins Pipeline scripting.",
-    "context": [
-      "CA Service Virtualization Jenkins Plugin\nThe CA Service Virtualization plug-in for Jenkins lets you manage virtual services and provision tests on CA Service Virtualization from your Jenkins UI.\nKey Features:\nCreate and Deploy virtual services\nStart / Stop virtual services\nDeploy / Undeploy virtual services\nDeploy tests and test suites\nDisplay of test or test suite Jenkins built-in reports\nUse global or dynamic CA SV connection settings",
-      "Use global or dynamic CA SV connection settings\nCA Service Virtualization credentials supported by Jenkins Credentials store\nLeverage Jenkins parameters to parametrize CA SV build steps\nFull support of Jenkins Pipeline scripting\nFollow the\nCA Service Virtualization Jenkins plugin community\nto get the latest news, tips & tricks, best practices and support.\nAdditional Information\nFor detailed documentation see:\nJenkins Plug-in for CA Service Virtualization."
-    ],
-    "additional_metadata": {
-      "id": "q-020",
-      "category": "plugin_ecosystem",
-      "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
-    }
-  },
+  "input": "What can you manage using the CA Service Virtualization Jenkins plugin?",
+  "expected_output": "The CA Service Virtualization Jenkins plugin lets Jenkins manage virtual services and provision tests from the Jenkins UI. It can create, deploy, start, stop, and undeploy virtual services; deploy tests and test suites; display Jenkins built-in reports; use global or dynamic CA SV connection settings; store CA SV credentials in the Jenkins Credentials store; use Jenkins parameters in CA SV build steps; and support Jenkins Pipeline scripting.",
+  "context": [
+    "CA Service Virtualization Jenkins Plugin\nThe CA Service Virtualization plug-in for Jenkins lets you manage virtual services and provision tests on CA Service Virtualization from your Jenkins UI.\nKey Features:\nCreate and Deploy virtual services\nStart / Stop virtual services\nDeploy / Undeploy virtual services\nDeploy tests and test suites\nDisplay of test or test suite Jenkins built-in reports\nUse global or dynamic CA SV connection settings",
+    "Use global or dynamic CA SV connection settings\nCA Service Virtualization credentials supported by Jenkins Credentials store\nLeverage Jenkins parameters to parametrize CA SV build steps\nFull support of Jenkins Pipeline scripting\nFollow the\nCA Service Virtualization Jenkins plugin community\nto get the latest news, tips & tricks, best practices and support.\nAdditional Information\nFor detailed documentation see:\nJenkins Plug-in for CA Service Virtualization."
+  ],
+  "additional_metadata": {
+    "id": "q-020",
+    "category": "plugin_ecosystem",
+    "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
+  }
+},
   {
     "input": "What are the four testing modes available in the API Fortress Jenkins plugin?", 
     "expected_output": "The API Fortress Jenkins plugin supports four testing modes. 'Run single test' runs a single test by providing a test ID. 'Run automatch' runs tests by providing a URL representing a certain endpoint using automatch patterns. 'Run by tag' runs multiple tests marked with a certain tag. 'Run project' runs all tests contained in a project.",
@@ -270,30 +271,31 @@
     }
   },
   {
-    "input": "How do you setup and use the calendar view plugin?", 
-    "expected_output": "To set up the Calendar View plugin, first create a new view by selecting the 'Calendar View' option and giving it a name. Then configure the view by selecting the jobs whose builds should be displayed and customizing settings as needed. The View Job Filters Plugin can be used for more flexible job selection. Once opened, the view displays all past and future builds for the selected jobs.",
-    "context": [
-      "About\nShows past and future builds in a calendar view.\nScreenshots\nFeatures\nProvides a month, week and day view of past and future builds\nIndicates status of past builds by color\nDisplays when future scheduled builds will happen\nShows estimated duration of future scheduled builds\nConfigurable date and time settings\nUsage\n1. Create a new view\nSelect the\nCalendar View\noption and give the view a name.\n2. Configure the view", 
-      "Select the\nCalendar View\noption and give the view a name.\n2. Configure the view\nSelect the jobs whose builds should be displayed in the view and customize the view to your liking:\nTip: to be more flexible in selecting the jobs use the\nView Job Filters Plugin\n.\n3. Open the view\nThis will show all the past and future builds for the jobs that you have selected in the previous step.\nNote: there is currently no auto refresh available.\nPast builds\nPast builds will appear in four different colors:" 
-    ],
-    "additional_metadata": {
-      "id": "q-022",
-      "category": "plugin_ecosystem",
-      "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
-    }
-  },
+  "input": "How do you setup and use the calendar view plugin?",
+  "expected_output": "To set up the Calendar View plugin, create a new view, select Calendar View, and give it a name. Then select the jobs whose builds should be displayed and customize the view. The View Job Filters Plugin can help with more flexible job selection. Opening the view shows past and future builds for the selected jobs.",
+  "context": [
+    "About\nShows past and future builds in a calendar view.\nScreenshots\nFeatures\nProvides a month, week and day view of past and future builds\nIndicates status of past builds by color\nDisplays when future scheduled builds will happen\nShows estimated duration of future scheduled builds\nConfigurable date and time settings\nUsage\n1. Create a new view\nSelect the\nCalendar View\noption and give the view a name.\n2. Configure the view",
+    "Select the\nCalendar View\noption and give the view a name.\n2. Configure the view\nSelect the jobs whose builds should be displayed in the view and customize the view to your liking:\nTip: to be more flexible in selecting the jobs use the\nView Job Filters Plugin\n.\n3. Open the view\nThis will show all the past and future builds for the jobs that you have selected in the previous step.\nNote: there is currently no auto refresh available.\nPast builds\nPast builds will appear in four different colors:"
+  ],
+  "additional_metadata": {
+    "id": "q-022",
+    "category": "plugin_ecosystem",
+    "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
+  }
+},
   {
-    "input": "Is there a way to categorize Jenkins jobs by naming patterns in a view?", 
-    "expected_output": "Yes, the Categorized View plugin allows you to create a 'Categorized Jobs View' that groups jobs using regular expressions. In the configuration page under 'Job group categorization', you can add multiple expressions, each with a regex to match job names and a naming rule for the category label.",
-    "context": [
-      "Introduce a new kind of view where you can categorize groups of jobs under a single label created by regular expressions or other criterias that can be implemented as extension points.\nDescription\nThis plugin allows you to create a new view that is very similar to the standard Jenkins List Views, but where you can group jobs and categorize them according to regular expressions. The functionality is better explained with images."
-    ],
-    "additional_metadata": {
-      "id": "q-023",
-      "category": "plugin_ecosystem",
-      "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
-    }
-  },
+  "input": "Is there a way to categorize Jenkins jobs by naming patterns in a view?",
+  "expected_output": "Yes. The Categorized View plugin adds a Categorized Jobs View that groups jobs under labels derived from regular expressions. In the Job group categorization section, add as many expressions as needed, with each expression defining a regex that matches job names for that category.",
+  "context": [
+    "Introduce a new kind of view where you can categorize groups of jobs under a single label created by regular expressions or other criterias that can be implemented as extension points.\nDescription\nThis plugin allows you to create a new view that is very similar to the standard Jenkins List Views, but where you can group jobs and categorize them according to regular expressions. The functionality is better explained with images.",
+    "That is, the jobs are now categorized under the labels derived from the regular expression.\nUsage\nTo create the view, just follow the usual procedure to add new views and you will find a new type of view named \"Categorized Jobs View\".\nThe configuration page has a new section, \"Job group categorization\". You can add as many expressions as you want. For each expression, there are two fields:\nRegex for categorization: regular expression to match job names that will be part of this category"
+  ],
+  "additional_metadata": {
+    "id": "q-023",
+    "category": "plugin_ecosystem",
+    "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
+  }
+},
   {
     "input": "How can I find out if my Jenkins instance has security vulnerabilities or plugin issues without manually checking everything?", 
     "expected_output": "The Jenkins Health Advisor by CloudBees plugin proactively identifies issues in your Jenkins environment including security vulnerabilities, performance problems, and plugin version issues. It scans a Support Bundle generated daily from your Jenkins controller and emails you a summary whenever a new problem is detected. The first report covers everything found, and follow-up reports only highlight changes.",
@@ -359,31 +361,33 @@
     }
   },
   {
-    "input": "How to setup Go in a Jenkins pipeline?",
-    "expected_output": "The Golang plugin automatically installs and configures Go tools on a Jenkins agent during a build. First, go to Manage Jenkins > Global Tool Configuration, find the 'Go' section and add a Go installation with a name and version. For Declarative Pipeline, use the tools directive. For Scripted Pipeline, use the tool step and manually set GOROOT and PATH.", 
-    "context": [
-      "Automatically installs and sets up the\nGo programming language\n(golang) tools on a Jenkins agent during a build.\nFunctionality\nDuring a build, this plugin can:\nInstall a particular version of Go on the agent that the build is running on\nThe correct package for the machine's operating system and CPU architecture will be automatically downloaded and installed, if not already present\nExport the\nGOROOT\nenvironment variable, pointing to the installed Go tools\nAdd the path\n$GOROOT/bin", 
-      "Export the\nGOROOT\nenvironment variable, pointing to the installed Go tools\nAdd the path\n$GOROOT/bin\nas a prefix of the\nPATH\n, so that the tools are available during the build\nUsage\nOnce this plugin is installed, you must first configure which Go version(s) you need for your Jenkins jobs, and then configure any jobs that need Go as appropriate.\nGlobal configuration"
-    ],
-    "additional_metadata":{
-      "id":"q-029",
-      "category": "plugin_ecosystem", 
-      "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
-    }
-  },
+  "input": "How to setup Go in a Jenkins pipeline?",
+  "expected_output": "The Golang plugin automatically installs and sets up Go tools on a Jenkins agent during a build. Configure Go under Manage Jenkins > Global Tool Configuration by adding a Go installation. For Declarative Pipeline, use the tools directive. For Scripted Pipeline, use the tool step and set GOROOT and PATH so the selected Go installation is used.",
+  "context": [
+    "Automatically installs and sets up the\nGo programming language\n(golang) tools on a Jenkins agent during a build.\nFunctionality\nDuring a build, this plugin can:\nInstall a particular version of Go on the agent that the build is running on\nThe correct package for the machine's operating system and CPU architecture will be automatically downloaded and installed, if not already present\nExport the\nGOROOT\nenvironment variable, pointing to the installed Go tools\nAdd the path\n$GOROOT/bin",
+    "Export the\nGOROOT\nenvironment variable, pointing to the installed Go tools\nAdd the path\n$GOROOT/bin\nas a prefix of the\nPATH\n, so that the tools are available during the build\nUsage\nOnce this plugin is installed, you must first configure which Go version(s) you need for your Jenkins jobs, and then configure any jobs that need Go as appropriate.\nGlobal configuration",
+    "Global configuration\nIn the Global Tool Configuration (Manage Jenkins → Global Tool Configuration), find the \"Go\" section, click \"Go Installations…\" and \"Add Go\".\nEnter a name, e.g. \"1.19\" — the name itself has no significance, but it's what you'll need to provide for a Pipeline, or will be displayed to users during Freestyle job configuration\nEither select \"Install automatically\" and pick the desired Go version from the drop-down list, or specify another installation method",
+    "Per-job configuration\nDeclarative Pipeline\nYou can use the\ntools\ndirective\nwithin any\npipeline\nor\nstage\n. For example:\n[[CODE_BLOCK_0]]\nScripted Pipeline\nYou will need to grab the installation directory from the\ntool\nstep\n, and ensure that the correct\nGOROOT\nand\nPATH\nare set. For example:\n[[CODE_BLOCK_1]]\nFreestyle\nIn a job's configuration, find the \"Build environment\" section\nSelect the \"Set up Go programming language tools\" checkbox\nSelect the name of a Go installation from the drop-down"
+  ],
+  "additional_metadata": {
+    "id": "q-029",
+    "category": "plugin_ecosystem",
+    "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
+  }
+},
   {
-    "input": "How do I install the Google Kubernetes Engine plugin in Jenkins?",
-    "expected_output": "To install the Google Kubernetes Engine plugin, go to Manage Jenkins > Manage Plugins. Optionally click 'Check now' to refresh plugin data. Under the Available tab, search for 'Google Kubernetes Engine Plugin', check the box under the Install column and click 'Install without restart'. If the plugin does not appear under Available, check that it is listed under Installed and is enabled.", 
-    "context": [
-      "The Google Kubernetes Engine (GKE) Plugin allows you to deploy build artifacts to Kubernetes clusters running in GKE with Jenkins.\nDocumentation\nPlease see the\nGoogle Kubernetes Engine Plugin\ndocs for complete documentation.\nInstallation\nGo to\nManage Jenkins\nthen\nManage Plugins\n.\n(Optional) Make sure the plugin manager has updated data by clicking the\nCheck now\nbutton.\nIn the Plugin Manager, click the\nAvailable\ntab and look for the \"Google Kubernetes Engine Plugin\".\nCheck the box under the", 
-      "Available\ntab and look for the \"Google Kubernetes Engine Plugin\".\nCheck the box under the\nInstall\ncolumn and click the\nInstall without restart\nbutton.\nIf the plugin does not appear under\nAvailable\n, make sure it appears under\nInstalled\nand is enabled.\nPlugin Source Build Installation\nSee\nPlugin Source Build Installation\nto build and install from source.\nUsage\nSee the\nUsage\ndocumentation for how to create a\nDeploy to GKE\nbuild step.\nFeature requests and bug reports"
-    ],
-    "additional_metadata":{
-      "id":"q-030",
-      "category": "plugin_ecosystem", 
-      "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
-    }
-  },
+  "input": "How do I install the Google Kubernetes Engine plugin in Jenkins?",
+  "expected_output": "To install the Google Kubernetes Engine plugin, go to Manage Jenkins > Manage Plugins. Optionally click Check now so the plugin manager has updated data. In the Available tab, find Google Kubernetes Engine Plugin, check the Install column, and click Install without restart. If it does not appear under Available, make sure it appears under Installed and is enabled.",
+  "context": [
+    "The Google Kubernetes Engine (GKE) Plugin allows you to deploy build artifacts to Kubernetes clusters running in GKE with Jenkins.\nDocumentation\nPlease see the\nGoogle Kubernetes Engine Plugin\ndocs for complete documentation.\nInstallation\nGo to\nManage Jenkins\nthen\nManage Plugins\n.\n(Optional) Make sure the plugin manager has updated data by clicking the\nCheck now\nbutton.\nIn the Plugin Manager, click the\nAvailable\ntab and look for the \"Google Kubernetes Engine Plugin\".\nCheck the box under the",
+    "Available\ntab and look for the \"Google Kubernetes Engine Plugin\".\nCheck the box under the\nInstall\ncolumn and click the\nInstall without restart\nbutton.\nIf the plugin does not appear under\nAvailable\n, make sure it appears under\nInstalled\nand is enabled.\nPlugin Source Build Installation\nSee\nPlugin Source Build Installation\nto build and install from source.\nUsage\nSee the\nUsage\ndocumentation for how to create a\nDeploy to GKE\nbuild step.\nFeature requests and bug reports"
+  ],
+  "additional_metadata": {
+    "id": "q-030",
+    "category": "plugin_ecosystem",
+    "source_doc": "chatbot-core/data/processed/chunks_plugin_docs.json"
+  }
+},
   {
     "input": "Why does a GitLab merge request webhook trigger a Jenkins build when a user is just assigned to the MR?",
     "expected_output": "GitLab sends the same webhook payload for every merge request event, including when a user is only assigned. To avoid unnecessary rebuilds, add a conditional stage to the pipeline that inspects the webhook payload and only continues when actual code changes are detected, since GitLab's documentation indicates certain fields are only present when new code is pushed or a suggestion is applied.",
@@ -398,17 +402,17 @@
     }
   },
   {
-    "input": "How can I make a Jenkins job act as a link or shortcut to another job?",
-    "expected_output": "There is no first-class shortcut job type in Jenkins. One approach is to install the markdown-formatter plugin and the embeddable-build-status plugin, then place a build status badge link to the target job in the description of the referencing job or folder.",
-    "context": [
-      "You might install the [markdown formatter plugin](https://plugins.jenkins.io/markdown-formatter/) in your Jenkins controller and the [embeddable build status plugin](https://plugins.jenkins.io/embeddable-build-status/) to place a link to the other job in the description of the referencing job or folder.\n\nI have a folder like this that uses embeddable build status links in the page to show the status of key jobs in a much larger folder of jobs"
-    ],
-    "additional_metadata": {
-      "id": "q-032",
-      "category": "plugin_ecosystem",
-      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
-    }
-  },
+  "input": "How can I make a Jenkins job act as a link or shortcut to another job?",
+  "expected_output": "Install the markdown formatter plugin and the embeddable build status plugin, then place a link to the target job in the description of the referencing job or folder. The source example uses embeddable build status links to show the referenced job status and link from another page.",
+  "context": [
+    "You might install the [markdown formatter plugin](https://plugins.jenkins.io/markdown-formatter/) in your Jenkins controller and the [embeddable build status plugin](https://plugins.jenkins.io/embeddable-build-status/) to place a link to the other job in the description of the referencing job or folder.\n\nI have a folder like this that uses embeddable build status links in the page to show the status of key jobs in a much larger folder of jobs"
+  ],
+  "additional_metadata": {
+    "id": "q-032",
+    "category": "plugin_ecosystem",
+    "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+  }
+},
   {
     "input": "Why does my Jenkins SSH credential fail to connect to a Linux machine?",
     "expected_output": "The SSH credential in Jenkins must contain the private key you generated, not the public key. The public key belongs in the target machine's authorized_keys file (unattended access via .ssh/id_rsa), and the matching private key must be stored in the Jenkins SSH credential used by the job.",
@@ -474,31 +478,32 @@
     }
   },
   {
-    "input": "What happens to the workspace when the same Jenkins job runs concurrently on one node?",
-    "expected_output": "Jenkins automatically gives each concurrent run a separate workspace on the same node by appending a suffix to the workspace name. The same rule applies to the ws step. To avoid concurrent runs entirely, pipeline jobs have a configuration option to disallow concurrent builds.",
-    "context": [
-      "\u200b\n\n[quote=\"poddingue, post:5, topic:15073\"]\nAs far as I know, when two builds of the same job are running concurrently, they try to use the same workspace, which can lead to one build being canceled or the builds interfering with each other.\n[/quote]\n\nNo!\nJenkins will take care that you get separate workspaces, at least when they run on the same node. The second run should happen in a workspace with [[CODE_SNIPPET_2]] appended.\n\nThis also applies to using the [[CODE_SNIPPET_3]] step",
-      "Thanks a lot for correcting, @mawinter69 . \ud83e\udd17\n\nbtw, pipeline jobs have a configuration option that disallows concurrent builds and that aborts previous builds.\n\n![image|690x79](upload://9iygKtkOZ2EokXC48OGNJa6Smdf.png)\n\nThank you for help!\nA temporary fix is to [u]disable[/u] concurrent builds, but the issue turned out to be more Kubernetes related than I thought initially."
-    ],
-    "additional_metadata": {
-      "id": "q-038",
-      "category": "jenkins_core",
-      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
-    }
-  },
+  "input": "What happens to the workspace when the same Jenkins job runs concurrently on one node?",
+  "expected_output": "When concurrent builds of the same Jenkins job run on the same node, Jenkins gives them separate workspaces. The second run may use a workspace with a suffix such as @2, and this also applies to the ws step. Pipeline jobs also have an option to disallow concurrent builds and abort previous builds.",
+  "context": [
+    "​\n\n[quote=\"poddingue, post:5, topic:15073\"]\nAs far as I know, when two builds of the same job are running concurrently, they try to use the same workspace, which can lead to one build being canceled or the builds interfering with each other.\n[/quote]\n\nNo!\nJenkins will take care that you get separate workspaces, at least when they run on the same node. The second run should happen in a workspace with [[CODE_SNIPPET_2]] appended.\n\nThis also applies to using the [[CODE_SNIPPET_3]] step",
+    "Thanks a lot for correcting, @mawinter69 . 🤗\n\nbtw, pipeline jobs have a configuration option that disallows concurrent builds and that aborts previous builds.\n\n![image|690x79](upload://9iygKtkOZ2EokXC48OGNJa6Smdf.png)\n\nThank you for help!\nA temporary fix is to [u]disable[/u] concurrent builds, but the issue turned out to be more Kubernetes related than I thought initially.\n\n> Jenkins will take care that you get separate workspaces, at least when they run on the **same** node",
+    "node\nstep.\ndir : String\nA workspace is automatically allocated for you with the\nnode\nstep, or you can get an alternate workspace with this\nws\nstep, but by default the location is chosen automatically. (Something like\nAGENT_ROOT/workspace/JOB_NAME@2\n.)\nYou can instead specify a path here and that workspace will be locked instead. (The path may be relative to the build agent root, or absolute.)\nIf concurrent builds ask for the same workspace, a directory with a suffix such as\n@2"
+  ],
+  "additional_metadata": {
+    "id": "q-038",
+    "category": "jenkins_core",
+    "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+  }
+},
   {
-    "input": "Why does my global variable documentation not show in the Jenkins UI for a Shared Library?",
-    "expected_output": "The Global Variable Reference for a shared library variable's .txt documentation is only available at the branch level of a multibranch pipeline job, not at the job level.",
-    "context": [
-      "So I have created my variable [[CODE_SNIPPET_0]] and the documentation at [[CODE_SNIPPET_1]]. Put them into [[CODE_SNIPPET_2]] folder of my shared library. Ran the associated job successfully, however the documentation in the Jenkins UI is not present.\n\nDoes this still supposed to work, or not anymore?\n\nNever mind. Was looking at the job level, but the documentation is available only at branch level in multibranch pipeline job.",
-      "https://www.jenkins.io/doc/book/pipeline/shared-libraries/#directory-structure mentions that global variables can be documented in .txt files representing those variables, and this documentation appears in the **Global Variable Reference** window."
-    ],
-    "additional_metadata": {
-      "id": "q-039",
-      "category": "pipeline_syntax",
-      "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
-    }
-  },
+  "input": "Why does my global variable documentation not show in the Jenkins UI for a Shared Library?",
+  "expected_output": "The shared library global variable documentation can be present even if it is not visible at the job level. For a multibranch Pipeline, the Global Variable Reference documentation is available at the branch level after the associated job has run successfully.",
+  "context": [
+    "So I have created my variable [[CODE_SNIPPET_0]] and the documentation at [[CODE_SNIPPET_1]]. Put them into [[CODE_SNIPPET_2]] folder of my shared library. Ran the associated job successfully, however the documentation in the Jenkins UI is not present.\n\nDoes this still supposed to work, or not anymore?\n\nNever mind. Was looking at the job level, but the documentation is available only at branch level in multibranch pipeline job.",
+    "https://www.jenkins.io/doc/book/pipeline/shared-libraries/#directory-structure mentions that global variables can be documented in .txt files representing those variables, and this documentation appears in the **Global Variable Reference** window."
+  ],
+  "additional_metadata": {
+    "id": "q-039",
+    "category": "pipeline_syntax",
+    "source_doc": "chatbot-core/data/processed/chunks_discourse_docs.json"
+  }
+},
   {
     "input": "Why does an ephemeral Docker Android agent fail with `UnsupportedClassVersionError: class file version 55.0`?",
     "expected_output": "The agent image is running a different Java version than the Jenkins controller. Bytecode version 52.0 means JDK 8 and 55.0 means JDK 11, and the agent and controller must use the same Java version. JDK 8 is also no longer supported since Jenkins 2.357 and 2.361.1 LTS, so the agent image needs to be rebuilt with a matching modern JDK.",
@@ -513,17 +518,18 @@
     }
   },
   {
-    "input": "How do I run Jenkins behind Caddy as an HTTPS reverse proxy using Docker Compose?",
-    "expected_output": "To run Jenkins behind Caddy, create a docker-compose.yml and a Caddyfile in the same directory. Prerequisites are DNS pointing to the Docker host and ports 80/443 open. After startup, set the Jenkins URL under Manage Jenkins > System > Jenkins Location to your subdomain, or to a sub-path like https://example.com/jenkins/ with JENKINS_OPTS=--prefix=/jenkins if using a sub-path setup.",
-    "context": [
-      "Index\nReverse proxy - Caddy\nThis sets up Jenkins behind Caddy as an HTTPS reverse proxy using Docker Compose.\nPrerequisites\nDNS for your domain pointing to the Docker host\nPorts 80/443 open to the internet\n(Optional, for sub-path) Decide your Jenkins context path (e.g.,\n/jenkins\n)\nFiles\nCreate these two files in the same directory.\ndocker-compose.yml\n[[CODE_BLOCK_0]]\nCaddyfile (subdomain)\n[[CODE_BLOCK_1]]\nCaddyfile (sub-path\n/jenkins\n)\n[[CODE_BLOCK_2]]\nRun\n[[CODE_BLOCK_3]]\nJenkins URL"
-    ],
-    "additional_metadata": {
-      "id": "q-041",
-      "category": "jenkins_core",
-      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
-    }
-  },
+  "input": "How do I run Jenkins behind Caddy as an HTTPS reverse proxy using Docker Compose?",
+  "expected_output": "To run Jenkins behind Caddy with Docker Compose, point DNS to the Docker host, open ports 80 and 443, and create docker-compose.yml plus a Caddyfile in the same directory. After startup, set the Jenkins URL under Manage Jenkins > System > Jenkins Location to the subdomain URL, or to the sub-path URL when using /jenkins with JENKINS_OPTS=--prefix=/jenkins.",
+  "context": [
+    "Index\nReverse proxy - Caddy\nThis sets up Jenkins behind Caddy as an HTTPS reverse proxy using Docker Compose.\nPrerequisites\nDNS for your domain pointing to the Docker host\nPorts 80/443 open to the internet\n(Optional, for sub-path) Decide your Jenkins context path (e.g.,\n/jenkins\n)\nFiles\nCreate these two files in the same directory.\ndocker-compose.yml\n[[CODE_BLOCK_0]]\nCaddyfile (subdomain)\n[[CODE_BLOCK_1]]\nCaddyfile (sub-path\n/jenkins\n)\n[[CODE_BLOCK_2]]\nRun\n[[CODE_BLOCK_3]]\nJenkins URL",
+    "[[CODE_BLOCK_1]]\nCaddyfile (sub-path\n/jenkins\n)\n[[CODE_BLOCK_2]]\nRun\n[[CODE_BLOCK_3]]\nJenkins URL\nAfter startup, set the Jenkins URL under\nManage Jenkins → System → Jenkins Location\nto either:\nhttps://jenkins.example.com/\n(subdomain)\nhttps://example.com/jenkins/\n(sub-path; ensure\nJENKINS_OPTS=--prefix=/jenkins\nis set as shown above)\nIndex\nWas this page helpful?"
+  ],
+  "additional_metadata": {
+    "id": "q-041",
+    "category": "jenkins_core",
+    "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+  }
+},
   {
     "input": "Which Jenkins directories do I need to back up vs. ones I can leave out?",
     "expected_output": "The exploded war file, ./cache (downloaded tools), and ./tools (extracted tools) do not need to be backed up as they can be re-downloaded or re-extracted. The ./plugins/xxx subdirectories will be automatically populated on the next restart. Always validate your backups so you do not discover they are unusable when you actually need them.",
@@ -550,18 +556,18 @@
     }
   },
   {
-    "input": "What is the major change to be aware of when upgrading to Jenkins LTS 2.504.1?",
-    "expected_output": "As of 2.504.1, Yahoo! UI (YUI) has been removed from Jenkins core (initially removed in weekly 2.493). Plugins that still depend on YUI in their configuration UIs will break. A small number of plugins with over 800 installs (AWS Lambda, SLOCCount, OpenStack Cloud, Fortify on Demand) have not yet removed YUI, and others are tracked in the YUI removal epic.",
-    "context": [
-      "As of Jenkins 2.504.1, Yahoo! UI (YUI) has been removed from Jenkins core.\nThis was initially removed in the weekly 2.493 release and is the result of work done over multiple years.\nPlugins that had previously used YUI must remove its usage accordingly.\nThanks to all of the work from core and plugin maintainers and contributors, there has been great progress made to ensure that components have been updated.\nThe list of plugins can be found in our\ntracking sheet\n.",
-      "The list of plugins can be found in our\ntracking sheet\n.\nAt this time, there are only a few plugins with over 800 installs, not planned for deprecation, that have not removed YUI from their configuration.\nThese plugins are:\nAWS Lambda\nSLOCCount\nOpenStack Cloud\nFortify on Demand\nThere are other plugins, all under 700 installs, that have issues created for them in the Jenkins issue tracker, linked to the overall\nYUI removal epic\n.\nRemove jCIFS and j-Interop"
-    ],
-    "additional_metadata": {
-      "id": "q-044",
-      "category": "jenkins_core",
-      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
-    }
-  },
+  "input": "What is the major change to be aware of when upgrading to Jenkins LTS 2.504.1?",
+  "expected_output": "The major change in Jenkins LTS 2.504.1 is that Yahoo! UI, or YUI, has been removed from Jenkins core after first being removed in weekly 2.493. Plugins that still use YUI must remove that usage. The tracked plugins with over 800 installs that had not removed YUI include AWS Lambda, SLOCCount, OpenStack Cloud, and Fortify on Demand.",
+  "context": [
+    "As of Jenkins 2.504.1, Yahoo! UI (YUI) has been removed from Jenkins core.\nThis was initially removed in the weekly 2.493 release and is the result of work done over multiple years.\nPlugins that had previously used YUI must remove its usage accordingly.\nThanks to all of the work from core and plugin maintainers and contributors, there has been great progress made to ensure that components have been updated.\nThe list of plugins can be found in our\ntracking sheet\n.",
+    "The list of plugins can be found in our\ntracking sheet\n.\nAt this time, there are only a few plugins with over 800 installs, not planned for deprecation, that have not removed YUI from their configuration.\nThese plugins are:\nAWS Lambda\nSLOCCount\nOpenStack Cloud\nFortify on Demand\nThere are other plugins, all under 700 installs, that have issues created for them in the Jenkins issue tracker, linked to the overall\nYUI removal epic\n.\nRemove jCIFS and j-Interop"
+  ],
+  "additional_metadata": {
+    "id": "q-044",
+    "category": "jenkins_core",
+    "source_doc": "chatbot-core/data/processed/chunks_docs.json"
+  }
+},
   {
     "input": "Which Configuration as Code and agent launch changes must I make when upgrading to Jenkins LTS 2.440.x?",
     "expected_output": "Replace `diskSpaceMonitor` with `diskSpace` in the JCasC nodeMonitors definition. For agents, the `-jnlpUrl ${JENKINS_URL}/computer/${AGENT_NAME}/jenkins-agent.jnlp` argument to agent.jar is deprecated; use `-url ${JENKINS_URL}` and `-name ${AGENT_NAME}` instead, passing in `-webSocket`, `-tunnel`, and work directory options as needed.",
@@ -628,15 +634,16 @@
     }
   },
   {
-    "input": "Where can I find the Javadoc for the Jenkins core APIs my plugin depends on?",
-    "expected_output": "Jenkins publishes Javadoc for the latest weekly release and for recent LTS releases of core. Stapler, the request routing framework, has its own separate Javadoc as well. Start by choosing the minimum Jenkins core baseline for your plugin, then read the Javadoc matching that version.",
-    "context": [
-      "Javadoc\nJenkins Core\nThis is the Javadoc for Jenkins core. Javadoc is available for the latest weekly release and for recent LTS releases.\nSee choosing a Jenkins baseline for guidance choosing the minimum Jenkins core version for a plugin.\nWeekly\nLatest Core Javadoc\nLTS\nJenkins Core 2.555.1 Javadoc\nJenkins Core 2.541.3 Javadoc\nJenkins Core 2.528.3 Javadoc\nJenkins Core 2.516.3 Javadoc\nStapler Javadoc"
-    ],
-    "additional_metadata": {
-      "id": "q-050",
-      "category": "jenkins_core",
-      "source_doc": "chatbot-core/data/processed/chunks_docs.json"
-    }
+  "input": "Where can I find the Javadoc for the Jenkins core APIs my plugin depends on?",
+  "expected_output": "Jenkins publishes Javadoc for Jenkins core for the latest weekly release and recent LTS releases. Choose the minimum Jenkins core baseline for the plugin, then use the matching Jenkins core Javadoc. Stapler also has separate Javadoc for the request routing framework used by Jenkins.",
+  "context": [
+    "Javadoc\nJenkins Core\nThis is the Javadoc for Jenkins core. Javadoc is available for the latest weekly release and for recent LTS releases.\nSee\nchoosing a Jenkins baseline\nfor guidance choosing the minimum Jenkins core version for a plugin.\nWeekly\nLatest Core Javadoc\nLTS\nJenkins Core\n2.555.1\nJavadoc\nJenkins Core\n2.541.3\nJavadoc\nJenkins Core\n2.528.3\nJavadoc\nJenkins Core\n2.516.3\nJavadoc\nStapler Javadoc\nStapler Javadoc",
+    "Javadoc\nJenkins Core\n2.528.3\nJavadoc\nJenkins Core\n2.516.3\nJavadoc\nStapler Javadoc\nStapler Javadoc\ndescribes the framework used by Jenkins to route requests to the objects handling them.\nLearn more.\nComponents Javadoc\nComponents Javadoc\ndescribes Jenkins components and libraries (currently a partial list of components).\nPlugins Javadoc\nPlugins Javadoc\ndescribes the newest releases of all Jenkins plugins, if available."
+  ],
+  "additional_metadata": {
+    "id": "q-050",
+    "category": "jenkins_core",
+    "source_doc": "chatbot-core/data/processed/chunks_docs.json"
   }
+}
 ]
