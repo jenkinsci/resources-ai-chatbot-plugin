@@ -15,7 +15,7 @@ import json
 import uuid
 
 import pytest
-from langchain.schema import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from api.services import memory
 
@@ -134,7 +134,7 @@ class TestPersistSessionSerializationFix:
         sm, _ = tmp_session
         session_id = memory.init_session()
         session = memory.get_session(session_id)
-        session.chat_memory.add_message(HumanMessage(content="How do I install Jenkins?"))
+        session.add_message(HumanMessage(content="How do I install Jenkins?"))
 
         # Must not raise TypeError
         memory.persist_session(session_id)
@@ -149,7 +149,7 @@ class TestPersistSessionSerializationFix:
         sm, _ = tmp_session
         session_id = memory.init_session()
         session = memory.get_session(session_id)
-        session.chat_memory.add_message(AIMessage(content="Jenkins is open-source."))
+        session.add_message(AIMessage(content="Jenkins is open-source."))
 
         memory.persist_session(session_id)
 
@@ -163,9 +163,9 @@ class TestPersistSessionSerializationFix:
         sm, _ = tmp_session
         session_id = memory.init_session()
         session = memory.get_session(session_id)
-        session.chat_memory.add_message(HumanMessage(content="What is Jenkins?"))
-        session.chat_memory.add_message(AIMessage(content="Jenkins is a CI/CD tool."))
-        session.chat_memory.add_message(HumanMessage(content="How do I install it?"))
+        session.add_message(HumanMessage(content="What is Jenkins?"))
+        session.add_message(AIMessage(content="Jenkins is a CI/CD tool."))
+        session.add_message(HumanMessage(content="How do I install it?"))
 
         memory.persist_session(session_id)
 
@@ -180,7 +180,7 @@ class TestPersistSessionSerializationFix:
         _, tmp_path = tmp_session
         session_id = memory.init_session()
         session = memory.get_session(session_id)
-        session.chat_memory.add_message(HumanMessage(content="Hello"))
+        session.add_message(HumanMessage(content="Hello"))
 
         memory.persist_session(session_id)
 
@@ -209,7 +209,7 @@ class TestPersistLoadRoundTrip:
         sm, _ = tmp_session
         session_id = memory.init_session()
         session = memory.get_session(session_id)
-        session.chat_memory.add_message(HumanMessage(content="Hello, Jenkins!"))
+        session.add_message(HumanMessage(content="Hello, Jenkins!"))
 
         memory.persist_session(session_id)
 
@@ -223,9 +223,9 @@ class TestPersistLoadRoundTrip:
         sm, _ = tmp_session
         session_id = memory.init_session()
         session = memory.get_session(session_id)
-        session.chat_memory.add_message(HumanMessage(content="What is Jenkins?"))
-        session.chat_memory.add_message(AIMessage(content="Jenkins is a CI/CD tool."))
-        session.chat_memory.add_message(HumanMessage(content="Thanks!"))
+        session.add_message(HumanMessage(content="What is Jenkins?"))
+        session.add_message(AIMessage(content="Jenkins is a CI/CD tool."))
+        session.add_message(HumanMessage(content="Thanks!"))
 
         memory.persist_session(session_id)
 

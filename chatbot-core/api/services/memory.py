@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timedelta
 from threading import Lock
 from typing import Optional
-from langchain.memory import ConversationBufferMemory
+from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from api.config.loader import CONFIG
 from api.services.sessionmanager import(
@@ -17,7 +17,7 @@ from api.services.sessionmanager import(
     append_message,
     get_persisted_session_ids
 )
-# sessionId --> {"memory": ConversationBufferMemory, "last_accessed": datetime}
+# sessionId --> {"memory": InMemoryChatMessageHistory, "last_accessed": datetime}
 
 
 _sessions = {}
@@ -41,13 +41,13 @@ def init_session() -> str:
     session_id = str(uuid.uuid4())
     with _lock:
         _sessions[session_id] = {
-            "memory": ConversationBufferMemory(return_messages=True),
+            "memory": InMemoryChatMessageHistory(),
             "last_accessed": datetime.now()
         }
     return session_id
 
 
-def _restore_persisted_message(memory: ConversationBufferMemory, message: object) -> None:
+def _restore_persisted_message(memory: InMemoryChatMessageHistory, message: object) -> None:
     """
     Restore one persisted message into LangChain memory.
 
@@ -68,10 +68,10 @@ def _restore_persisted_message(memory: ConversationBufferMemory, message: object
         content = str(content)
 
     message_class = _ROLE_TO_MESSAGE_CLASS.get(normalized_role, HumanMessage)
-    memory.chat_memory.add_message(message_class(content=content))
+    memory.add_message(message_class(content=content))
 
 
-def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
+def get_session(session_id: str) -> Optional[InMemoryChatMessageHistory]:
     """
     Retrieve the chat session memory for the given session ID.
     Lazily restores from disk if missing in memory.
@@ -80,7 +80,7 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
         session_id (str): The session identifier.
 
     Returns:
-        Optional[ConversationBufferMemory]: The memory object if found, else None.
+        Optional[InMemoryChatMessageHistory]: The memory object if found, else None.
     """
 
     with _lock:
@@ -95,7 +95,7 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
         if not history:
             return None
 
-        memory = ConversationBufferMemory(return_messages=True)
+        memory = InMemoryChatMessageHistory()
         for msg in history:
             _restore_persisted_message(memory, msg)
 
@@ -106,7 +106,7 @@ def get_session(session_id: str) -> Optional[ConversationBufferMemory]:
 
         return memory
 
-async def get_session_async(session_id: str) -> Optional[ConversationBufferMemory]:
+async def get_session_async(session_id: str) -> Optional[InMemoryChatMessageHistory]:
     """
     Async wrapper for get_session to prevent event loop blocking.
     """
@@ -124,7 +124,7 @@ def persist_session(session_id: str)-> None:
     if session_data:
         messages = [
             {"role": msg.type, "content": msg.content}
-            for msg in session_data.chat_memory.messages
+            for msg in session_data.messages
         ]
         append_message(session_id, messages)
 

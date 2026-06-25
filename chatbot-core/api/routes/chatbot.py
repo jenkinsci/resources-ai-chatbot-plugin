@@ -243,7 +243,7 @@ def get_chat_history(session_id: str):
 
     messages = [
         {"role": msg.type, "content": msg.content}
-        for msg in session.chat_memory.messages
+        for msg in session.messages
     ]
     return MessageHistoryResponse(
         session_id=session_id,

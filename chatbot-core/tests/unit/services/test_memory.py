@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
-from langchain.memory import ConversationBufferMemory
+from langchain_core.chat_history import InMemoryChatMessageHistory
 
 from api.prompts.prompt_builder import build_prompt
 from api.services import memory
@@ -29,7 +29,7 @@ def test_get_session_returns_existing_session():
     session_id = memory.init_session()
     session = memory.get_session(session_id)
 
-    assert isinstance(session, ConversationBufferMemory)
+    assert isinstance(session, InMemoryChatMessageHistory)
     assert session is memory.get_session(session_id)
 
 
@@ -47,8 +47,8 @@ def test_get_session_restores_disk_messages_as_langchain_messages(mocker):
     session = memory.get_session(session_id)
 
     assert session is not None
-    assert [msg.type for msg in session.chat_memory.messages] == ["human", "ai"]
-    assert [msg.content for msg in session.chat_memory.messages] == ["hi", "hello"]
+    assert [msg.type for msg in session.messages] == ["human", "ai"]
+    assert [msg.content for msg in session.messages] == ["hi", "hello"]
 
     prompt = build_prompt("How are you?", "context", session)
     assert "User: hi" in prompt

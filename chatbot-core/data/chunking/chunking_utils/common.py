@@ -2,7 +2,7 @@
 import os
 import json
 import uuid
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 def save_chunks(output_path, all_chunks, logger):

@@ -1,15 +1,15 @@
 """Unit tests for prompt builder logic."""
 
-from langchain.memory import ConversationBufferMemory
+from langchain_core.chat_history import InMemoryChatMessageHistory
 from api.prompts.prompt_builder import build_prompt, SYSTEM_INSTRUCTION
 from api.prompts.prompts import LOG_ANALYSIS_INSTRUCTION
 
 
 def test_build_prompt_with_full_history_and_context():
     """Test prompt formatting with user + assistant chat history and context."""
-    memory = ConversationBufferMemory(return_messages=True)
-    memory.chat_memory.add_user_message("How do I configure a Jenkins job?") # pylint: disable=no-member
-    memory.chat_memory.add_ai_message("You can use the freestyl option.") # pylint: disable=no-member
+    memory = InMemoryChatMessageHistory()
+    memory.add_user_message("How do I configure a Jenkins job?") # pylint: disable=no-member
+    memory.add_ai_message("You can use the freestyl option.") # pylint: disable=no-member
     context = "You can configure Jenkins jobs using freestyle option or pipelines."
     user_query = "What about using pipelines?"
 
@@ -29,7 +29,7 @@ def test_build_prompt_with_full_history_and_context():
 
 def test_build_prompt_with_empty_history():
     """Test prompt formatting when no prior messages exist."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = InMemoryChatMessageHistory()
     context = "Relevant Jenkins documentation here."
     user_query = "How do I install plugins?"
 
@@ -47,7 +47,7 @@ def test_build_prompt_with_empty_history():
 
 def test_build_prompt_with_no_context_and_whitespace_query():
     """Test prompt formatting when context is missing and question has extra spaces."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = InMemoryChatMessageHistory()
     user_query = "   How can I trigger a build manually?   "
     context = ""
 
@@ -80,7 +80,7 @@ def test_build_prompt_with_none_memory():
 def test_build_prompt_with_log_context_uses_log_analysis_instruction():
     """Test that providing log_context switches to LOG_ANALYSIS_INSTRUCTION
     and includes the 'User-Provided Log Data' section in the prompt."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = InMemoryChatMessageHistory()
     context = "Jenkins pipeline documentation."
     user_query = "Why did my build fail?"
     log_context = "ERROR: Build step 'Execute shell' marked build as failure"
@@ -106,9 +106,9 @@ def test_build_prompt_with_log_context_uses_log_analysis_instruction():
 
 def test_build_prompt_with_log_context_and_history():
     """Test the full combination: log_context + conversation history + context."""
-    memory = ConversationBufferMemory(return_messages=True)
-    memory.chat_memory.add_user_message("My build failed.") # pylint: disable=no-member
-    memory.chat_memory.add_ai_message("Can you share the logs?") # pylint: disable=no-member
+    memory = InMemoryChatMessageHistory()
+    memory.add_user_message("My build failed.") # pylint: disable=no-member
+    memory.add_ai_message("Can you share the logs?") # pylint: disable=no-member
     context = "Check Jenkins console output for errors."
     user_query = "Here are my logs, can you analyze?"
     log_context = "java.lang.OutOfMemoryError: Java heap space"
@@ -136,7 +136,7 @@ def test_build_prompt_with_log_context_and_history():
 def test_build_prompt_with_empty_string_log_context_uses_system_instruction():
     """Test that an empty string log_context (falsy) does NOT trigger the
     log analysis branch — should fall back to SYSTEM_INSTRUCTION."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = InMemoryChatMessageHistory()
     context = "Some context."
     user_query = "How do I configure agents?"
 
@@ -151,7 +151,7 @@ def test_build_prompt_with_empty_string_log_context_uses_system_instruction():
 def test_build_prompt_with_none_log_context_uses_system_instruction():
     """Test that log_context=None (the default) does NOT trigger the
     log analysis branch."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = InMemoryChatMessageHistory()
     context = "Some context."
     user_query = "How do I set up a pipeline?"
 
@@ -164,11 +164,11 @@ def test_build_prompt_with_none_log_context_uses_system_instruction():
 def test_build_prompt_with_multiple_conversation_turns():
     """Test that multiple rounds of user/assistant messages are all
     captured in the Chat History section in the correct order."""
-    memory = ConversationBufferMemory(return_messages=True)
-    memory.chat_memory.add_user_message("What is a Jenkinsfile?") # pylint: disable=no-member
-    memory.chat_memory.add_ai_message("A Jenkinsfile defines your pipeline.") # pylint: disable=no-member
-    memory.chat_memory.add_user_message("Can I use it with GitHub?") # pylint: disable=no-member
-    memory.chat_memory.add_ai_message("Yes, you can integrate it with GitHub.") # pylint: disable=no-member
+    memory = InMemoryChatMessageHistory()
+    memory.add_user_message("What is a Jenkinsfile?") # pylint: disable=no-member
+    memory.add_ai_message("A Jenkinsfile defines your pipeline.") # pylint: disable=no-member
+    memory.add_user_message("Can I use it with GitHub?") # pylint: disable=no-member
+    memory.add_ai_message("Yes, you can integrate it with GitHub.") # pylint: disable=no-member
     context = "Jenkinsfile supports declarative and scripted syntax."
     user_query = "Show me an example."
 
@@ -191,10 +191,10 @@ def test_build_prompt_with_multiple_conversation_turns():
 def test_build_prompt_with_none_content_message():
     """Test that a message with None content is handled gracefully
     (the `msg.content or ''` guard in the source)."""
-    memory = ConversationBufferMemory(return_messages=True)
-    memory.chat_memory.add_user_message("Hello") # pylint: disable=no-member
+    memory = InMemoryChatMessageHistory()
+    memory.add_user_message("Hello") # pylint: disable=no-member
     # Simulate a None content message by directly manipulating memory
-    memory.chat_memory.messages[-1].content = None  # pylint: disable=no-member
+    memory.messages[-1].content = None  # pylint: disable=no-member
     context = "Jenkins docs."
     user_query = "Test query"
 
@@ -209,7 +209,7 @@ def test_build_prompt_with_none_content_message():
 def test_build_prompt_with_special_characters_in_query():
     """Test that special characters (unicode, newlines) in the user query
     are preserved correctly in the output prompt."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = InMemoryChatMessageHistory()
     context = "Jenkins configuration docs."
     user_query = "  How do I use the 'pipeline' with \"quotes\" & <angle> brackets?\n  "
 
@@ -222,7 +222,7 @@ def test_build_prompt_with_special_characters_in_query():
 def test_build_prompt_log_data_section_appears_between_context_and_question():
     """Test that the 'User-Provided Log Data' section is placed
     after the context section and before the user question."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = InMemoryChatMessageHistory()
     context = "Pipeline troubleshooting guide."
     user_query = "Analyze this error."
     log_context = "FATAL: command execution failed"
@@ -242,7 +242,7 @@ def test_build_prompt_with_whitespace_only_log_context_triggers_log_branch():
     log_context check uses `if log_context:` which treats non-empty
     whitespace strings as truthy. If this behavior should change,
     the source should be updated to use `if log_context and log_context.strip():`."""
-    memory = ConversationBufferMemory(return_messages=True)
+    memory = InMemoryChatMessageHistory()
     context = "Some context."
     user_query = "Why did my build fail?"
 
