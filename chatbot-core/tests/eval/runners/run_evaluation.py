@@ -194,25 +194,31 @@ def count_complete_metrics(result: dict[str, Any]) -> int:
     return complete_count
 
 
-def find_incomplete_case_ids(raw_result: dict[str, Any]) -> set[str]:
+def find_incomplete_case_ids(
+    raw_result: dict[str, Any],
+    expected_case_ids: set[str],
+) -> set[str]:
     """
-    Find cases missing at least one usable metric result.
+    Find cases missing from DeepEval output or missing usable metric results.
 
     Args:
         raw_result (dict[str, Any]): Raw DeepEval evaluation result.
+        expected_case_ids (set[str]): Case IDs expected in the shard.
 
     Returns:
         set[str]: Case IDs that should be retried.
     """
     results = raw_result.get("test_results")
     if not isinstance(results, list):
-        return set()
-    incomplete_ids: set[str] = set()
+        return set(expected_case_ids)
+    incomplete_ids = set(expected_case_ids)
     for index, result in enumerate(results):
         if not isinstance(result, dict):
             continue
+        case_id = get_result_case_id(result, index)
+        incomplete_ids.discard(case_id)
         if count_complete_metrics(result) != len(METRIC_NAMES):
-            incomplete_ids.add(get_result_case_id(result, index))
+            incomplete_ids.add(case_id)
     return incomplete_ids
 
 
@@ -241,11 +247,13 @@ def merge_retry_results(
         if isinstance(result, dict)
     }
     merged_results = []
+    merged_ids: set[str] = set()
     for index, result in enumerate(results):
         if not isinstance(result, dict):
             merged_results.append(result)
             continue
         case_id = get_result_case_id(result, index)
+        merged_ids.add(case_id)
         retry_case = retry_by_id.get(case_id)
         if retry_case and count_complete_metrics(retry_case) > count_complete_metrics(
             result
@@ -253,6 +261,10 @@ def merge_retry_results(
             merged_results.append(retry_case)
         else:
             merged_results.append(result)
+
+    for case_id, retry_case in retry_by_id.items():
+        if case_id not in merged_ids:
+            merged_results.append(retry_case)
 
     raw_result["test_results"] = merged_results
     return raw_result
@@ -443,7 +455,10 @@ def run(args: argparse.Namespace) -> int:
         raw_result = result.model_dump(mode="json")
         test_cases_by_id = {test_case.name: test_case for test_case in test_cases}
         for attempt in range(1, args.retry_attempts + 1):
-            incomplete_case_ids = find_incomplete_case_ids(raw_result)
+            incomplete_case_ids = find_incomplete_case_ids(
+                raw_result,
+                set(test_cases_by_id),
+            )
             if not incomplete_case_ids:
                 break
             retry_cases = [
