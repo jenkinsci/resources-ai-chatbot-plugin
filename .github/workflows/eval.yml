@@ -12,6 +12,7 @@ name: LLM-as-a-Judge
 permissions:
   actions: read
   contents: read
+  issues: write
 
 concurrency:
   group: llm-as-judge-eval-${{ github.event.pull_request.number || github.run_id }}
@@ -345,6 +346,16 @@ jobs:
           if [[ -f artifacts/combined/evaluation-report.md ]]; then
             cat artifacts/combined/evaluation-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Comment evaluation report on pull request
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 chatbot-core/tests/eval/runners/comment_evaluation_report.py \
+            --report artifacts/combined/evaluation-report.md \
+            --issue-number '${{ github.event.pull_request.number }}' \
+            --commit-sha '${{ github.sha }}'
 
       - name: Upload combined responses
         if: always()
