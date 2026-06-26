@@ -286,7 +286,7 @@ def run_deepeval(
         ),
         display_config=DisplayConfig(
             print_results=True,
-            verbose_mode=False,
+            verbose_mode=True,
             truncate_passing_cases=False,
             inspect_after_run=False,
         ),
