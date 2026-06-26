@@ -349,6 +349,7 @@ jobs:
 
       - name: Comment evaluation report on pull request
         if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
