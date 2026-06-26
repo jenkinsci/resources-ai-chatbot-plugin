@@ -9,7 +9,10 @@ from deepeval.metrics import (
 )
 from deepeval.models import OllamaModel
 
+from faithfulness_template import JenkinsFaithfulnessTemplate
+
 METRIC_THRESHOLD = 0.5
+
 
 def build_metrics(
     judge_model_name: str,
@@ -46,7 +49,10 @@ def build_metrics(
         "verbose_mode": True,
     }
     return [
-        FaithfulnessMetric(**metric_kwargs),
+        FaithfulnessMetric(
+            **metric_kwargs,
+            evaluation_template=JenkinsFaithfulnessTemplate,
+        ),
         AnswerRelevancyMetric(**metric_kwargs),
         ContextualRecallMetric(**metric_kwargs),
     ]
