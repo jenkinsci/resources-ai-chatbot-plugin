@@ -43,6 +43,7 @@ def build_metrics(
         "threshold": threshold,
         "async_mode": False,
         "include_reason": False,
+        "verbose_mode": True,
     }
     return [
         FaithfulnessMetric(**metric_kwargs),
