@@ -1,5 +1,7 @@
 """Jenkins-specific adaptation of DeepEval's FaithfulnessTemplate."""
 
+# pylint: disable=unused-argument
+
 import textwrap
 from typing import List, Optional
 
@@ -190,14 +192,21 @@ class JenkinsFaithfulnessTemplate(FaithfulnessTemplate):
             API tokens.
             The Pipeline stage can contain both retry and timeout steps. When a stage times
             out, the pipeline is marked as failed in that stage.
-            To install the Google Kubernetes Engine Plugin, click Install without restart."
+            To install the Google Kubernetes Engine Plugin, click Install without restart.
+            The Build Log Compress Plugin can be enabled by checking Compress Build Log in
+            job configuration or by adding compressBuildLog() to Pipeline properties.
+            A community reply says Jenkins creates separate workspaces with suffixes such
+            as @2 for concurrent runs."
 
             Example Claims:
             [
                 "The Git plugin does not accept GitLab API token credentials.",
                 "You can combine retry and timeout steps in a Jenkins Pipeline stage.",
                 "The Google Kubernetes Engine Plugin must be installed after restarting Jenkins.",
-                "The Google Kubernetes Engine Plugin supports AWS Lambda deployment mode."
+                "The Google Kubernetes Engine Plugin supports AWS Lambda deployment mode.",
+                "The Build Log Compress Plugin change applies immediately.",
+                "Jenkins creates separate workspaces like @2 for concurrent runs.",
+                "The plugin might require extra setup, but the context is incomplete."
             ]
 
             Example JSON:
@@ -214,7 +223,18 @@ class JenkinsFaithfulnessTemplate(FaithfulnessTemplate):
                         "verdict": "no"
                     }},
                     {{
-                        "reason": "The truths do not mention AWS Lambda deployment mode.",
+                        "reason": "The truths do not support AWS Lambda deployment mode.",
+                        "verdict": "no"
+                    }},
+                    {{
+                        "reason": "The truths support enabling the plugin, but not immediacy.",
+                        "verdict": "no"
+                    }},
+                    {{
+                        "verdict": "yes"
+                    }},
+                    {{
+                        "reason": "The claim is cautious and the truths are incomplete.",
                         "verdict": "idk"
                     }}
                 ]
@@ -225,18 +245,26 @@ class JenkinsFaithfulnessTemplate(FaithfulnessTemplate):
             IMPORTANT: Please make sure to only return in JSON format, with the "verdicts"
             key as a list of JSON objects.
             Generate exactly one verdict per claim, in the same order.
-            Use "yes" when the claim is directly or semantically supported. Semantic support
-            is enough; exact wording is not required.
-            Use "no" only when the extracted truths directly contradict the claim.
-            Use "idk" when the extracted truths do not support or contradict the claim.
-            Do not use prior Jenkins knowledge.
+            Use "yes" when the claim is directly supported, semantically supported, or a
+            reasonable inference from the truths that does not add a new unsupported tool,
+            URL, version, command, plugin name, or recommendation.
+            Use "no" when a confident factual claim is not supported by the truths, uses
+            outside Jenkins knowledge, contradicts the truths, adds an unsupported detail
+            that changes the meaning, or is too broad or vague to fully verify.
+            Use "no" when only part of a claim is supported and another critical part is
+            unsupported.
+            Use "idk" only when the claim itself is cautious or uncertain, such as "may",
+            "might", "likely", "appears", or "not enough context", or when the extracted
+            truths are too noisy, malformed, empty, or incomplete to fairly judge the claim.
+            Do not use "idk" as a safe fallback for confidently unsupported answer claims.
+            Non-factual statements should not have been extracted as claims.
             Preserve Jenkins terminology: job, item, project, Pipeline, stage, agent,
             controller, workspace, plugin, credential, CLI, JCasC.
             Treat plugin names, UI labels, file paths, URLs, commands, and annotations as
             exact identifiers.
             If your reason says the truths support the claim, the verdict must be "yes".
-            If your reason says support is missing, the verdict must be "idk", not "no",
-            unless there is a direct contradiction.
+            If your reason says a confident factual claim lacks support, the verdict must
+            be "no".
             **
 
             Extracted Retrieval Truths:
