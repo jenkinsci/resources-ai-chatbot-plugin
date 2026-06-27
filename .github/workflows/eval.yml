@@ -12,7 +12,6 @@ name: LLM-as-a-Judge
 permissions:
   actions: read
   contents: read
-  issues: write
 
 concurrency:
   group: llm-as-judge-eval-${{ github.event.pull_request.number || github.run_id }}
@@ -347,16 +346,30 @@ jobs:
             cat artifacts/combined/evaluation-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Comment evaluation report on pull request
+      - name: Prepare PR comment artifact
         if: always() && github.event_name == 'pull_request'
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python3 chatbot-core/tests/eval/runners/comment_evaluation_report.py \
-            --report artifacts/combined/evaluation-report.md \
-            --issue-number '${{ github.event.pull_request.number }}' \
-            --commit-sha '${{ github.sha }}'
+          mkdir -p artifacts/pr-comment
+          echo '${{ github.event.pull_request.number }}' > artifacts/pr-comment/pr_number
+          echo '${{ github.sha }}' > artifacts/pr-comment/commit_sha
+          if [[ -f artifacts/combined/evaluation-report.md ]]; then
+            cp artifacts/combined/evaluation-report.md artifacts/pr-comment/evaluation-report.md
+          else
+            {
+              echo "# Chatbot evaluation report"
+              echo
+              echo "Evaluation did not produce a combined report. Check the workflow logs."
+            } > artifacts/pr-comment/evaluation-report.md
+          fi
+
+      - name: Upload PR comment artifact
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-as-judge-pr-comment
+          path: artifacts/pr-comment/
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Upload combined responses
         if: always()
