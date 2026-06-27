@@ -337,7 +337,7 @@ jobs:
             --question-count '${{ needs.prepare-response-matrix.outputs.question_count }}' \
             --expected-shards '${{ needs.prepare-response-matrix.outputs.shard_count }}' \
             --minimum-metric-coverage '${{ needs.prepare-response-matrix.outputs.minimum_metric_coverage }}' \
-            --minimum-average-score '${{ needs.prepare-response-matrix.outputs.metric_threshold }}'
+            --threshold-score '${{ needs.prepare-response-matrix.outputs.metric_threshold }}'
 
       - name: Publish evaluation report
         if: always()
