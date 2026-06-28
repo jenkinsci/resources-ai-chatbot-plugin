@@ -80,8 +80,6 @@ def test_load_faiss_index_oserror(mocker, tmp_path):
 
 def test_save_metadata_success(mocker, tmp_path):
     """Test that metadata is securely saved as JSON, even if .pkl is passed."""
-    from rag.vectorstore.vectorstore_utils import save_metadata
-
     metadata = [{"chunk_text": "Jenkins on the moon"}]
     mock_logger = mocker.Mock()
 
@@ -113,9 +111,6 @@ def test_save_metadata_logs_error_on_exception(mocker, tmp_path):
 
 def test_load_metadata_success(mocker, tmp_path):
     """Test loading legacy metadata successfully triggers the security warning."""
-    import pickle
-    from rag.vectorstore.vectorstore_utils import load_metadata
-
     data = [{"chunk_text": "Jenkins on the moon"}]
     path = tmp_path / "metadata.pkl"
     with open(path, "wb") as f:
