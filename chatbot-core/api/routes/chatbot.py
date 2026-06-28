@@ -117,6 +117,19 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
                 )
                 continue
 
+            if not isinstance(message_data, dict):
+                logger.warning(
+                    "Invalid JSON payload type from session %s: %s",
+                    session_id,
+                    type(message_data).__name__,
+                )
+                await websocket.send_text(
+                    json.dumps(
+                        {"error": "Invalid message payload. Expected JSON object."}
+                    )
+                )
+                continue
+
             user_message = message_data.get("message", "")
 
             if not user_message:
@@ -133,6 +146,8 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
             await websocket.send_text(
                 json.dumps({"end": True})
             )
+
+            asyncio.create_task(asyncio.to_thread(persist_session, session_id))
 
     except WebSocketDisconnect:
         logger.info(
