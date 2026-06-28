@@ -1,6 +1,6 @@
 name: Build Retrieval Vector Cache
 
-"on":
+on:
   workflow_call:
     inputs:
       artifact_name:

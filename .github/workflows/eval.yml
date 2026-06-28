@@ -1,6 +1,6 @@
 name: LLM-as-a-Judge
 
-"on":
+on:
   pull_request:
     types:
       - opened

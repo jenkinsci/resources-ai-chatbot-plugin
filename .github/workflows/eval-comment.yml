@@ -1,6 +1,6 @@
 name: LLM-as-a-Judge Comment
 
-"on":
+on:
   workflow_run:
     workflows:
       - LLM-as-a-Judge
