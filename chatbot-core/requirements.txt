@@ -163,3 +163,4 @@ nltk==3.9.2
 optuna==4.6.0
 ranx==0.3.21
 Unidecode==1.4.0
+beautifulsoup4
