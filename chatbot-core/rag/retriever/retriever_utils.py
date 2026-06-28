@@ -7,7 +7,9 @@ import os
 import numpy as np
 from rag.vectorstore.vectorstore_utils import load_faiss_index, load_metadata
 
-VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
+VECTOR_STORE_DIR = os.path.join(os.path.dirname(
+    __file__), "..", "..", "data", "embeddings")
+
 
 def load_vector_index(logger, source_name):
     """
@@ -23,13 +25,17 @@ def load_vector_index(logger, source_name):
     if not source_name.strip():
         logger.warning("No source name provided. Returning empty results.")
         return [], []
+
     index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
-    metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+    # SECURED: Point to the new .json metadata file to mitigate RCE risk
+    metadata_path = os.path.join(
+        VECTOR_STORE_DIR, f"{source_name}_metadata.json")
 
     index = load_faiss_index(index_path, logger)
     metadata = load_metadata(metadata_path, logger)
 
     return index, metadata
+
 
 def search_index(query_vector, index, metadata, logger, top_k):
     """
@@ -54,7 +60,7 @@ def search_index(query_vector, index, metadata, logger, top_k):
 
     if index.ntotal != len(metadata):
         logger.warning(
-            "Index contains %d vectors but metadata has %d entries." \
+            "Index contains %d vectors but metadata has %d entries."
             " Some results may be missing or inconsistent.",
             index.ntotal,
             len(metadata)
@@ -73,9 +79,9 @@ def search_index(query_vector, index, metadata, logger, top_k):
             })
         else:
             logger.error("FAISS returned index %d out of range (metadata size: %d)",
-                idx,
-                len(metadata)
-            )
+                         idx,
+                         len(metadata)
+                         )
 
     data = []
     scores = []
