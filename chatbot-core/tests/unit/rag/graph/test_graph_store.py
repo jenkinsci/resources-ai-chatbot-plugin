@@ -9,7 +9,12 @@ from rag.graph.schema import GraphRelationType
 
 
 def build_test_graph():
-    """Build a graph with parallel evidence edges."""
+    """
+    Build a MultiDiGraph with two parallel plugin relation edges.
+
+    Returns:
+        nx.MultiDiGraph: Test graph with node attributes and edge evidence.
+    """
     graph = nx.MultiDiGraph()
     graph.add_node("blueocean", name="Blue Ocean", entity_type="Plugin")
     graph.add_node("git", name="Git plugin", entity_type="Plugin")
@@ -37,7 +42,9 @@ def build_test_graph():
 
 
 def test_save_and_load_graph_preserves_multidigraph(tmp_path):
-    """Test graph save and load."""
+    """
+    Verify saved graph JSON loads back as a MultiDiGraph with node metadata.
+    """
     mock_logger = Mock()
     path = tmp_path / "plugin_graph.json"
 
@@ -50,7 +57,9 @@ def test_save_and_load_graph_preserves_multidigraph(tmp_path):
 
 
 def test_save_and_load_graph_preserves_parallel_edges(tmp_path):
-    """Test parallel edges survive JSON round trip."""
+    """
+    Verify parallel relation edges survive the node-link JSON round trip.
+    """
     mock_logger = Mock()
     path = tmp_path / "plugin_graph.json"
 
@@ -69,7 +78,9 @@ def test_save_and_load_graph_preserves_parallel_edges(tmp_path):
 
 
 def test_save_graph_rejects_plain_digraph(tmp_path):
-    """Test plain DiGraph is not saved."""
+    """
+    Verify the store rejects plain DiGraph instances.
+    """
     mock_logger = Mock()
     path = tmp_path / "plugin_graph.json"
 
@@ -80,7 +91,9 @@ def test_save_graph_rejects_plain_digraph(tmp_path):
 
 
 def test_load_graph_missing_file_returns_none(tmp_path):
-    """Test missing graph file."""
+    """
+    Verify loading a missing graph file returns None and logs an error.
+    """
     mock_logger = Mock()
     path = tmp_path / "missing_graph.json"
 
@@ -92,7 +105,9 @@ def test_load_graph_missing_file_returns_none(tmp_path):
 
 
 def test_load_graph_corrupt_json_returns_none(tmp_path):
-    """Test corrupt graph JSON."""
+    """
+    Verify loading malformed graph JSON returns None and logs an error.
+    """
     mock_logger = Mock()
     path = tmp_path / "plugin_graph.json"
     path.write_text("not json", encoding="utf-8")

@@ -1,4 +1,4 @@
-"""GraphRAG graph store helpers."""
+"""Save and load GraphRAG NetworkX graph artifacts."""
 
 import json
 import os
@@ -13,12 +13,12 @@ DEFAULT_PLUGIN_GRAPH_PATH = os.path.join(GRAPH_STORE_DIR, "plugin_graph.json")
 
 def save_graph(graph: nx.MultiDiGraph, path: str, logger) -> None:
     """
-    Save a MultiDiGraph to JSON.
+    Save a NetworkX MultiDiGraph to node-link JSON.
 
     Args:
-        graph (nx.MultiDiGraph): Graph to save.
-        path (str): File path to save the graph.
-        logger (logging.Logger): Logger for status or error messages.
+        graph (nx.MultiDiGraph): Graph artifact to serialize.
+        path (str): Destination JSON file path.
+        logger (logging.Logger): Logger for save status or error messages.
     """
     if not isinstance(graph, nx.MultiDiGraph):
         logger.error("Graph must be a NetworkX MultiDiGraph")
@@ -37,14 +37,15 @@ def save_graph(graph: nx.MultiDiGraph, path: str, logger) -> None:
 
 def load_graph(path: str, logger) -> nx.MultiDiGraph | None:
     """
-    Load a MultiDiGraph from JSON.
+    Load a NetworkX MultiDiGraph from node-link JSON.
 
     Args:
-        path (str): File path to load the graph from.
-        logger (logging.Logger): Logger for status or error messages.
+        path (str): Source JSON file path.
+        logger (logging.Logger): Logger for load status or error messages.
 
     Returns:
-        nx.MultiDiGraph | None: Loaded graph, or None if loading fails.
+        nx.MultiDiGraph | None: Loaded graph when parsing succeeds, otherwise
+        None.
     """
     try:
         logger.info("Loading graph from %s...", path)

@@ -13,7 +13,16 @@ from rag.graph.schema import GraphEntityType, GraphRelationType
 
 
 def build_entity(name="Git plugin", entity_id="git"):
-    """Build a test graph entity."""
+    """
+    Build a plugin entity for model tests.
+
+    Args:
+        name (str): Entity display name.
+        entity_id (str): Canonical graph node ID.
+
+    Returns:
+        GraphEntity: Test graph entity.
+    """
     return GraphEntity(
         name=name,
         entity_type=GraphEntityType.PLUGIN.value,
@@ -22,7 +31,12 @@ def build_entity(name="Git plugin", entity_id="git"):
 
 
 def build_evidence():
-    """Build test graph evidence."""
+    """
+    Build source evidence for model tests.
+
+    Returns:
+        GraphEvidence: Test graph evidence.
+    """
     return GraphEvidence(
         source_chunk_id="chunk-1",
         source_title="Git plugin",
@@ -32,7 +46,9 @@ def build_evidence():
 
 
 def test_triple_accepts_valid_payload():
-    """Test valid triple."""
+    """
+    Verify a valid triple can be constructed.
+    """
     triple = Triple(
         source=build_entity("Blue Ocean", ""),
         relation=GraphRelationType.DEPENDS_ON.value,
@@ -45,7 +61,9 @@ def test_triple_accepts_valid_payload():
 
 
 def test_triple_rejects_invalid_relation():
-    """Test invalid triple relation."""
+    """
+    Verify triple construction rejects unsupported relation values.
+    """
     with pytest.raises(ValueError, match="invalid relation"):
         Triple(
             source=build_entity("Blue Ocean", ""),
@@ -57,13 +75,17 @@ def test_triple_rejects_invalid_relation():
 
 
 def test_entity_rejects_empty_name():
-    """Test empty entity name."""
+    """
+    Verify graph entities require a non-empty name.
+    """
     with pytest.raises(ValueError, match="name must not be empty"):
         GraphEntity(name="", entity_type=GraphEntityType.PLUGIN.value)
 
 
 def test_evidence_rejects_empty_text():
-    """Test empty evidence text."""
+    """
+    Verify graph evidence requires non-empty evidence text.
+    """
     with pytest.raises(ValueError, match="evidence must not be empty"):
         GraphEvidence(
             source_chunk_id="chunk-1",
@@ -74,7 +96,9 @@ def test_evidence_rejects_empty_text():
 
 
 def test_graph_relation_requires_node_ids():
-    """Test relation needs graph node ids."""
+    """
+    Verify graph relations require canonical source and target node IDs.
+    """
     with pytest.raises(ValueError, match="source.entity_id must not be empty"):
         GraphRelation(
             source=build_entity("Blue Ocean", ""),
@@ -86,7 +110,9 @@ def test_graph_relation_requires_node_ids():
 
 
 def test_retrieval_result_converts_relations_to_tuple():
-    """Test retrieval relation tuple conversion."""
+    """
+    Verify retrieval results normalize relation collections to tuples.
+    """
     relation = GraphRelation(
         source=build_entity("Blue Ocean", "blueocean"),
         relation=GraphRelationType.DEPENDS_ON.value,
