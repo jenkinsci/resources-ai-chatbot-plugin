@@ -37,5 +37,9 @@ tool_names:
   community_threads: "discourse"
 
 cors:
+  # Security: Specify allowed origins explicitly instead of using wildcard.
+  # For local development, use localhost. For production, add specific domains.
+  # Examples: ["http://localhost:3000", "https://jenkins.example.com"]
   allowed_origins:
-    - "*"
+    - "http://localhost:3000"
+    - "http://localhost:8000"

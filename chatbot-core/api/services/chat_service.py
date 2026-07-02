@@ -224,6 +224,7 @@ def _handle_query_type(query: str, query_type: QueryType, memory) -> str:
 def _get_sub_queries(query: str) -> List[str]:
     """
     Splits a complex user query into a list of single-task sub-queries.
+    Uses JSON parsing instead of ast.literal_eval to prevent DoS attacks.
 
     Args:
         query (str): The original user query.
@@ -236,17 +237,36 @@ def _get_sub_queries(query: str) -> List[str]:
     queries_string = generate_answer(prompt, max_tokens=len(query) * 2)
 
     try:
-        queries = ast.literal_eval(queries_string)
-    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        # Use JSON parsing for safer deserialization
+        queries = json.loads(queries_string)
+    except json.JSONDecodeError as e:
         logger.warning(
-            "Error in parsing sub-queries. Falling back to single query mode.")
+            "Error parsing sub-queries as JSON: %s. Falling back to single query mode.", e)
+        logger.debug("Failed sub-query payload: %s",
+                     _sanitize_log_payload(queries_string))
+        queries = [query]
+    except (ValueError, TypeError) as e:
+        logger.warning(
+            "Invalid data type for sub-queries: %s. Falling back to single query mode.", e)
         logger.debug("Failed sub-query payload: %s",
                      _sanitize_log_payload(queries_string))
         queries = [query]
 
-    queries = [q.strip() for q in queries]
-
-    return queries
+    # Validate that we got a list of strings
+    if not isinstance(queries, list):
+        logger.warning(
+            "Expected list of queries, got %s. Falling back to single query.", type(queries).__name__)
+        queries = [query]
+    
+    # Clean and validate each query
+    validated_queries = []
+    for q in queries:
+        if isinstance(q, str):
+            stripped = q.strip()
+            if stripped:
+                validated_queries.append(stripped)
+    
+    return validated_queries if validated_queries else [query]
 
 
 def _assemble_response(answers: List[str]):

@@ -31,22 +31,24 @@ def _get_session_file_path(session_id: str) -> str:
 
 def _load_session_from_json(session_id: str) -> list:
     """
-    Load a session's history from disk.
+    Load a session's history from disk with proper file locking.
     """
     path = _get_session_file_path(session_id)
     if not os.path.exists(path):
         return []
 
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            payload = json.load(f)
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning(
-            "Failed to load persisted session '%s' from disk: %s",
-            session_id,
-            exc,
-        )
-        return []
+    # Use lock for read operations to prevent race conditions
+    with _FILE_LOCK:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning(
+                "Failed to load persisted session '%s' from disk: %s",
+                session_id,
+                exc,
+            )
+            return []
 
     if not isinstance(payload, list):
         logger.warning(

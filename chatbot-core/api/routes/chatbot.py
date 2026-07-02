@@ -90,6 +90,11 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
 
     Accepts WebSocket connections and streams chatbot responses
     token-by-token for a more interactive user experience.
+    
+    Features:
+    - Proper error handling for malformed messages
+    - Timeout handling for long-running operations
+    - Cleanup of resources on disconnect or error
     """
     logger.info("WebSocket connection attempt for session: %s", session_id)
     await websocket.accept()
@@ -104,7 +109,16 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
 
     try:
         while True:
-            data = await websocket.receive_text()
+            try:
+                # Add receive timeout to prevent hanging connections
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=300)
+            except asyncio.TimeoutError:
+                logger.warning("WebSocket receive timeout for session %s", session_id)
+                await websocket.send_text(
+                    json.dumps({"error": "Request timeout. Please try again."})
+                )
+                await websocket.close()
+                break
 
             try:
                 message_data = json.loads(data)
@@ -132,22 +146,49 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
 
             user_message = message_data.get("message", "")
 
-            if not user_message:
+            if not user_message or not isinstance(user_message, str):
+                logger.warning("Invalid or empty message from session %s", session_id)
+                await websocket.send_text(
+                    json.dumps({"error": "Message must be a non-empty string."})
+                )
                 continue
 
-            async for token in get_chatbot_reply_stream(
-                session_id,
-                user_message,
-            ):
+            try:
+                async for token in get_chatbot_reply_stream(
+                    session_id,
+                    user_message,
+                ):
+                    await websocket.send_text(
+                        json.dumps({"token": token})
+                    )
+
                 await websocket.send_text(
-                    json.dumps({"token": token})
+                    json.dumps({"end": True})
+                )
+            except Exception as stream_error:  # pylint: disable=broad-exception-caught
+                logger.error(
+                    "Error during streaming response for session %s: %s",
+                    session_id,
+                    stream_error,
+                    exc_info=True,
+                )
+                await websocket.send_text(
+                    json.dumps({"error": "Failed to generate response."})
                 )
 
-            await websocket.send_text(
-                json.dumps({"end": True})
-            )
+            # Persist session with error handling
+            async def _persist_with_error_handling():
+                try:
+                    await asyncio.to_thread(persist_session, session_id)
+                except Exception as persist_error:  # pylint: disable=broad-exception-caught
+                    logger.error(
+                        "Failed to persist session %s: %s",
+                        session_id,
+                        persist_error,
+                        exc_info=True,
+                    )
 
-            asyncio.create_task(asyncio.to_thread(persist_session, session_id))
+            asyncio.create_task(_persist_with_error_handling())
 
     except WebSocketDisconnect:
         logger.info(
@@ -169,8 +210,15 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
                 )
             )
         except Exception:  # pylint: disable=broad-exception-caught
-            # Connection already closed
+            # Connection already closed or cannot send
+            logger.debug("Cannot send error message - connection closed")
             pass
+    finally:
+        # Ensure proper cleanup
+        try:
+            await websocket.close()
+        except Exception:  # pylint: disable=broad-exception-caught
+            logger.debug("WebSocket already closed")
 
 
 # =========================
@@ -267,17 +315,46 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
 
     Returns:
         ChatResponse: The assistant's reply.
+        
+    Raises:
+        HTTPException: 404 if session not found, 422 if message is invalid.
     """
     if not session_exists(session_id):
         raise HTTPException(
             status_code=404,
             detail="Session not found.",
         )
-    reply =  get_chatbot_reply(session_id, request.message)
-    _background_tasks.add_task(
-        persist_session,
-        session_id,
+    
+    # Validate message
+    if not request.message or not isinstance(request.message, str):
+        raise HTTPException(
+            status_code=422,
+            detail="Message must be a non-empty string.",
         )
+    
+    if not request.message.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="Message cannot be empty or whitespace only.",
+        )
+    
+    try:
+        reply = get_chatbot_reply(session_id, request.message)
+    except RuntimeError as e:
+        logger.error("Error generating chatbot reply: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate response.",
+        ) from e
+    
+    # Add background task for persistence with error handling
+    def persist_with_error_handling():
+        try:
+            persist_session(session_id)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error("Failed to persist session %s: %s", session_id, e)
+    
+    _background_tasks.add_task(persist_with_error_handling)
 
     return reply
 

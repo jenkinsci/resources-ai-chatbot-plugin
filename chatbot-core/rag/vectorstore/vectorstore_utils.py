@@ -4,7 +4,7 @@ Handles persistence and logging for vector search storage.
 """
 
 import os
-import pickle
+import json
 import faiss
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
@@ -47,39 +47,46 @@ def load_faiss_index(path, logger):
 
 def save_metadata(metadata, path, logger):
     """
-    Save metadata to a pickle file.
+    Save metadata to a JSON file for security and portability.
+    Uses JSON instead of pickle to prevent arbitrary code execution.
 
     Args:
-        metadata (Any): Metadata object to serialize.
+        metadata (dict): Metadata dictionary to serialize.
         path (str): File path to save the metadata.
         logger (logging.Logger): Logger for status or error messages.
     """
     try:
-        with open(path, "wb") as f:
-            pickle.dump(metadata, f)
+        # Ensure metadata is JSON-serializable (dict/list)
+        if not isinstance(metadata, (dict, list)):
+            logger.warning("Metadata is not JSON-serializable, converting to dict")
+            metadata = {"data": str(metadata)}
+        
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2, ensure_ascii=False)
         logger.info("Metadata saved to %s", path)
-    except (OSError, pickle.PickleError) as e:
+    except (OSError, TypeError) as e:
         logger.error("Failed to save metadata to %s: %s", path, e)
 
 def load_metadata(path, logger):
     """
-    Load metadata from a pickle file.
+    Load metadata from a JSON file for security and portability.
+    Uses JSON instead of pickle to prevent arbitrary code execution.
 
     Args:
         path (str): File path to load the metadata from.
         logger (logging.Logger): Logger for status or error messages.
 
     Returns:
-        Any | None: Loaded metadata, or None if loading fails.
+        dict | None: Loaded metadata, or None if loading fails.
     """
     try:
         logger.info("Loading metadata from %s...", path)
-        with open(path, "rb") as f:
-            metadata = pickle.load(f)
+        with open(path, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
         logger.info("Metadata loaded successfully.")
         return metadata
     except FileNotFoundError as e:
         logger.error("Metadata file not found: %s - %s", path, e)
-    except (OSError, pickle.UnpicklingError) as e:
-        logger.error("Failed to load metadata from %s - %s", path, e)
+    except (OSError, json.JSONDecodeError) as e:
+        logger.error("Failed to load metadata from %s: %s", path, e)
     return None

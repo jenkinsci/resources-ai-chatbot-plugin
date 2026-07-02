@@ -17,14 +17,6 @@ export const useContextObserver = (isChatOpen: boolean) => {
       const currentUrl = window.location.href;
       const isConsolePage = currentUrl.includes("/console");
 
-      // Debug log (remove later)
-      console.log(
-        "[Chatbot Observer] URL:",
-        currentUrl,
-        "| Is Console:",
-        isConsolePage,
-      );
-
       if (!isConsolePage) {
         setShowToast(false);
         return;
@@ -38,23 +30,15 @@ export const useContextObserver = (isChatOpen: boolean) => {
 
       const isAtBottom = scrollPosition >= pageHeight - buffer;
 
-      // Debug log (remove later)
-      console.log(
-        `[Chatbot Observer] Scroll: ${Math.round(scrollPosition)} / ${pageHeight} | At Bottom: ${isAtBottom}`,
-      );
-
       if (isAtBottom && !isChatOpen && !showToast) {
         if (!toastTimer) {
-          console.log("[Chatbot Observer] ⏳ Starting timer for toast...");
           const timer = setTimeout(() => {
-            console.log("[Chatbot Observer] 🔔 Triggering Toast!");
             setShowToast(true);
           }, 2000); // 2 seconds
           setToastTimer(timer);
         }
       } else {
         if (toastTimer) {
-          console.log("[Chatbot Observer] ❌ Condition lost, clearing timer.");
           clearTimeout(toastTimer);
           setToastTimer(null);
         }
