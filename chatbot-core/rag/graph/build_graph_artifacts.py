@@ -3,6 +3,7 @@
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 from rag.graph.entity_normalizer import (
     DEFAULT_PLUGIN_NAMES_PATH,
@@ -38,7 +39,7 @@ def run_graph_build(
     chunks_path: Path,
     artifact_paths: GraphArtifactPaths,
     logger,
-) -> dict:
+) -> dict[str, Any]:
     """
     Build graph artifacts from plugin chunks.
 
@@ -49,7 +50,7 @@ def run_graph_build(
         logger (logging.Logger): Logger for build progress and errors.
 
     Returns:
-        dict: Extraction report payload.
+        dict[str, Any]: Extraction report payload.
     """
     plugin_ids = load_canonical_plugin_ids(plugin_names_path)
     plugin_aliases = build_plugin_aliases(plugin_ids)
@@ -121,7 +122,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """
-    Main entry point for graph artifact generation.
+    Run the graph artifact build entrypoint.
     """
     args = parse_args()
     logger = LoggerFactory.instance().get_logger("graph-artifacts")

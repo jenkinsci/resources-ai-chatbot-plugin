@@ -11,7 +11,7 @@ DEFAULT_PLUGIN_NAMES_PATH = GRAPH_ROOT / "data" / "raw" / "plugin_names.json"
 
 def normalize_lookup_value(value: str) -> str:
     """
-    Normalize a plugin name into a stable lookup key.
+    Normalize plugin text into a stable lookup key.
 
     Args:
         value (str): Plugin name or alias to normalize.
@@ -27,7 +27,7 @@ def load_canonical_plugin_ids(
     path: Path = DEFAULT_PLUGIN_NAMES_PATH,
 ) -> list[str]:
     """
-    Load canonical plugin IDs from the raw plugin index file.
+    Load canonical plugin IDs from the raw plugin index.
 
     Args:
         path (Path): Path to the plugin names JSON file.
@@ -37,12 +37,16 @@ def load_canonical_plugin_ids(
     """
     with path.open(encoding="utf-8") as plugin_names_file:
         plugin_ids = json.load(plugin_names_file)
-    return [plugin_id for plugin_id in plugin_ids if isinstance(plugin_id, str)]
+    return [
+        plugin_id
+        for plugin_id in plugin_ids
+        if isinstance(plugin_id, str) and plugin_id.strip()
+    ]
 
 
 def build_plugin_aliases(plugin_ids: list[str]) -> dict[str, str]:
     """
-    Build normalized alias mappings for canonical plugin IDs.
+    Build alias mappings for canonical plugin IDs.
 
     Args:
         plugin_ids (list[str]): Canonical plugin IDs.
@@ -50,7 +54,7 @@ def build_plugin_aliases(plugin_ids: list[str]) -> dict[str, str]:
     Returns:
         dict[str, str]: Mapping from normalized alias key to canonical ID.
     """
-    alias_map = {}
+    alias_map: dict[str, str] = {}
 
     for plugin_id in plugin_ids:
         alias_candidates = {
@@ -80,7 +84,7 @@ def resolve_plugin_name(
     plugin_aliases: dict[str, str],
 ) -> str | None:
     """
-    Resolve a plugin name or alias to a canonical plugin ID.
+    Resolve plugin text to a canonical plugin ID.
 
     Args:
         plugin_name (str): Plugin name or alias from a query or chunk.
