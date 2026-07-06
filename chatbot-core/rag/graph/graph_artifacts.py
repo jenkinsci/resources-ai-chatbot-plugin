@@ -19,7 +19,7 @@ DEFAULT_EXTRACTION_REPORT_PATH = GRAPH_STORE_DIR / "extraction_report.json"
 @dataclass(frozen=True)
 class GraphArtifactPaths:
     """
-    Output paths for graph extraction artifacts.
+    Hold output paths for graph extraction artifacts.
 
     Args:
         graph_path (Path): Destination graph JSON path.
@@ -34,7 +34,7 @@ class GraphArtifactPaths:
 
 def triple_to_record(triple: Triple) -> dict[str, Any]:
     """
-    Convert a Triple model to a JSON-serializable record.
+    Convert a Triple model to a JSON-ready record.
 
     Args:
         triple (Triple): Extracted graph relation triple.
@@ -45,7 +45,11 @@ def triple_to_record(triple: Triple) -> dict[str, Any]:
     return asdict(triple)
 
 
-def write_jsonl(path: Path, records: list[dict[str, Any]], logger) -> None:
+def write_jsonl(
+    path: Path,
+    records: list[dict[str, Any]],
+    logger,
+) -> None:
     """
     Write records to a JSONL artifact file.
 
@@ -65,7 +69,11 @@ def write_jsonl(path: Path, records: list[dict[str, Any]], logger) -> None:
         logger.error("Failed to write JSONL artifact to %s: %s", path, error)
 
 
-def write_json(path: Path, data: dict[str, Any], logger) -> None:
+def write_json(
+    path: Path,
+    data: dict[str, Any],
+    logger,
+) -> None:
     """
     Write a JSON artifact file.
 

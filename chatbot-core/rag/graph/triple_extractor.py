@@ -41,9 +41,26 @@ RELATION_PATTERNS = (
 )
 
 
+def make_plugin_entity(plugin_id: str) -> GraphEntity:
+    """
+    Build a plugin graph entity from a canonical plugin ID.
+
+    Args:
+        plugin_id (str): Canonical plugin ID.
+
+    Returns:
+        GraphEntity: Plugin graph entity.
+    """
+    return GraphEntity(
+        name=plugin_id,
+        entity_type=GraphEntityType.PLUGIN.value,
+        entity_id=plugin_id,
+    )
+
+
 def build_chunk_evidence(chunk: dict, evidence_text: str) -> GraphEvidence:
     """
-    Build graph evidence from a source chunk.
+    Build source-backed graph evidence from a chunk.
 
     Args:
         chunk (dict): Chunk payload from chunks_plugin_docs.json.
@@ -63,7 +80,7 @@ def build_chunk_evidence(chunk: dict, evidence_text: str) -> GraphEvidence:
 
 def sentence_split(text: str) -> list[str]:
     """
-    Split chunk text into simple sentences.
+    Split chunk text into simple sentence spans.
 
     Args:
         text (str): Chunk text to split.
@@ -80,7 +97,7 @@ def sentence_split(text: str) -> list[str]:
 
 def build_candidate_variants(candidate: str) -> list[str]:
     """
-    Build candidate name variants for alias resolution.
+    Build candidate name variants for alias lookup.
 
     Args:
         candidate (str): Raw plugin phrase from a sentence.
@@ -89,18 +106,19 @@ def build_candidate_variants(candidate: str) -> list[str]:
         list[str]: Candidate variants in resolution order.
     """
     candidate = candidate.strip(" ,:;()[]{}")
+    candidate_lower = candidate.lower()
     variants = [candidate]
 
-    if candidate.lower().startswith("jenkins "):
+    if candidate_lower.startswith("jenkins "):
         variants.append(candidate[8:].strip())
 
-    if candidate.lower().endswith(" plugin"):
+    if candidate_lower.endswith(" plugin"):
         variants.append(candidate[:-7].strip())
 
-    if candidate.lower().startswith("jenkins ") and candidate.lower().endswith(" plugin"):
+    if candidate_lower.startswith("jenkins ") and candidate_lower.endswith(" plugin"):
         variants.append(candidate[8:-7].strip())
 
-    return [variant for variant in variants if variant]
+    return list(dict.fromkeys(variant for variant in variants if variant))
 
 
 def resolve_target_entity(
@@ -126,11 +144,7 @@ def resolve_target_entity(
             for variant in build_candidate_variants(candidate):
                 target_id = resolve_plugin_name(variant, plugin_aliases)
                 if target_id and target_id not in SKIPPED_TARGET_PLUGIN_IDS:
-                    return GraphEntity(
-                        name=target_id,
-                        entity_type=GraphEntityType.PLUGIN.value,
-                        entity_id=target_id,
-                    )
+                    return make_plugin_entity(target_id)
 
     return None
 
@@ -142,7 +156,7 @@ def extract_triples_from_sentence(
     plugin_aliases: dict[str, str],
 ) -> list[Triple]:
     """
-    Extract graph triples from one sentence.
+    Extract graph triples from one sentence span.
 
     Args:
         source_entity (GraphEntity): Canonical source plugin entity.
@@ -153,7 +167,7 @@ def extract_triples_from_sentence(
     Returns:
         list[Triple]: Extracted triples for the sentence.
     """
-    extracted_triples = []
+    extracted_triples: list[Triple] = []
 
     for relation, confidence, pattern in RELATION_PATTERNS:
         for match in pattern.finditer(sentence):
@@ -182,7 +196,7 @@ def extract_triples_from_chunk(
     plugin_aliases: dict[str, str],
 ) -> list[Triple]:
     """
-    Extract graph triples from a single plugin chunk.
+    Extract graph triples from one plugin chunk.
 
     Args:
         chunk (dict): Chunk payload from chunks_plugin_docs.json.
@@ -197,13 +211,9 @@ def extract_triples_from_chunk(
     if not source_plugin_id:
         return []
 
-    source_entity = GraphEntity(
-        name=source_plugin_id,
-        entity_type=GraphEntityType.PLUGIN.value,
-        entity_id=source_plugin_id,
-    )
+    source_entity = make_plugin_entity(source_plugin_id)
 
-    extracted_triples = []
+    extracted_triples: list[Triple] = []
     seen_triples = set()
 
     for sentence in sentence_split(chunk.get("chunk_text", "")):
@@ -232,7 +242,7 @@ def extract_triples(
     plugin_aliases: dict[str, str],
 ) -> list[Triple]:
     """
-    Extract graph triples from a list of plugin chunks.
+    Extract graph triples from plugin chunks.
 
     Args:
         chunks (list[dict]): Plugin documentation chunks.
@@ -241,7 +251,7 @@ def extract_triples(
     Returns:
         list[Triple]: All validated triples found across chunks.
     """
-    triples = []
+    triples: list[Triple] = []
 
     for chunk in chunks:
         triples.extend(extract_triples_from_chunk(chunk, plugin_aliases))

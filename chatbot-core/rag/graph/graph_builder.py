@@ -8,7 +8,7 @@ from rag.graph.triple_extractor import extract_triples
 
 def add_triple_to_graph(graph: nx.MultiDiGraph, triple: Triple) -> None:
     """
-    Add one validated triple to the graph.
+    Add one validated triple to the graph artifact.
 
     Args:
         graph (nx.MultiDiGraph): Graph artifact being built.
@@ -59,7 +59,7 @@ def build_graph_from_chunks(
     plugin_aliases: dict[str, str],
 ) -> tuple[nx.MultiDiGraph, list[Triple]]:
     """
-    Extract triples from chunks and build a graph artifact.
+    Extract triples from chunks and build the graph artifact.
 
     Args:
         chunks (list[dict]): Plugin documentation chunks.
