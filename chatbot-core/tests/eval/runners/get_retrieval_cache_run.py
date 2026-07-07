@@ -104,6 +104,53 @@ def get_artifact_run_id(artifact: dict[str, Any], artifact_name: str) -> int | N
     return run_id if isinstance(run_id, int) else None
 
 
+def is_successful_workflow_run(artifact: dict[str, Any]) -> bool:
+    """
+    Return whether the artifact belongs to a completed successful workflow run.
+
+    Args:
+        artifact (dict[str, Any]): Repository artifact payload from GitHub.
+
+    Returns:
+        bool: True when the artifact belongs to a successful workflow run.
+    """
+    workflow_run = artifact.get("workflow_run")
+    if not isinstance(workflow_run, dict):
+        return False
+    return (
+        workflow_run.get("status") == "completed"
+        and workflow_run.get("conclusion") == "success"
+    )
+
+
+def describe_artifact_skip(artifact: dict[str, Any], artifact_name: str) -> str | None:
+    """
+    Return the reason a candidate artifact cannot be reused.
+
+    Args:
+        artifact (dict[str, Any]): Repository artifact payload from GitHub.
+        artifact_name (str): Required artifact name.
+
+    Returns:
+        str | None: Skip reason, or None when the artifact is reusable.
+    """
+    if artifact.get("name") != artifact_name:
+        return None
+    if artifact.get("expired") is not False:
+        return "artifact is expired"
+    workflow_run = artifact.get("workflow_run")
+    if not isinstance(workflow_run, dict):
+        return "artifact is missing workflow run metadata"
+    status = workflow_run.get("status")
+    conclusion = workflow_run.get("conclusion")
+    if status != "completed" or conclusion != "success":
+        return (
+            "artifact run is not reusable "
+            f"(status={status!r}, conclusion={conclusion!r})"
+        )
+    return None
+
+
 def resolve_run_id(
     repository: str,
     artifact_name: str,
@@ -123,14 +170,24 @@ def resolve_run_id(
     Raises:
         RuntimeError: If no valid cache artifact can be found.
     """
+    skip_reasons: list[str] = []
     for artifact in list_repository_artifacts(repository, artifact_name, token):
         run_id = get_artifact_run_id(artifact, artifact_name)
-        if run_id is not None:
+        if run_id is None:
+            reason = describe_artifact_skip(artifact, artifact_name)
+            if reason is not None:
+                skip_reasons.append(reason)
+            continue
+        if is_successful_workflow_run(artifact):
             return run_id
+        reason = describe_artifact_skip(artifact, artifact_name)
+        if reason is not None:
+            skip_reasons.append(reason)
 
+    details = "; ".join(skip_reasons) if skip_reasons else "no matching artifacts found"
     raise RuntimeError(
-        f"No non-expired '{artifact_name}' artifact found in repository "
-        "runs. The fallback cache build will run."
+        f"No reusable '{artifact_name}' artifact found in repository runs: "
+        f"{details}. The fallback cache build will run."
     )
 
 
