@@ -6,34 +6,58 @@ from rag.graph.models import Triple
 from rag.graph.triple_extractor import extract_triples
 
 
-def add_triple_to_graph(graph: nx.MultiDiGraph, triple: Triple) -> None:
+def build_node_records(triples: list[Triple]) -> list[tuple[str, dict[str, str]]]:
     """
-    Add one validated triple to the graph artifact.
+    Build node rows for graph insertion.
 
     Args:
-        graph (nx.MultiDiGraph): Graph artifact being built.
-        triple (Triple): Validated relation to add.
+        triples (list[Triple]): Validated triples ready for graph storage.
+
+    Returns:
+        list[tuple[str, dict[str, str]]]: Node rows for add_nodes_from().
     """
-    graph.add_node(
-        triple.source.entity_id,
-        name=triple.source.name,
-        entity_type=triple.source.entity_type,
-    )
-    graph.add_node(
-        triple.target.entity_id,
-        name=triple.target.name,
-        entity_type=triple.target.entity_type,
-    )
-    graph.add_edge(
-        triple.source.entity_id,
-        triple.target.entity_id,
-        relation=triple.relation,
-        confidence=triple.confidence,
-        source_chunk_id=triple.evidence.source_chunk_id,
-        source_title=triple.evidence.source_title,
-        source_data_source=triple.evidence.source_data_source,
-        evidence=triple.evidence.evidence,
-    )
+    node_records: dict[str, dict[str, str]] = {}
+
+    for triple in triples:
+        node_records[triple.source.entity_id] = {
+            "name": triple.source.name,
+            "entity_type": triple.source.entity_type,
+        }
+        node_records[triple.target.entity_id] = {
+            "name": triple.target.name,
+            "entity_type": triple.target.entity_type,
+        }
+
+    return list(node_records.items())
+
+
+def build_edge_records(
+    triples: list[Triple],
+) -> list[tuple[str, str, dict[str, str | float]]]:
+    """
+    Build edge rows for graph insertion.
+
+    Args:
+        triples (list[Triple]): Validated triples ready for graph storage.
+
+    Returns:
+        list[tuple[str, str, dict[str, str | float]]]: Edge rows for add_edges_from().
+    """
+    return [
+        (
+            triple.source.entity_id,
+            triple.target.entity_id,
+            {
+                "relation": triple.relation,
+                "confidence": triple.confidence,
+                "source_chunk_id": triple.evidence.source_chunk_id,
+                "source_title": triple.evidence.source_title,
+                "source_data_source": triple.evidence.source_data_source,
+                "evidence": triple.evidence.evidence,
+            },
+        )
+        for triple in triples
+    ]
 
 
 def build_graph(triples: list[Triple]) -> nx.MultiDiGraph:
@@ -47,9 +71,8 @@ def build_graph(triples: list[Triple]) -> nx.MultiDiGraph:
         nx.MultiDiGraph: Graph artifact with node and edge attributes.
     """
     graph = nx.MultiDiGraph()
-
-    for triple in triples:
-        add_triple_to_graph(graph, triple)
+    graph.add_nodes_from(build_node_records(triples))
+    graph.add_edges_from(build_edge_records(triples))
 
     return graph
 
