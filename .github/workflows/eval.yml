@@ -40,7 +40,7 @@ jobs:
       - name: Resolve retrieval vector cache
         id: cache
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 chatbot-core/tests/eval/runners/get_retrieval_cache_run.py \
             --github-output "$GITHUB_OUTPUT"
@@ -84,7 +84,7 @@ jobs:
         with:
           name: ${{ needs.get-retrieval-cache.outputs.artifact_name }}
           path: .
-          github-token: ${{ github.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ needs.get-retrieval-cache.outputs.run_id }}
 

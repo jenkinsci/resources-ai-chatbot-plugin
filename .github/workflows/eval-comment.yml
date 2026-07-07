@@ -41,4 +41,5 @@ jobs:
           python3 chatbot-core/tests/eval/runners/comment_evaluation_report.py \
             --report artifacts/pr-comment/evaluation-report.md \
             --issue-number "$(cat artifacts/pr-comment/pr_number)" \
-            --commit-sha "$(cat artifacts/pr-comment/commit_sha)"
+            --commit-sha "$(cat artifacts/pr-comment/commit_sha)" \
+            --workflow-run-id "${{ github.event.workflow_run.id }}"
