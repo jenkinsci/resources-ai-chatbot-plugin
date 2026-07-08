@@ -82,16 +82,26 @@ def load_eval_config(path: Path = DEFAULT_EVAL_CONFIG) -> dict[str, Any]:
     """
     return json.loads(path.read_text(encoding="utf-8"))
 
+def build_default_settings(config: dict[str, Any]) -> dict[str, Any]:
+    """
+    Build CLI default values from the eval config file.
 
-EVAL_CONFIG = load_eval_config()
-DEFAULT_RESPONSE_MODEL = str(EVAL_CONFIG["response_model"])
-DEFAULT_MAX_TOKENS = int(EVAL_CONFIG["response_max_tokens"])
-DEFAULT_NUM_CTX = int(EVAL_CONFIG["response_num_ctx"])
-DEFAULT_TEMPERATURE = float(EVAL_CONFIG["response_temperature"])
-DEFAULT_REQUEST_TIMEOUT = float(EVAL_CONFIG.get("response_request_timeout", 300.0))
-DEFAULT_PROMPT_PROFILE = str(EVAL_CONFIG.get("response_prompt_profile", "production"))
-DEFAULT_KEEP_ALIVE = str(EVAL_CONFIG.get("response_keep_alive", "60m"))
-DEFAULT_WARM_PROMPT_CACHE = bool(EVAL_CONFIG.get("warm_prompt_cache", False))
+    Args:
+        config (dict[str, Any]): Parsed eval configuration.
+
+    Returns:
+        dict[str, Any]: CLI defaults derived from config.json.
+    """
+    return {
+        "response_model": str(config["response_model"]),
+        "max_tokens": int(config["response_max_tokens"]),
+        "num_ctx": int(config["response_num_ctx"]),
+        "temperature": float(config["response_temperature"]),
+        "request_timeout": float(config.get("response_request_timeout", 300.0)),
+        "prompt_profile": str(config.get("response_prompt_profile", "production")),
+        "keep_alive": str(config.get("response_keep_alive", "60m")),
+        "warm_prompt_cache": bool(config.get("warm_prompt_cache", False)),
+    }
 
 
 @dataclass(frozen=True)
@@ -105,7 +115,7 @@ class OllamaRuntimeConfig:
     """
 
     ollama_url: str
-    keep_alive: str = DEFAULT_KEEP_ALIVE
+    keep_alive: str = "60m"
 
 
 @dataclass(frozen=True)
@@ -125,11 +135,11 @@ class GenerationConfig:
 
     response_model: str
     runtime: OllamaRuntimeConfig
-    max_tokens: int = DEFAULT_MAX_TOKENS
-    num_ctx: int = DEFAULT_NUM_CTX
-    temperature: float = DEFAULT_TEMPERATURE
-    request_timeout: float = DEFAULT_REQUEST_TIMEOUT
-    prompt_profile: str = DEFAULT_PROMPT_PROFILE
+    max_tokens: int = 256
+    num_ctx: int = 16384
+    temperature: float = 0.1
+    request_timeout: float = 300.0
+    prompt_profile: str = "production"
 
 
 def load_json_list(path: Path) -> list[dict[str, Any]]:
@@ -242,7 +252,7 @@ def retrieve_context_from_tools(question: str) -> list[str]:
 def build_response_prompt(
     question: str,
     retrieval_context: list[str],
-    prompt_profile: str = DEFAULT_PROMPT_PROFILE,
+    prompt_profile: str = "production",
 ) -> str:
     """
     Build the response-generation prompt for the selected prompt profile.
@@ -356,8 +366,9 @@ def generate_output_with_ollama(
     except (HTTPError, URLError, TimeoutError) as exc:
         raise RuntimeError(
             "Could not generate eval output with Ollama. "
-            f"Ensure Ollama is running and '{generation_config.response_model}' "
-            "is pulled."
+            f"Ensure Ollama is running at "
+            f"'{generation_config.runtime.ollama_url}' and "
+            f"'{generation_config.response_model}' is pulled."
         ) from exc
 
     generated = result.get("response")
@@ -607,8 +618,23 @@ def parse_args() -> argparse.Namespace:
     Returns:
         argparse.Namespace: Parsed command-line arguments.
     """
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_EVAL_CONFIG,
+    )
+    config_args, remaining_args = config_parser.parse_known_args()
+    defaults = build_default_settings(load_eval_config(config_args.config))
+
     parser = argparse.ArgumentParser(
         description="Generate retrieval_context and actual_output entries for responses.json."
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_EVAL_CONFIG,
+        help="Path to the eval configuration JSON file.",
     )
     parser.add_argument(
         "--golden-dataset",
@@ -657,7 +683,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--response-model",
-        default=os.getenv("EVAL_RESPONSE_MODEL", DEFAULT_RESPONSE_MODEL),
+        default=os.getenv("EVAL_RESPONSE_MODEL", defaults["response_model"]),
         help="Ollama model used for output generation.",
     )
     parser.add_argument(
@@ -668,45 +694,45 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-tokens",
         type=int,
-        default=DEFAULT_MAX_TOKENS,
+        default=defaults["max_tokens"],
         help="Maximum generated tokens per response.",
     )
     parser.add_argument(
         "--num-ctx",
         type=int,
-        default=DEFAULT_NUM_CTX,
+        default=defaults["num_ctx"],
         help="Ollama context window size.",
     )
     parser.add_argument(
         "--temperature",
         type=float,
-        default=DEFAULT_TEMPERATURE,
+        default=defaults["temperature"],
         help="Ollama sampling temperature.",
     )
     parser.add_argument(
         "--request-timeout",
         type=float,
-        default=DEFAULT_REQUEST_TIMEOUT,
+        default=defaults["request_timeout"],
         help="Ollama request timeout in seconds.",
     )
     parser.add_argument(
         "--prompt-profile",
         choices=("production", "concise"),
-        default=DEFAULT_PROMPT_PROFILE,
+        default=defaults["prompt_profile"],
         help="Response prompt profile used for generated outputs.",
     )
     parser.add_argument(
         "--keep-alive",
-        default=DEFAULT_KEEP_ALIVE,
+        default=defaults["keep_alive"],
         help="Ollama keep_alive value for the response model.",
     )
     parser.add_argument(
         "--warm-prompt-cache",
         action="store_true",
-        default=DEFAULT_WARM_PROMPT_CACHE,
+        default=defaults["warm_prompt_cache"],
         help="Warm Ollama with the selected prompt profile before generation.",
     )
-    return parser.parse_args()
+    return parser.parse_args(remaining_args, namespace=config_args)
 
 
 def main() -> None:
@@ -715,6 +741,15 @@ def main() -> None:
     args = parse_args()
     if args.retrieval_only and args.generation_only:
         raise ValueError("--retrieval-only and --generation-only are mutually exclusive")
+    if args.generation_only and args.source_responses is None:
+        raise ValueError(
+            "--generation-only requires --source-responses pointing to a "
+            "retrieval-complete responses artifact."
+        )
+    if args.generation_only and not args.source_responses.exists():
+        raise ValueError(
+            f"--source-responses does not exist: {args.source_responses}"
+        )
 
     generation_config = GenerationConfig(
         response_model=args.response_model,
@@ -729,11 +764,10 @@ def main() -> None:
         prompt_profile=args.prompt_profile,
     )
     if args.generation_only:
-        source_responses = args.source_responses or args.responses
         if args.warm_prompt_cache:
             warm_prompt_cache(generation_config)
         responses = generate_outputs_from_responses(
-            source_responses=source_responses,
+            source_responses=args.source_responses,
             generation_config=generation_config,
             offset=args.offset,
             limit=args.limit,
@@ -754,6 +788,7 @@ def main() -> None:
         args.responses,
         len(responses),
     )
+
 
 if __name__ == "__main__":
     main()
