@@ -39,6 +39,49 @@ def save_json(path: Path, value: Any) -> None:
     )
 
 
+def collect_shard_outputs(
+    response_files: list[Path],
+) -> tuple[dict[str, str], list[str]]:
+    """
+    Collect generated outputs and validation errors from response shard files.
+
+    Args:
+        response_files (list[Path]): Per-shard response artifact files.
+
+    Returns:
+        tuple[dict[str, str], list[str]]: Outputs keyed by eval ID and merge
+        errors collected while reading the shard files.
+    """
+    outputs_by_id: dict[str, str] = {}
+    output_sources_by_id: dict[str, str] = {}
+    errors: list[str] = []
+    for response_file in response_files:
+        entries = load_json(response_file)
+        shard_name = response_file.parent.name
+        errors.extend(f"{shard_name}: {error}" for error in validate_entries(entries))
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            entry_id = entry.get("id")
+            if entry_id in outputs_by_id:
+                original_shard = output_sources_by_id[entry_id]
+                errors.append(
+                    "Duplicate response across shards: "
+                    f"{entry_id}. First seen in {original_shard}, "
+                    f"duplicated in {shard_name}."
+                )
+                continue
+            if not isinstance(entry_id, str):
+                continue
+            actual_output = entry.get("actual_output")
+            if not isinstance(actual_output, str):
+                errors.append(f"{shard_name}: {entry_id}: actual_output is empty.")
+                continue
+            outputs_by_id[entry_id] = actual_output.strip()
+            output_sources_by_id[entry_id] = shard_name
+    return outputs_by_id, errors
+
+
 def merge_shards(
     source_file: Path,
     shards_dir: Path,
@@ -68,31 +111,8 @@ def merge_shards(
             f"Expected {expected_shards} shard response files, found {len(response_files)}."
         )
 
-    outputs_by_id: dict[str, str] = {}
-    for response_file in response_files:
-        entries = load_json(response_file)
-        errors.extend(
-            f"{response_file.parent.name}: {error}"
-            for error in validate_entries(entries)
-        )
-        if not isinstance(entries, list):
-            continue
-        for entry in entries:
-            entry_id = entry.get("id")
-            if entry_id in outputs_by_id:
-                errors.append(f"Duplicate response across shards: {entry_id}.")
-                continue
-            if not isinstance(entry_id, str):
-                continue
-
-            actual_output = entry.get("actual_output")
-            if not isinstance(actual_output, str):
-                errors.append(
-                    f"{response_file.parent.name}: {entry_id}: actual_output is empty."
-                )
-                continue
-
-            outputs_by_id[entry_id] = actual_output.strip()
+    outputs_by_id, shard_errors = collect_shard_outputs(response_files)
+    errors.extend(shard_errors)
 
     merged_entries = deepcopy(source_entries)
     for entry in merged_entries:

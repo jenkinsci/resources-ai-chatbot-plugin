@@ -15,6 +15,7 @@ from deepeval.evaluate.configs import AsyncConfig, CacheConfig, DisplayConfig, E
 from deepeval.test_case import LLMTestCase
 
 EVAL_ROOT = Path(__file__).resolve().parents[1]
+MAX_RETRY_BACKOFF_SECONDS = 30
 if str(EVAL_ROOT) not in sys.path:
     sys.path.insert(0, str(EVAL_ROOT))
 
@@ -270,6 +271,59 @@ def merge_retry_results(
     return raw_result
 
 
+def retry_incomplete_cases(
+    raw_result: dict[str, Any],
+    test_cases_by_id: dict[str, LLMTestCase],
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    """
+    Retry cases with missing metric rows using exponential backoff.
+
+    Args:
+        raw_result (dict[str, Any]): Initial raw DeepEval result.
+        test_cases_by_id (dict[str, LLMTestCase]): Test cases keyed by stable ID.
+        args (argparse.Namespace): Parsed evaluation runner arguments.
+
+    Returns:
+        dict[str, Any]: Raw result with improved retry rows merged in.
+    """
+    for attempt in range(1, args.retry_attempts + 1):
+        incomplete_case_ids = find_incomplete_case_ids(
+            raw_result,
+            set(test_cases_by_id),
+        )
+        if not incomplete_case_ids:
+            return raw_result
+        sorted_case_ids = sorted(incomplete_case_ids)
+        retry_cases = [
+            test_cases_by_id[case_id]
+            for case_id in sorted_case_ids
+            if case_id in test_cases_by_id
+        ]
+        if not retry_cases:
+            return raw_result
+        backoff_seconds = min(2**attempt, MAX_RETRY_BACKOFF_SECONDS)
+        print(
+            f"Retrying {len(retry_cases)} cases with incomplete metrics "
+            f"(attempt {attempt}/{args.retry_attempts}, "
+            f"max_concurrent={args.retry_concurrency}, "
+            f"backoff={backoff_seconds}s)."
+        )
+        print(f"Retry case IDs: {', '.join(sorted_case_ids)}")
+        time.sleep(backoff_seconds)
+        retry_metrics = build_metrics(args.judge_model, args.base_url, args.threshold)
+        retry_result = run_deepeval(
+            test_cases=retry_cases,
+            metrics=retry_metrics,
+            identifier=f"{args.identifier}-retry-{attempt}",
+            max_concurrent=args.retry_concurrency,
+        )
+        raw_result = merge_retry_results(
+            raw_result, retry_result.model_dump(mode="json")
+        )
+    return raw_result
+
+
 def run_deepeval(
     test_cases: list[LLMTestCase],
     metrics: list[Any],
@@ -454,34 +508,7 @@ def run(args: argparse.Namespace) -> int:
         )
         raw_result = result.model_dump(mode="json")
         test_cases_by_id = {test_case.name: test_case for test_case in test_cases}
-        for attempt in range(1, args.retry_attempts + 1):
-            incomplete_case_ids = find_incomplete_case_ids(
-                raw_result,
-                set(test_cases_by_id),
-            )
-            if not incomplete_case_ids:
-                break
-            retry_cases = [
-                test_cases_by_id[case_id]
-                for case_id in sorted(incomplete_case_ids)
-                if case_id in test_cases_by_id
-            ]
-            if not retry_cases:
-                break
-            print(
-                f"Retrying {len(retry_cases)} cases with incomplete metrics "
-                f"(attempt {attempt}/{args.retry_attempts})."
-            )
-            retry_metrics = build_metrics(args.judge_model, args.base_url, args.threshold)
-            retry_result = run_deepeval(
-                test_cases=retry_cases,
-                metrics=retry_metrics,
-                identifier=f"{args.identifier}-retry-{attempt}",
-                max_concurrent=args.retry_concurrency,
-            )
-            raw_result = merge_retry_results(
-                raw_result, retry_result.model_dump(mode="json")
-            )
+        raw_result = retry_incomplete_cases(raw_result, test_cases_by_id, args)
         summary, errors = summarize_result(
             raw_result,
             args.response_model,

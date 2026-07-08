@@ -98,8 +98,10 @@ def collect_shard_summaries(
     """
     summary_files = sorted(shards_dir.glob("*/evaluation-summary.json"))
     if len(summary_files) != expected_shards:
+        found_files = ", ".join(str(path) for path in summary_files) or "none"
         raise ValueError(
-            f"Expected {expected_shards} evaluation summaries, found {len(summary_files)}"
+            f"Expected {expected_shards} evaluation summaries, found "
+            f"{len(summary_files)}. Found summary files: {found_files}"
         )
 
     shard_summaries = [load_json(path) for path in summary_files]
