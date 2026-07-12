@@ -1,4 +1,4 @@
-"""Query intent and entity resolution helpers for GraphRAG retrieval."""
+"""GraphRAG query parsing and graph traversal helpers."""
 
 from dataclasses import dataclass
 import re
@@ -68,7 +68,7 @@ class GraphQueryIntent:
 @dataclass(frozen=True)
 class GraphQueryMatch:
     """
-    Parsed graph query state used by later retrieval code.
+    Parsed graph query state used by graph traversal.
 
     Args:
         query (str): Original user query.

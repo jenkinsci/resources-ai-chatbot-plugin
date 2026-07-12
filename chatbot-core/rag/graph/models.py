@@ -164,7 +164,7 @@ class GraphRelation:
 @dataclass(frozen=True)
 class GraphRetrievalResult:
     """
-    Result object returned by future graph retrieval code.
+    Result object returned by graph retrieval code.
 
     Args:
         query_entity (str): Entity text detected in the user query.
