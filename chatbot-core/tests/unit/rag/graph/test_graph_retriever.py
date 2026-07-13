@@ -3,12 +3,9 @@
 import networkx as nx
 
 from rag.graph.entity_normalizer import build_plugin_aliases
-from rag.graph.graph_retriever import (
-    detect_graph_query_intent,
-    parse_graph_query,
-    retrieve_graph_relations,
-)
+from rag.graph.graph_retriever import retrieve_graph_relations
 from rag.graph.hybrid_context import build_chunk_lookup, format_graph_retrieval_result
+from rag.graph.query_parser import detect_graph_query_intent, parse_graph_query
 from rag.graph.schema import GraphEntityType, GraphRelationType
 
 
@@ -61,8 +58,8 @@ def build_test_graph() -> nx.MultiDiGraph:
             evidence=evidence,
             confidence=0.9,
     )
-
     return graph
+
 
 def test_detect_graph_query_intents():
     """Verify dependency, reverse dependency, conflict, and multi-hop intents."""
@@ -76,16 +73,17 @@ def test_detect_graph_query_intents():
     assert conflict.direction == "both"
     assert multi_hop.traversal_depth == 2
 
+
 def test_parse_graph_query_resolves_alias_entity():
     """Verify human plugin names resolve to canonical graph node IDs."""
     query_match = parse_graph_query(
         "What does Blue Ocean depend on?",
         PLUGIN_ALIASES,
     )
-
     assert query_match.query_entity == "Blue Ocean"
     assert query_match.matched_entity.entity_id == "blueocean"
     assert query_match.intent.direction == "outgoing"
+
 
 def test_retrieve_graph_relations_handles_dependency_directions():
     """Verify outgoing and incoming dependency traversal."""
@@ -100,12 +98,12 @@ def test_retrieve_graph_relations_handles_dependency_directions():
         PLUGIN_ALIASES,
         graph,
     )
-
     assert [relation.target.entity_id for relation in outgoing.relations] == ["git"]
     assert sorted(relation.source.entity_id for relation in incoming.relations) == [
         "blueocean",
         "workflow",
     ]
+
 
 def test_retrieve_graph_relations_handles_conflicts_and_fallback():
     """Verify conflict traversal works and normal how-to queries do not activate."""
@@ -115,7 +113,6 @@ def test_retrieve_graph_relations_handles_conflicts_and_fallback():
         PLUGIN_ALIASES,
         graph,
     )
-
     assert conflict.relations[0].source.entity_id == "blueocean"
     assert conflict.relations[0].target.entity_id == "legacy-plugin"
     assert retrieve_graph_relations(
@@ -123,6 +120,7 @@ def test_retrieve_graph_relations_handles_conflicts_and_fallback():
         PLUGIN_ALIASES,
         graph,
     ) is None
+
 
 def test_format_graph_retrieval_result_includes_source_chunk_context():
     """Verify graph context includes relation evidence and source chunk text."""
@@ -139,7 +137,6 @@ def test_format_graph_retrieval_result_includes_source_chunk_context():
             }
         ]
     )
-
     context = format_graph_retrieval_result(result, chunk_lookup=chunk_lookup)
 
     assert "blueocean DEPENDS_ON git." in context
