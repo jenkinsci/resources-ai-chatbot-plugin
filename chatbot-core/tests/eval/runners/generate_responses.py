@@ -411,6 +411,10 @@ def warm_prompt_cache(generation_config: GenerationConfig) -> None:
     """
     Warm Ollama with the configured response prompt profile.
 
+    Prompt-cache warmup is an optimization only. If Ollama rejects the warmup
+    request, generation should continue with normal requests instead of failing
+    the whole shard up front.
+
     Args:
         generation_config (GenerationConfig): Output-generation settings.
     """
@@ -424,11 +428,14 @@ def warm_prompt_cache(generation_config: GenerationConfig) -> None:
         request_timeout=generation_config.request_timeout,
         prompt_profile=generation_config.prompt_profile,
     )
-    generate_output_with_ollama(
-        question="Warm the response prompt cache.",
-        retrieval_context=["Prompt cache warm-up context."],
-        generation_config=warm_config,
-    )
+    try:
+        generate_output_with_ollama(
+            question="Warm the response prompt cache.",
+            retrieval_context=["Prompt cache warm-up context."],
+            generation_config=warm_config,
+        )
+    except RuntimeError as exc:
+        logger.warning("Skipping prompt-cache warmup after Ollama warmup failure: %s", exc)
 
 
 def build_response_entry(
