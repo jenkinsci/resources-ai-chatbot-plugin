@@ -205,9 +205,6 @@ jobs:
           cache: pip
           cache-dependency-path: chatbot-core/tests/eval/requirements-eval.txt
 
-      - name: Install backend dependencies
-        run: make IS_CPU_REQ=1 setup-backend
-
       - name: Initialize shard results
         run: mkdir -p "$RESULTS_DIR"
 
@@ -234,10 +231,9 @@ jobs:
         run: |
           bash chatbot-core/tests/eval/scripts/start_ollama_service.sh "$RESULTS_DIR"
 
-      - name: Pull response and judge models
+      - name: Pull response model
         run: |
           ollama pull "$RESPONSE_MODEL" 2>&1 | tee "$RESULTS_DIR/response-model-pull.log"
-          ollama pull "$JUDGE_MODEL" 2>&1 | tee "$RESULTS_DIR/judge-model-pull.log"
 
       - name: Generate responses for shard
         id: generation
@@ -248,7 +244,7 @@ jobs:
           if [[ '${{ needs.prepare-response-matrix.outputs.warm_prompt_cache }}' == 'true' ]]; then
             WARM_PROMPT_CACHE_ARGS+=(--warm-prompt-cache)
           fi
-          chatbot-core/venv/bin/python \
+          python3 \
             chatbot-core/tests/eval/runners/generate_responses.py \
             --generation-only \
             --source-responses artifacts/retrieval/responses.json \
@@ -278,7 +274,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ollama stop "$RESPONSE_MODEL" || true
+          if [[ "$RESPONSE_MODEL" != "$JUDGE_MODEL" ]]; then
+            ollama stop "$RESPONSE_MODEL" || true
+            ollama rm "$RESPONSE_MODEL"
+            ollama pull "$JUDGE_MODEL" 2>&1 | tee "$RESULTS_DIR/judge-model-pull.log"
+          fi
           python3 chatbot-core/tests/eval/runners/run_evaluation.py \
             --responses "$RESULTS_DIR/responses.json" \
             --goldens chatbot-core/tests/eval/datasets/golden_dataset.json \
