@@ -7,6 +7,7 @@ import {
   fetchChatbotReplyWithFiles,
   createChatSession,
   deleteChatSession,
+  fetchSessionHistory,
   fetchSupportedExtensions,
   validateFile,
   fileToAttachment,
@@ -72,8 +73,8 @@ export const Chatbot = () => {
    */
   useEffect(() => {
     const handleBeforeUnload = () => {
-      sessionStorage.setItem("chatbot-sessions", JSON.stringify(sessions));
-      sessionStorage.setItem("chatbot-last-session-id", currentSessionId || "");
+      localStorage.setItem("chatbot-sessions", JSON.stringify(sessions));
+      localStorage.setItem("chatbot-last-session-id", currentSessionId || "");
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -82,6 +83,28 @@ export const Chatbot = () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [sessions, currentSessionId]);
+
+  /**
+   * Hydrate session messages from the backend when switching
+   * to a session that has no local messages.
+   */
+  useEffect(() => {
+    if (!currentSessionId) return;
+
+    const session = sessions.find((s) => s.id === currentSessionId);
+    if (session && session.messages.length > 0) return;
+
+    const hydrateHistory = async () => {
+      const messages = await fetchSessionHistory(currentSessionId);
+      if (messages.length === 0) return;
+
+      setSessions((prev) =>
+        prev.map((s) => (s.id === currentSessionId ? { ...s, messages } : s)),
+      );
+    };
+
+    hydrateHistory();
+  }, [currentSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Returns the messages of a chat session.
