@@ -1,6 +1,6 @@
 name: LLM-as-a-Judge
 
-"on":
+on:
   pull_request:
     types:
       - opened
@@ -40,7 +40,7 @@ jobs:
       - name: Resolve retrieval vector cache
         id: cache
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 chatbot-core/tests/eval/runners/get_retrieval_cache_run.py \
             --github-output "$GITHUB_OUTPUT"
@@ -84,7 +84,7 @@ jobs:
         with:
           name: ${{ needs.get-retrieval-cache.outputs.artifact_name }}
           path: .
-          github-token: ${{ github.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           run-id: ${{ needs.get-retrieval-cache.outputs.run_id }}
 
@@ -193,6 +193,7 @@ jobs:
       OLLAMA_MAX_LOADED_MODELS: "1"
       OLLAMA_FLASH_ATTENTION: "1"
       OLLAMA_KV_CACHE_TYPE: "q8_0"
+      OLLAMA_LLM_LIBRARY: "cpu_avx2"
 
     steps:
       - name: Check out pull request
@@ -204,9 +205,6 @@ jobs:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: chatbot-core/tests/eval/requirements-eval.txt
-
-      - name: Install backend dependencies
-        run: make IS_CPU_REQ=1 setup-backend
 
       - name: Initialize shard results
         run: mkdir -p "$RESULTS_DIR"
@@ -234,10 +232,9 @@ jobs:
         run: |
           bash chatbot-core/tests/eval/scripts/start_ollama_service.sh "$RESULTS_DIR"
 
-      - name: Pull response and judge models
+      - name: Pull response model
         run: |
           ollama pull "$RESPONSE_MODEL" 2>&1 | tee "$RESULTS_DIR/response-model-pull.log"
-          ollama pull "$JUDGE_MODEL" 2>&1 | tee "$RESULTS_DIR/judge-model-pull.log"
 
       - name: Generate responses for shard
         id: generation
@@ -248,7 +245,7 @@ jobs:
           if [[ '${{ needs.prepare-response-matrix.outputs.warm_prompt_cache }}' == 'true' ]]; then
             WARM_PROMPT_CACHE_ARGS+=(--warm-prompt-cache)
           fi
-          chatbot-core/venv/bin/python \
+          python3 \
             chatbot-core/tests/eval/runners/generate_responses.py \
             --generation-only \
             --source-responses artifacts/retrieval/responses.json \
@@ -278,7 +275,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ollama stop "$RESPONSE_MODEL" || true
+          if [[ "$RESPONSE_MODEL" != "$JUDGE_MODEL" ]]; then
+            ollama stop "$RESPONSE_MODEL" || true
+            ollama rm "$RESPONSE_MODEL"
+            ollama pull "$JUDGE_MODEL" 2>&1 | tee "$RESULTS_DIR/judge-model-pull.log"
+          fi
           python3 chatbot-core/tests/eval/runners/run_evaluation.py \
             --responses "$RESULTS_DIR/responses.json" \
             --goldens chatbot-core/tests/eval/datasets/golden_dataset.json \
@@ -337,7 +338,7 @@ jobs:
             --question-count '${{ needs.prepare-response-matrix.outputs.question_count }}' \
             --expected-shards '${{ needs.prepare-response-matrix.outputs.shard_count }}' \
             --minimum-metric-coverage '${{ needs.prepare-response-matrix.outputs.minimum_metric_coverage }}' \
-            --minimum-average-score '${{ needs.prepare-response-matrix.outputs.metric_threshold }}'
+            --threshold-score '${{ needs.prepare-response-matrix.outputs.metric_threshold }}'
 
       - name: Publish evaluation report
         if: always()
@@ -345,6 +346,31 @@ jobs:
           if [[ -f artifacts/combined/evaluation-report.md ]]; then
             cat artifacts/combined/evaluation-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Prepare PR comment artifact
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          mkdir -p artifacts/pr-comment
+          echo '${{ github.event.pull_request.number }}' > artifacts/pr-comment/pr_number
+          echo '${{ github.sha }}' > artifacts/pr-comment/commit_sha
+          if [[ -f artifacts/combined/evaluation-report.md ]]; then
+            cp artifacts/combined/evaluation-report.md artifacts/pr-comment/evaluation-report.md
+          else
+            {
+              echo "# Chatbot evaluation report"
+              echo
+              echo "Evaluation did not produce a combined report. Check the workflow logs."
+            } > artifacts/pr-comment/evaluation-report.md
+          fi
+
+      - name: Upload PR comment artifact
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-as-judge-pr-comment
+          path: artifacts/pr-comment/
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Upload combined responses
         if: always()

@@ -98,8 +98,10 @@ def collect_shard_summaries(
     """
     summary_files = sorted(shards_dir.glob("*/evaluation-summary.json"))
     if len(summary_files) != expected_shards:
+        found_files = ", ".join(str(path) for path in summary_files) or "none"
         raise ValueError(
-            f"Expected {expected_shards} evaluation summaries, found {len(summary_files)}"
+            f"Expected {expected_shards} evaluation summaries, found "
+            f"{len(summary_files)}. Found summary files: {found_files}"
         )
 
     shard_summaries = [load_json(path) for path in summary_files]
@@ -115,7 +117,7 @@ def aggregate_scores(
     question_count: int,
     expected_shards: int,
     minimum_metric_coverage: float,
-    minimum_average_score: float,
+    threshold_score: float,
 ) -> tuple[dict[str, Any], list[str]]:
     """
     Aggregate shard-level evaluation summaries into one report.
@@ -126,7 +128,7 @@ def aggregate_scores(
         expected_shards (int): Number of shard summaries expected on disk.
         minimum_metric_coverage (float): Required fraction of questions with
             a numeric score for each metric.
-        minimum_average_score (float): Required average score for each metric.
+        threshold_score (float): Required average score threshold for each metric.
 
     Returns:
         tuple[dict[str, Any], list[str]]: Aggregate summary payload and fatal
@@ -147,11 +149,11 @@ def aggregate_scores(
                 f"{metric_name}: coverage {coverage:.2%} is below "
                 f"{minimum_metric_coverage:.2%}"
             )
-        if average_score is None or average_score < minimum_average_score:
+        if average_score is None or average_score < threshold_score:
             score_text = "missing" if average_score is None else f"{average_score:.4f}"
             errors.append(
                 f"{metric_name}: average score {score_text} is below "
-                f"{minimum_average_score:.4f}"
+                f"threshold {threshold_score:.4f}"
             )
 
     return (
@@ -161,7 +163,7 @@ def aggregate_scores(
             "question_count": question_count,
             "shard_count": expected_shards,
             "minimum_metric_coverage": minimum_metric_coverage,
-            "minimum_average_score": minimum_average_score,
+            "threshold_score": threshold_score,
             "metrics": metrics,
             "cases": cases,
             "warnings": warnings,
@@ -188,11 +190,25 @@ def write_report(summary: dict[str, Any], path: Path) -> None:
         f"- Questions: {summary['question_count']}",
         f"- Shards: {summary['shard_count']}",
         f"- Minimum metric coverage: {summary['minimum_metric_coverage']}",
-        f"- Minimum average score: {summary['minimum_average_score']}",
+        f"- Threshold score: {summary['threshold_score']}",
         "",
-        "| Metric | Average | Min | Max | Evaluated | Coverage | Pass rate |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
+    if summary["errors"]:
+        lines.extend(
+            [
+                (
+                    "> **Warning:** merge is blocked because one or more "
+                    "evaluation requirements failed."
+                ),
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "| Metric | Average | Min | Max | Evaluated | Coverage | Pass rate |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+    )
     for name in METRIC_NAMES:
         metric = summary["metrics"][name]
         lines.append(
@@ -223,7 +239,7 @@ def main() -> int:
     parser.add_argument("--question-count", type=int, required=True)
     parser.add_argument("--expected-shards", type=int, required=True)
     parser.add_argument("--minimum-metric-coverage", type=float, required=True)
-    parser.add_argument("--minimum-average-score", type=float, required=True)
+    parser.add_argument("--threshold-score", type=float, required=True)
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -240,7 +256,7 @@ def main() -> int:
             args.question_count,
             args.expected_shards,
             args.minimum_metric_coverage,
-            args.minimum_average_score,
+            args.threshold_score,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"Aggregation failed: {exc}")

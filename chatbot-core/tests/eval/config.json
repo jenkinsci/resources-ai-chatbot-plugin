@@ -13,7 +13,7 @@
     "warm_prompt_cache": true,
     "judge_max_tokens": 4028,
     "judge_num_ctx": 16384,
-    "metric_threshold": 0.5,
+    "metric_threshold": 0.85,
     "minimum_metric_coverage": 0.9,
     "missing_metric_retry_attempts": 3,
     "missing_metric_retry_concurrency": 2,

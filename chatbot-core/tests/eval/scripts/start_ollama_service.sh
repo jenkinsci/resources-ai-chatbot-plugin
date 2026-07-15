@@ -9,8 +9,10 @@ fi
 
 RESULTS_DIR="$1"
 OLLAMA_LOG="$RESULTS_DIR/ollama-server.log"
+OLLAMA_PID_FILE="$RESULTS_DIR/ollama.pid"
 
 nohup ollama serve > "$OLLAMA_LOG" 2>&1 &
+echo "$!" > "$OLLAMA_PID_FILE"
 sleep 5
 
 for attempt in {1..30}; do
@@ -26,5 +28,5 @@ done
 
 echo "Ollama did not become ready within 60 seconds." >&2
 echo "=== Ollama Server Log ===" >&2
-cat "$OLLAMA_LOG" >&2
+tail -n 100 "$OLLAMA_LOG" >&2 || cat "$OLLAMA_LOG" >&2
 exit 1

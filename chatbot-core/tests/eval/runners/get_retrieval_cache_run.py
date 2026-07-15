@@ -10,6 +10,7 @@ from urllib import parse, request
 from urllib.error import HTTPError, URLError
 
 GITHUB_API_URL = "https://api.github.com"
+CACHE_BUILD_JOB_NAME = "build-retrieval-cache"
 
 
 def default_artifact_name() -> str:
@@ -104,6 +105,70 @@ def get_artifact_run_id(artifact: dict[str, Any], artifact_name: str) -> int | N
     return run_id if isinstance(run_id, int) else None
 
 
+def has_successful_cache_build_job(
+    repository: str,
+    run_id: int,
+    token: str,
+) -> bool:
+    """
+    Return whether a workflow run completed its retrieval cache build job.
+
+    Args:
+        repository (str): Repository in OWNER/REPO format.
+        run_id (int): Workflow run ID to inspect.
+        token (str): GitHub token with Actions read access.
+
+    Returns:
+        bool: True when the retrieval cache build job completed successfully.
+    """
+    query = parse.urlencode({"filter": "latest", "per_page": 100})
+    payload = github_api_get(
+        f"/repos/{repository}/actions/runs/{run_id}/jobs?{query}",
+        token,
+    )
+    jobs = payload.get("jobs", [])
+    if not isinstance(jobs, list):
+        raise RuntimeError("GitHub API workflow jobs payload is invalid")
+
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        job_name = job.get("name")
+        if not isinstance(job_name, str):
+            continue
+        is_cache_build = job_name == CACHE_BUILD_JOB_NAME or job_name.endswith(
+            f" / {CACHE_BUILD_JOB_NAME}"
+        )
+        if (
+            is_cache_build
+            and job.get("status") == "completed"
+            and job.get("conclusion") == "success"
+        ):
+            return True
+    return False
+
+
+def describe_artifact_skip(artifact: dict[str, Any], artifact_name: str) -> str | None:
+    """
+    Return the reason a candidate artifact cannot be reused.
+
+    Args:
+        artifact (dict[str, Any]): Repository artifact payload from GitHub.
+        artifact_name (str): Required artifact name.
+
+    Returns:
+        str | None: Skip reason, or None when the artifact is reusable.
+    """
+    if artifact.get("name") != artifact_name:
+        return None
+    if artifact.get("expired") is not False:
+        return "artifact is expired"
+    workflow_run = artifact.get("workflow_run")
+    if not isinstance(workflow_run, dict):
+        return "artifact is missing workflow run metadata"
+    return None
+
+
 def resolve_run_id(
     repository: str,
     artifact_name: str,
@@ -123,14 +188,24 @@ def resolve_run_id(
     Raises:
         RuntimeError: If no valid cache artifact can be found.
     """
+    skip_reasons: list[str] = []
     for artifact in list_repository_artifacts(repository, artifact_name, token):
         run_id = get_artifact_run_id(artifact, artifact_name)
-        if run_id is not None:
+        if run_id is None:
+            reason = describe_artifact_skip(artifact, artifact_name)
+            if reason is not None:
+                skip_reasons.append(reason)
+            continue
+        if has_successful_cache_build_job(repository, run_id, token):
             return run_id
+        skip_reasons.append(
+            f"run {run_id} has no completed successful {CACHE_BUILD_JOB_NAME} job"
+        )
 
+    details = "; ".join(skip_reasons) if skip_reasons else "no matching artifacts found"
     raise RuntimeError(
-        f"No non-expired '{artifact_name}' artifact found in repository "
-        "runs. The fallback cache build will run."
+        f"No reusable '{artifact_name}' artifact found in repository runs: "
+        f"{details}. The fallback cache build will run."
     )
 
 

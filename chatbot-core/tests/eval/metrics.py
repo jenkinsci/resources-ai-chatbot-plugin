@@ -9,12 +9,15 @@ from deepeval.metrics import (
 )
 from deepeval.models import OllamaModel
 
-METRIC_THRESHOLD = 0.5
+from faithfulness_template import JenkinsFaithfulnessTemplate
+
+DEFAULT_THRESHOLD = float(os.getenv("METRIC_THRESHOLD", "0.85"))
+
 
 def build_metrics(
     judge_model_name: str,
     base_url: str,
-    threshold: float = METRIC_THRESHOLD,
+    threshold: float = DEFAULT_THRESHOLD,
 ):
     """
     Build the DeepEval metrics used for chatbot response evaluation.
@@ -43,9 +46,13 @@ def build_metrics(
         "threshold": threshold,
         "async_mode": False,
         "include_reason": False,
+        "verbose_mode": True,
     }
     return [
-        FaithfulnessMetric(**metric_kwargs),
+        FaithfulnessMetric(
+            **metric_kwargs,
+            evaluation_template=JenkinsFaithfulnessTemplate,
+        ),
         AnswerRelevancyMetric(**metric_kwargs),
         ContextualRecallMetric(**metric_kwargs),
     ]
