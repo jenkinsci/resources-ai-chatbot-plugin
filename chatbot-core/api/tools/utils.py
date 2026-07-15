@@ -85,9 +85,9 @@ def validate_tool_calls(tool_calls_parsed: list, logger) -> bool:
 
             for param_name, param_type in expected_params.items():
                 if param_name not in params:
-                    logger.warning("Tool: %s: Param %s is not expected.", tool, param_name)
+                    logger.warning("Tool: %s: Param %s is missing.", tool, param_name)
                     valid = False
-                if not isinstance(params[param_name], param_type):
+                elif not isinstance(params[param_name], param_type):
                     logger.warning("Tool: %s: Param %s is not of the expected type %s.",
                                 tool, param_name, param_type.__name__)
                     valid = False
