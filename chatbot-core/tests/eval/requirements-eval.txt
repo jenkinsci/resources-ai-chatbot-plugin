@@ -1,1 +1,2 @@
 deepeval==4.0.2
+ollama==0.6.2

@@ -1,0 +1,109 @@
+name: Build Retrieval Vector Cache
+
+on:
+  workflow_call:
+    inputs:
+      artifact_name:
+        type: string
+      retention_days:
+        type: number
+        default: 2
+    outputs:
+      artifact_name:
+        description: Name of the uploaded retrieval vector cache artifact.
+        value: ${{ jobs.build-retrieval-cache.outputs.artifact_name }}
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        type: string
+      retention_days:
+        type: number
+        default: 2
+  schedule:
+    # Temporary testing: run nightly while validating cache reuse.
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: read
+
+env:
+  RETRIEVAL_CACHE_ARTIFACT: ${{ inputs.artifact_name || '' }}
+  RETRIEVAL_CACHE_RETENTION_DAYS: ${{ inputs.retention_days || 2 }}
+
+concurrency:
+  group: retrieval-vector-cache
+  cancel-in-progress: false
+
+jobs:
+  build-retrieval-cache:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    outputs:
+      artifact_name: ${{ steps.cache-name.outputs.artifact_name }}
+
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Resolve cache artifact name
+        id: cache-name
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_name="${RETRIEVAL_CACHE_ARTIFACT}"
+          if [[ -z "$artifact_name" ]]; then
+            artifact_name="retrieval-vector-database-$(date -u +%d%m)"
+          fi
+          echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+
+      - name: Build retrieval vector database
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          make IS_CPU_REQ=1 setup-backend
+          {
+            make -j2 run-data-collection
+            make -j2 run-data-preprocessing
+            make -j2 run-data-chunking
+            make -j2 run-data-storage
+          } 2>&1 | tee logs/data-pipeline.log
+
+      - name: Verify retrieval artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for source in docs plugins discourse; do
+            test -s "chatbot-core/data/embeddings/${source}_index.idx"
+            test -s "chatbot-core/data/embeddings/${source}_metadata.pkl"
+          done
+
+      - name: Write cache manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > chatbot-core/data/embeddings/retrieval-cache-manifest.json <<EOF
+          {
+            "artifact": "${{ steps.cache-name.outputs.artifact_name }}",
+            "source_branch": "${GITHUB_REF_NAME}",
+            "source_sha": "${GITHUB_SHA}",
+            "run_id": "${GITHUB_RUN_ID}"
+          }
+          EOF
+
+      - name: Upload retrieval vector cache
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.cache-name.outputs.artifact_name }}
+          path: |
+            chatbot-core/data/embeddings/
+            logs/data-pipeline.log
+          if-no-files-found: error
+          # Temporary testing retention: keep only the last couple of days.
+          retention-days: ${{ env.RETRIEVAL_CACHE_RETENTION_DAYS }}
+          compression-level: 0
