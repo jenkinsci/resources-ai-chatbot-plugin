@@ -145,10 +145,11 @@ def delete_session(session_id: str) -> bool:
             return True
         in_memory_deleted = _sessions.pop(session_id, None) is not None
 
-    if in_memory_deleted:
-        delete_session_file(session_id)
+    persisted_deleted = False
+    if session_exists_in_json(session_id):
+        persisted_deleted = delete_session_file(session_id)
 
-    return in_memory_deleted
+    return in_memory_deleted or persisted_deleted
 
 
 def session_exists(session_id: str) -> bool:
