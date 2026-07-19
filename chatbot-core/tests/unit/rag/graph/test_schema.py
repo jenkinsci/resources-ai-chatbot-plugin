@@ -3,7 +3,6 @@
 from rag.graph.schema import (
     GraphEntityType,
     GraphRelationType,
-    has_required_edge_fields,
     has_required_evidence_fields,
     is_valid_confidence,
     is_valid_entity_type,
@@ -60,18 +59,3 @@ def test_required_evidence_fields():
         "evidence": "Git plugin is mentioned.",
     }
     assert has_required_evidence_fields(evidence)
-
-
-def test_required_edge_fields():
-    """
-    Verify edge payloads include relation metadata and evidence fields.
-    """
-    edge_data = {
-        "source_chunk_id": "chunk-1",
-        "source_title": "Git plugin",
-        "source_data_source": "plugins",
-        "evidence": "Git plugin is mentioned.",
-        "relation": GraphRelationType.MENTIONS.value,
-        "confidence": 0.8,
-    }
-    assert has_required_edge_fields(edge_data)

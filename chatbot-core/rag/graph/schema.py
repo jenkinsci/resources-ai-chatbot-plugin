@@ -42,14 +42,6 @@ REQUIRED_EVIDENCE_FIELDS = frozenset(
     }
 )
 
-REQUIRED_EDGE_FIELDS = frozenset(
-    {
-        *REQUIRED_EVIDENCE_FIELDS,
-        "relation",
-        "confidence",
-    }
-)
-
 ALLOWED_ENTITY_TYPES = frozenset(entity.value for entity in GraphEntityType)
 ALLOWED_RELATION_TYPES = frozenset(relation.value for relation in GraphRelationType)
 
@@ -113,16 +105,3 @@ def has_required_evidence_fields(evidence: dict) -> bool:
         bool: True when all required evidence fields are present.
     """
     return REQUIRED_EVIDENCE_FIELDS.issubset(evidence)
-
-
-def has_required_edge_fields(edge_data: dict) -> bool:
-    """
-    Check whether serialized edge data contains relation and evidence fields.
-
-    Args:
-        edge_data (dict): Serialized graph edge payload to validate.
-
-    Returns:
-        bool: True when all required edge fields are present.
-    """
-    return REQUIRED_EDGE_FIELDS.issubset(edge_data)
