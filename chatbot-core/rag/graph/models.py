@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 
 from rag.graph.schema import (
     DEFAULT_MIN_CONFIDENCE,
-    has_required_evidence_fields,
     is_valid_confidence,
     is_valid_entity_type,
     is_valid_relation_type,
@@ -96,15 +95,6 @@ class GraphEvidence:
         Raises:
             ValueError: If any required evidence value is missing or empty.
         """
-        evidence_payload = {
-            "source_chunk_id": self.source_chunk_id,
-            "source_title": self.source_title,
-            "source_data_source": self.source_data_source,
-            "evidence": self.evidence,
-        }
-        if not has_required_evidence_fields(evidence_payload):
-            raise ValueError("missing evidence fields")
-
         _require_non_empty(self.source_chunk_id, "source_chunk_id")
         _require_non_empty(self.source_title, "source_title")
         _require_non_empty(self.source_data_source, "source_data_source")
