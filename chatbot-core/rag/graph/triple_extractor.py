@@ -71,9 +71,9 @@ def build_chunk_evidence(chunk: dict, evidence_text: str) -> GraphEvidence:
     """
     metadata = chunk.get("metadata", {})
     return GraphEvidence(
-        source_chunk_id=chunk["id"],
-        source_title=metadata["title"],
-        source_data_source=metadata["data_source"],
+        source_chunk_id=chunk.get("id", ""),
+        source_title=metadata.get("title", ""),
+        source_data_source=metadata.get("data_source", ""),
         evidence=evidence_text.strip(),
     )
 
