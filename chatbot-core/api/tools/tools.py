@@ -12,6 +12,7 @@ from api.tools.utils import (
     extract_top_chunks
 )
 from api.config.loader import CONFIG
+from rag.graph.runtime_context import build_graph_runtime_context
 
 retrieval_config = CONFIG["retrieval"]
 
@@ -46,7 +47,7 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
             plugin_name
         )
 
-    return extract_top_chunks(
+    plugin_context = extract_top_chunks(
         data_retrieved_semantic,
         scores_semantic,
         data_retrieved_keyword,
@@ -54,6 +55,14 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
         top_k=retrieval_config["top_k_plugins"],
         logger=logger
     )
+    graph_context = build_graph_runtime_context(query, logger)
+
+    if not graph_context:
+        return plugin_context
+    if plugin_context == retrieval_config["empty_context_message"]:
+        return graph_context
+
+    return f"{plugin_context}\n\n{graph_context}"
 
 def search_jenkins_docs(query: str, keywords: str, logger) -> str:
     """
