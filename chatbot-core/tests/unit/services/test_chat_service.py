@@ -209,6 +209,24 @@ def test_retrieve_context_with_missing_code(mock_get_relevant_documents, caplog)
     assert "More placeholders than code blocks in chunk with ID doc-111" in caplog.text
 
 
+def test_retrieve_context_appends_graph_context(
+    mock_get_relevant_documents,
+    mocker,
+):
+    """Test retrieve_context appends GraphRAG context when available."""
+    mock_get_relevant_documents.return_value = (get_mock_documents("plain"), None)
+    graph_context_mock = mocker.patch(
+        "api.services.chat_service.build_graph_runtime_context",
+        return_value="[Source: plugin_relation_graph]\ngit DEPENDS_ON scm-api",
+    )
+
+    result = retrieve_context("What does git depend on?")
+
+    assert "[Source: plugins]\nPlugin documentation text" in result
+    assert "[Source: plugin_relation_graph]\ngit DEPENDS_ON scm-api" in result
+    graph_context_mock.assert_called_once()
+
+
 def get_mock_documents(doc_type: str):
     """Helper function to retrieve the mock documents."""
     if doc_type == "with_placeholders":
@@ -247,6 +265,14 @@ def get_mock_documents(doc_type: str):
                     "Snippet 1: [[CODE_BLOCK_0]], Snippet 2: [[CODE_BLOCK_1]]"
                 ),
                 "code_blocks": ["print('Only one snippet')"]
+            }
+        ]
+    if doc_type == "plain":
+        return [
+            {
+                "id": "doc-111",
+                "chunk_text": "Plugin documentation text",
+                "code_blocks": []
             }
         ]
     return []
