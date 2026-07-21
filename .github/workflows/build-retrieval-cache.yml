@@ -31,8 +31,8 @@ env:
   RETRIEVAL_CACHE_RETENTION_DAYS: ${{ inputs.retention_days || 2 }}
 
 concurrency:
-  group: retrieval-vector-cache
-  cancel-in-progress: false
+  group: retrieval-vector-cache-${{ github.event_name == 'workflow_call' && github.ref || 'scheduled' }}
+  cancel-in-progress: ${{ github.event_name == 'workflow_call' }}
 
 jobs:
   build-retrieval-cache:
