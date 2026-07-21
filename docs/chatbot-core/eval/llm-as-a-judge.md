@@ -199,7 +199,7 @@ The evaluation workflow runs when:
 - A mentor or maintainer adds the `eval` label to a pull request.
 - A contributor updates a pull request that already has the `eval` label.
 
-The retrieval vector cache workflow can also run on its schedule, configured in [`.github/workflows/build-retrieval-cache.yml`](../../../.github/workflows/build-retrieval-cache.yml), to keep a recent retrieval database artifact available.
+The retrieval vector cache workflow runs on the 1st and 15th of each month, keeps artifacts for 28 days, and uploads the stable `retrieval-vector-database` artifact for eval workflow reuse.
 
 ### Contributor Workflow
 
