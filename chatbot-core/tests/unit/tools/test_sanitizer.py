@@ -1,58 +1,147 @@
 """Unit tests for the sanitizer module."""
+
 import unittest
+
 from api.tools.sanitizer import sanitize_logs
+
 
 class TestLogSanitizer(unittest.TestCase):
     """Test suite for log sanitization to ensure secrets are redacted."""
 
-    def test_sanitize_password_assignment(self):
-        """Test that simple password assignments are redacted."""
-        log = "Connecting to DB with password=superSecretPassword123!"
-        expected = "Connecting to DB with password=[REDACTED]"
-        self.assertEqual(sanitize_logs(log), expected)
+    def assert_sanitized(self, raw, expected):
+        """
+        Assert a log string sanitizes to the expected output.
+
+        Args:
+            raw (str): Input log text.
+            expected (str): Expected sanitized text.
+        """
+        self.assertEqual(sanitize_logs(raw), expected)
+
+    def test_sanitize_secret_assignments(self):
+        """Test that common secret assignments are redacted."""
+        cases = [
+            ("TOKEN=abc123", "TOKEN=[REDACTED]"),
+            ('TOKEN="abc\\"def"', 'TOKEN="[REDACTED]"'),
+            ("password: abc123", "password: [REDACTED]"),
+            ("PASSWORD=${MY_PASSWORD}", "PASSWORD=[REDACTED]"),
+            ("MY_SECRET='abc123'", "MY_SECRET='[REDACTED]'"),
+            ('"api_key": "abc123"', '"api_key": "[REDACTED]"'),
+            (
+                "BITBUCKET_COMMON_CREDS_PSW=abc123",
+                "BITBUCKET_COMMON_CREDS_PSW=[REDACTED]",
+            ),
+        ]
+
+        for raw, expected in cases:
+            with self.subTest(raw=raw):
+                self.assert_sanitized(raw, expected)
 
     def test_sanitize_docker_login(self):
         """Test that docker login passwords are redacted."""
-        log = "docker login -u user -p myRealPassword123 registry.com"
-        # We expect the flag content to be masked
-        result = sanitize_logs(log)
-        self.assertNotIn("myRealPassword123", result)
-        self.assertIn("[REDACTED]", result)
+        cases = [
+            (
+                "docker login -u user -p myRealPassword123 registry.com",
+                "docker login -u user -p [REDACTED] registry.com",
+            ),
+            (
+                "docker login -u user --password myRealPassword123 registry.com",
+                "docker login -u user --password [REDACTED] registry.com",
+            ),
+            (
+                "docker login -u user --password=myRealPassword123 registry.com",
+                "docker login -u user --password=[REDACTED] registry.com",
+            ),
+            (
+                "docker login -u user --password-stdin registry.com",
+                "docker login -u user --password-stdin registry.com",
+            ),
+        ]
 
-    def test_sanitize_aws_key(self):
-        """Test that AWS access keys are redacted."""
-        log = "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"
-        result = sanitize_logs(log)
-        self.assertNotIn("AKIAIOSFODNN7EXAMPLE", result)
-        self.assertIn("[REDACTED_AWS_KEY]", result)
+        for raw, expected in cases:
+            with self.subTest(raw=raw):
+                self.assert_sanitized(raw, expected)
 
-    def test_sanitize_bearer_token(self):
-        """Test that Bearer tokens are redacted."""
-        log = "Authorization: Bearer hf_thisIsAFakeToken123"
-        expected = "Authorization: Bearer [REDACTED_TOKEN]"
-        self.assertEqual(sanitize_logs(log), expected)
+    def test_sanitize_headers_and_url_secrets(self):
+        """Test that HTTP headers, URL passwords, and query secrets are redacted."""
+        cases = [
+            ("Authorization: Bearer abc123", "Authorization: [REDACTED]"),
+            ("X-API-Key: abc123", "X-API-Key: [REDACTED]"),
+            ("Cookie: session=abcdef", "Cookie: [REDACTED]"),
+            (
+                "https://user:password@example.com/repository",
+                "https://user:[REDACTED]@example.com/repository",
+            ),
+            (
+                "https://example.com?a=1&token=abc123&debug=true",
+                "https://example.com?a=1&token=[REDACTED]&debug=true",
+            ),
+            (
+                'curl "https://example.com?token=abc123"',
+                'curl "https://example.com?token=[REDACTED]"',
+            ),
+        ]
 
-    def test_sanitize_github_token(self):
-        """Test that GitHub tokens are redacted."""
-        log = "Authenticating with ghp_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6"
-        expected = "Authenticating with [REDACTED_GITHUB_TOKEN]"
-        self.assertEqual(sanitize_logs(log), expected)
+        for raw, expected in cases:
+            with self.subTest(raw=raw):
+                self.assert_sanitized(raw, expected)
+
+    def test_sanitize_known_token_formats(self):
+        """Test that recognizable raw token formats are redacted."""
+        cases = [
+            ("AKIAIOSFODNN7EXAMPLE", "[REDACTED_AWS_KEY]"),
+            (
+                "ghp_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+                "[REDACTED_GITHUB_TOKEN]",
+            ),
+            ("sk-abcdefghijklmnopqrstuvwxyz123456", "[REDACTED_API_KEY]"),
+            (
+                "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.sig",
+                "[REDACTED_JWT]",
+            ),
+        ]
+
+        for raw, expected in cases:
+            with self.subTest(raw=raw):
+                self.assert_sanitized(raw, expected)
 
     def test_sanitize_private_key(self):
         """Test that private key blocks are redacted."""
-        log = (
+        raw = (
             "Found key:\n"
             "-----BEGIN RSA PRIVATE KEY-----\n"
             "someBase64ContentHere\n"
             "-----END RSA PRIVATE KEY-----"
         )
         expected = "Found key:\n[REDACTED_PRIVATE_KEY]"
-        self.assertEqual(sanitize_logs(log), expected)
 
-    def test_no_false_positives(self):
+        self.assert_sanitized(raw, expected)
+
+    def test_no_false_positives_for_common_diagnostics(self):
         """Test that normal logs without secrets remain unchanged."""
-        log = "Build step 'Execute Windows batch command' marked build as failure"
-        self.assertEqual(sanitize_logs(log), log)
+        cases = [
+            "Build step 'Execute Windows batch command' marked build as failure",
+            "PWD=/var/lib/jenkins/workspace/project",
+            "credentialsId: 'docker-production'",
+            "token_count=5",
+            "git clone git@github.com:jenkinsci/plugin.git",
+        ]
 
-if __name__ == '__main__':
+        for raw in cases:
+            with self.subTest(raw=raw):
+                self.assert_sanitized(raw, raw)
+
+    def test_is_idempotent(self):
+        """Test that running the sanitizer twice does not change the result."""
+        raw = (
+            "TOKEN=abc123\n"
+            "Authorization: Bearer xyz456\n"
+            "https://user:password@example.com/repository"
+        )
+        sanitized = sanitize_logs(raw)
+
+        self.assert_sanitized(sanitized, sanitized)
+
+
+if __name__ == "__main__":
     unittest.main()
