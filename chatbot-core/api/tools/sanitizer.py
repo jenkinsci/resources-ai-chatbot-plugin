@@ -1,14 +1,18 @@
-"""Module for sanitizing logs by redacting sensitive information."""
+"""Module for sanitizing Jenkins logs before sending them to an LLM."""
 
 import re
 
 
 SECRET_NAME_PATTERN = (
-    r"TOKEN|SECRET|PASSWORD|PASSWD|PSW|PASSPHRASE|"
-    r"API[-_]?KEY|PRIVATE[-_]?KEY|CREDENTIALS?|CREDS"
+    r"TOKEN|SECRET|PASSWORD|PASSWD|PSW|API[-_]?KEY|"
+    r"ACCESS[-_]?KEY|SECRET[-_]?KEY|PRIVATE[-_]?KEY|CREDENTIALS?|CREDS"
+)
+SECRET_NAME_RE = re.compile(
+    rf"(?:^|[_\-.])(?:{SECRET_NAME_PATTERN})(?:$|[_\-.])",
+    re.IGNORECASE,
 )
 
-# Private key blocks can appear in full or be truncated near the end of logs.
+# Private key blocks may be complete or truncated at the end of a console log.
 PRIVATE_KEY_PATTERN = re.compile(
     r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----"
     r".*?"
@@ -16,30 +20,34 @@ PRIVATE_KEY_PATTERN = re.compile(
     re.DOTALL,
 )
 
-# Env, JSON, and config-style values such as TOKEN=abc or "api_key": "abc".
+# Assignments in shell, Jenkins echo, JSON-like, and config-like output.
 SECRET_ASSIGNMENT_PATTERN = re.compile(
-    rf"""
+    r"""
     (?P<prefix>
-        ["']?
-        [A-Za-z0-9_.-]*
-        (?:{SECRET_NAME_PATTERN})
-        (?![A-Za-z0-9_-])
-        ["']?
+        (?:^|[\s{,])
+        (?:\+\s*)?
+        (?:export\s+)?
+        (?:\d+:\s*)?
+        (?P<name_quote>["']?)
+        (?P<name>[A-Za-z_][A-Za-z0-9_.-]*)
+        (?P=name_quote)
         \s*[:=]\s*
     )
-    (?:
-        "(?P<double_value>(?:\\.|[^"\\\r\n])*)"
+    (?P<value>
+        "(?:\\.|[^"\\\r\n])*"
         |
-        '(?P<single_value>(?:\\.|[^'\\\r\n])*)'
+        '(?:\\.|[^'\\\r\n])*'
         |
-        (?P<bare_value>[^\s,;&\]\['\"]+)
+        \${[^}\r\n]*}
+        |
+        [^\r\n,;&}\]\[]+
     )
     """,
     re.IGNORECASE | re.VERBOSE,
 )
 
 REDACTION_PATTERNS = (
-    # HTTP auth headers, API-key headers, Jenkins crumbs, and cookies.
+    # HTTP authentication, API key headers, Jenkins crumbs, and cookies.
     (
         re.compile(
             r"(?im)(\b(?:Authorization|Proxy-Authorization|X-API-Key|"
@@ -48,21 +56,12 @@ REDACTION_PATTERNS = (
         ),
         r"\1[REDACTED]",
     ),
-    # Docker login password flags; --password-stdin is intentionally not matched.
-    (
-        re.compile(
-            r"(?i)(\bdocker\s+login\b[^\r\n]*?"
-            r"\s(?:-p|--password)(?:\s+|=))"
-            r"([^\s'\";]+)"
-        ),
-        r"\1[REDACTED]",
-    ),
     # Passwords embedded in URLs, for example https://user:pass@example.com.
     (
         re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://[^/\s:@]+:)([^@\s/]+)(@)"),
         r"\1[REDACTED]\3",
     ),
-    # Sensitive query-string values while preserving surrounding quotes and params.
+    # Sensitive query-string values while preserving surrounding params.
     (
         re.compile(
             r"(?i)([?&](?:token|access_token|auth_token|api_key|"
@@ -93,27 +92,58 @@ REDACTION_PATTERNS = (
 )
 
 
+def _normalize_assignment_name(name: str) -> str:
+    """
+    Normalize assignment names before matching secret words.
+
+    Args:
+        name (str): Assignment key from a Jenkins log line.
+
+    Returns:
+        str: Name with camel-case boundaries converted to underscores.
+    """
+    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", name)
+
+
+def _is_secret_assignment_name(name: str) -> bool:
+    """
+    Check whether an assignment name looks secret-related.
+
+    Args:
+        name (str): Assignment key from a Jenkins log line.
+
+    Returns:
+        bool: True when the assignment should be redacted.
+    """
+    return bool(SECRET_NAME_RE.search(_normalize_assignment_name(name)))
+
+
 def _redact_assignment(match: re.Match[str]) -> str:
     """
-    Redact a secret assignment value while preserving simple quote style.
+    Redact a secret assignment while preserving simple quote style.
 
     Args:
         match (re.Match[str]): Regex match for a secret assignment.
 
     Returns:
-        str: Assignment with the value redacted.
+        str: Assignment with its value redacted.
     """
     prefix = match.group("prefix")
-    if match.group("double_value") is not None:
+    value = match.group("value")
+    if not _is_secret_assignment_name(match.group("name")):
+        return match.group(0)
+
+    if value.startswith('"') and value.endswith('"'):
         return f'{prefix}"[REDACTED]"'
-    if match.group("single_value") is not None:
+    if value.startswith("'") and value.endswith("'"):
         return f"{prefix}'[REDACTED]'"
+
     return f"{prefix}[REDACTED]"
 
 
 def sanitize_logs(log_text: str) -> str:
     """
-    Scans the input text for common secret patterns and redacts them.
+    Redact common secrets from Jenkins console log text.
 
     Args:
         log_text (str): Raw Jenkins log text.
