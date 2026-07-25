@@ -3,8 +3,9 @@
 import re
 
 
-DEFAULT_CONTEXT_LINES = 10
-DEFAULT_CONTEXT_AFTER_LINES = 5
+DEFAULT_CONTEXT_BEFORE = 10
+DEFAULT_CONTEXT_AFTER = 5
+DEFAULT_TAIL_LINES = 10
 
 ERROR_PATTERN = re.compile(
     r"""
@@ -16,103 +17,112 @@ ERROR_PATTERN = re.compile(
     |
     \bFAILURE:\s+Build\s+failed\b
     """,
-    flags=re.IGNORECASE | re.VERBOSE,
+    re.IGNORECASE | re.VERBOSE,
 )
 WRAPPER_ERROR_PATTERN = re.compile(
     r"\bERROR:\s+script\s+returned\s+exit\s+code\b",
-    flags=re.IGNORECASE,
+    re.IGNORECASE,
 )
-
-
-def extract_error_context(
-    log_text: str,
-    context_lines: int = DEFAULT_CONTEXT_LINES,
-    context_after: int = DEFAULT_CONTEXT_AFTER_LINES,
-) -> str:
-    """
-    Extract each meaningful error with nearby Jenkins log lines.
-
-    Args:
-        log_text (str): Raw Jenkins console log.
-        context_lines (int): Number of lines to include before each error.
-        context_after (int): Number of lines to include after each error.
-
-    Returns:
-        str: Selected log sections in their original order.
-    """
-    if not log_text:
-        return ""
-
-    lines = log_text.splitlines()
-    selected_indexes: set[int] = set()
-    error_indexes = [
-        index
-        for index, line in enumerate(lines)
-        if ERROR_PATTERN.search(line)
-    ]
-    if not error_indexes:
-        error_indexes = [
-            index
-            for index, line in enumerate(lines)
-            if WRAPPER_ERROR_PATTERN.search(line)
-        ]
-
-    for index in error_indexes:
-        start = max(0, index - max(0, context_lines))
-        end = min(len(lines), index + max(0, context_after) + 1)
-        selected_indexes.update(range(start, end))
-
-    if any(ERROR_PATTERN.search(line) for line in lines):
-        selected_indexes = {
-            index
-            for index in selected_indexes
-            if not WRAPPER_ERROR_PATTERN.search(lines[index])
-        }
-
-    if not selected_indexes:
-        return "\n".join(lines[-context_lines:])
-
-    return render_selected_lines(lines, sorted(selected_indexes))
 
 
 def extract_relevant_log_lines(
     log_text: str,
-    context_before: int = DEFAULT_CONTEXT_LINES,
-    context_after: int = DEFAULT_CONTEXT_AFTER_LINES,
-    tail_lines: int = DEFAULT_CONTEXT_LINES,
+    context_before: int = DEFAULT_CONTEXT_BEFORE,
+    context_after: int = DEFAULT_CONTEXT_AFTER,
+    tail_lines: int = DEFAULT_TAIL_LINES,
     max_chars: int = 0,
 ) -> str:
     """
-    Keep compatibility with the existing service call.
+    Extract Jenkins error sections with nearby log lines.
 
     Args:
         log_text (str): Raw Jenkins console log.
-        context_before (int): Number of lines before each error.
-        context_after (int): Number of lines after each error.
-        tail_lines (int): Number of fallback tail lines.
-        max_chars (int): Unused; kept for compatibility.
+        context_before (int): Lines included before each error.
+        context_after (int): Lines included after each error.
+        tail_lines (int): Lines returned when no error is found.
+        max_chars (int): Unused; retained for compatibility.
 
     Returns:
-        str: Selected error context.
+        str: Extracted error sections or final log lines.
     """
     del max_chars
 
     if not log_text:
         return ""
 
-    selected = extract_error_context(log_text, context_before, context_after)
-    if selected:
-        return selected
+    lines = log_text.splitlines()
+    error_indexes = _find_error_indexes(lines)
+    if not error_indexes:
+        tail = max(0, tail_lines)
+        return "\n".join(lines[-tail:]) if tail else ""
 
-    return "\n".join(log_text.splitlines()[-tail_lines:])
+    before = max(0, context_before)
+    after = max(0, context_after)
+    selected_indexes: set[int] = set()
+
+    for index in error_indexes:
+        start = max(0, index - before)
+        end = min(len(lines), index + after + 1)
+        selected_indexes.update(range(start, end))
+
+    return _render_selected_lines(lines, sorted(selected_indexes))
 
 
-def render_selected_lines(lines: list[str], selected_indexes: list[int]) -> str:
+def extract_error_context(
+    log_text: str,
+    context_lines: int = DEFAULT_CONTEXT_BEFORE,
+    context_after: int = DEFAULT_CONTEXT_AFTER,
+) -> str:
+    """
+    Keep the earlier parser helper name for existing callers.
+
+    Args:
+        log_text (str): Raw Jenkins console log.
+        context_lines (int): Lines included before each error.
+        context_after (int): Lines included after each error.
+
+    Returns:
+        str: Extracted error sections or final log lines.
+    """
+    return extract_relevant_log_lines(
+        log_text,
+        context_before=context_lines,
+        context_after=context_after,
+        tail_lines=context_lines,
+    )
+
+
+def _find_error_indexes(lines: list[str]) -> list[int]:
+    """
+    Find meaningful error lines, falling back to Jenkins wrapper errors.
+
+    Args:
+        lines (list[str]): Jenkins console log lines.
+
+    Returns:
+        list[int]: Zero-based indexes of selected error anchors.
+    """
+    meaningful_errors = [
+        index
+        for index, line in enumerate(lines)
+        if ERROR_PATTERN.search(line)
+    ]
+    if meaningful_errors:
+        return meaningful_errors
+
+    return [
+        index
+        for index, line in enumerate(lines)
+        if WRAPPER_ERROR_PATTERN.search(line)
+    ]
+
+
+def _render_selected_lines(lines: list[str], selected_indexes: list[int]) -> str:
     """
     Render selected lines with original line numbers and omission markers.
 
     Args:
-        lines (list[str]): Full log lines.
+        lines (list[str]): Full Jenkins console log lines.
         selected_indexes (list[int]): Selected zero-based line indexes.
 
     Returns:
