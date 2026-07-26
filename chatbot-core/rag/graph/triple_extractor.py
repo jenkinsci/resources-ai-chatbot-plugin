@@ -8,10 +8,37 @@ from rag.graph.schema import GraphEntityType, GraphRelationType
 
 
 MAX_TARGET_TOKENS = 8
-MAX_TARGET_START_OFFSET = 3
+MAX_TARGET_SCAN_OFFSET = 8
 TARGET_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._-]*")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 SKIPPED_TARGET_PLUGIN_IDS = {"jenkins"}
+EXPLICIT_PLUGIN_WORDING_TARGET_IDS = {
+    "coverage",
+    "credentials",
+    "github",
+    "notification",
+    "python",
+    "release",
+    "repository",
+    "s3",
+    "seed",
+    "ssh",
+}
+TARGET_SCAN_BOUNDARY_TOKENS = {
+    "after",
+    "before",
+    "for",
+    "if",
+    "only",
+    "so",
+    "that",
+    "to",
+    "when",
+    "where",
+    "which",
+    "while",
+    "with",
+}
 
 RELATION_PATTERNS = (
     (
@@ -121,32 +148,124 @@ def build_candidate_variants(candidate: str) -> list[str]:
     return list(dict.fromkeys(variant for variant in variants if variant))
 
 
-def resolve_target_entity(
+def resolve_target_entities(
     text: str,
     plugin_aliases: dict[str, str],
-) -> GraphEntity | None:
+    scan_from_end: bool = False,
+) -> list[GraphEntity]:
     """
-    Resolve a target plugin entity from text after a relation phrase.
+    Resolve target plugin entities from text after a relation phrase.
 
     Args:
         text (str): Sentence text after a relation trigger.
         plugin_aliases (dict[str, str]): Alias map built from plugin IDs.
+        scan_from_end (bool): Search nearest target text first for target-before
+            relation wording.
 
     Returns:
-        GraphEntity | None: Resolved target entity, if found.
+        list[GraphEntity]: Resolved target entities in text order.
     """
     tokens = TARGET_TOKEN_PATTERN.findall(text)
-    max_length = min(len(tokens), MAX_TARGET_TOKENS)
+    if not scan_from_end:
+        tokens = truncate_target_tokens(tokens)
+    target_entities: list[GraphEntity] = []
+    seen_target_ids = set()
+    consumed_until = 0
 
-    for start_index in range(min(MAX_TARGET_START_OFFSET + 1, len(tokens))):
-        for end_index in range(max_length, start_index, -1):
+    start_indices = range(min(MAX_TARGET_SCAN_OFFSET + 1, len(tokens)))
+    if scan_from_end:
+        start_indices = range(len(tokens) - 1, -1, -1)
+
+    for start_index in start_indices:
+        if start_index < consumed_until:
+            continue
+        max_end_index = min(len(tokens), start_index + MAX_TARGET_TOKENS)
+        found_target_at_start = False
+        for end_index in range(max_end_index, start_index, -1):
             candidate = " ".join(tokens[start_index:end_index])
             for variant in build_candidate_variants(candidate):
                 target_id = resolve_plugin_name(variant, plugin_aliases)
-                if target_id and target_id not in SKIPPED_TARGET_PLUGIN_IDS:
-                    return make_plugin_entity(target_id)
+                if not target_id or target_id in SKIPPED_TARGET_PLUGIN_IDS:
+                    continue
+                if target_id in seen_target_ids:
+                    continue
+                if (
+                    target_id in EXPLICIT_PLUGIN_WORDING_TARGET_IDS
+                    and "plugin" not in candidate.lower()
+                ):
+                    continue
 
-    return None
+                target_entities.append(make_plugin_entity(target_id))
+                seen_target_ids.add(target_id)
+                consumed_until = end_index
+                found_target_at_start = True
+                break
+            if found_target_at_start:
+                break
+
+    return target_entities
+
+
+def truncate_target_tokens(tokens: list[str]) -> list[str]:
+    """
+    Stop target scanning before explanatory text after plugin mentions.
+
+    Args:
+        tokens (list[str]): Candidate relation-tail tokens.
+
+    Returns:
+        list[str]: Tokens before the first explanatory boundary.
+    """
+    for index, token in enumerate(tokens):
+        if token.lower() in TARGET_SCAN_BOUNDARY_TOKENS:
+            return tokens[:index]
+    return tokens
+
+
+def is_aws_sdk_grouping_text(
+    source_entity: GraphEntity,
+    target_entity: GraphEntity,
+    sentence: str,
+) -> bool:
+    """
+    Detect AWS SDK module-family text that is not a source-plugin dependency.
+
+    Args:
+        source_entity (GraphEntity): Source plugin entity.
+        target_entity (GraphEntity): Target plugin entity.
+        sentence (str): Evidence sentence.
+
+    Returns:
+        bool: True when the relation is a known grouping false positive.
+    """
+    sentence_lower = sentence.lower()
+    return (
+        source_entity.entity_id.startswith("aws-java-sdk-")
+        and target_entity.entity_id == "aws-java-sdk"
+        and "depends on all other aws-java-sdk plugins" in sentence_lower
+    )
+
+
+def should_skip_target(
+    source_entity: GraphEntity,
+    target_entity: GraphEntity,
+    sentence: str,
+) -> bool:
+    """
+    Check whether a resolved target should be rejected for this sentence.
+
+    Args:
+        source_entity (GraphEntity): Source plugin entity.
+        target_entity (GraphEntity): Target plugin entity.
+        sentence (str): Evidence sentence.
+
+    Returns:
+        bool: True when the target should not become a triple.
+    """
+    return (
+        target_entity.entity_id == source_entity.entity_id
+        or is_aws_sdk_grouping_text(source_entity, target_entity, sentence)
+    )
 
 
 def extract_triples_from_sentence(
@@ -154,6 +273,7 @@ def extract_triples_from_sentence(
     sentence: str,
     chunk: dict,
     plugin_aliases: dict[str, str],
+    preceding_text: str = "",
 ) -> list[Triple]:
     """
     Extract graph triples from one sentence span.
@@ -171,22 +291,38 @@ def extract_triples_from_sentence(
 
     for relation, confidence, pattern in RELATION_PATTERNS:
         for match in pattern.finditer(sentence):
-            target_entity = resolve_target_entity(
+            target_entities = resolve_target_entities(
                 sentence[match.end():],
                 plugin_aliases,
             )
-            if not target_entity or target_entity.entity_id == source_entity.entity_id:
-                continue
-
-            extracted_triples.append(
-                Triple(
-                    source=source_entity,
-                    relation=relation,
-                    target=target_entity,
-                    evidence=build_chunk_evidence(chunk, sentence),
-                    confidence=confidence,
+            if not target_entities and relation == GraphRelationType.OPTIONAL_DEPENDS_ON.value:
+                target_entities = resolve_target_entities(
+                    sentence[:match.start()],
+                    plugin_aliases,
+                    scan_from_end=True,
                 )
-            )
+                if not target_entities:
+                    target_entities = resolve_target_entities(sentence, plugin_aliases)
+                if not target_entities and preceding_text:
+                    target_entities = resolve_target_entities(
+                        preceding_text,
+                        plugin_aliases,
+                        scan_from_end=True,
+                    )
+
+            for target_entity in target_entities:
+                if should_skip_target(source_entity, target_entity, sentence):
+                    continue
+
+                extracted_triples.append(
+                    Triple(
+                        source=source_entity,
+                        relation=relation,
+                        target=target_entity,
+                        evidence=build_chunk_evidence(chunk, sentence),
+                        confidence=confidence,
+                    )
+                )
 
     return extracted_triples
 
@@ -216,12 +352,14 @@ def extract_triples_from_chunk(
     extracted_triples: list[Triple] = []
     seen_triples = set()
 
+    previous_sentence = ""
     for sentence in sentence_split(chunk.get("chunk_text", "")):
         for triple in extract_triples_from_sentence(
             source_entity,
             sentence,
             chunk,
             plugin_aliases,
+            previous_sentence,
         ):
             triple_key = (
                 triple.source.entity_id,
@@ -233,6 +371,7 @@ def extract_triples_from_chunk(
                 continue
             seen_triples.add(triple_key)
             extracted_triples.append(triple)
+        previous_sentence = sentence
 
     return extracted_triples
 
