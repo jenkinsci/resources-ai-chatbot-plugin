@@ -1,0 +1,382 @@
+name: LLM-as-a-Judge
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: llm-as-judge-eval-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  get-retrieval-cache:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'eval')
+    runs-on: ubuntu-24.04
+    outputs:
+      artifact_name: ${{ steps.cache.outputs.artifact_name }}
+      cache_found: ${{ steps.cache.outputs.cache_found }}
+      run_id: ${{ steps.cache.outputs.run_id }}
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Resolve retrieval vector cache
+        id: cache
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 chatbot-core/tests/eval/runners/get_retrieval_cache_run.py \
+            --github-output "$GITHUB_OUTPUT"
+
+  build-vector-database:
+    needs: get-retrieval-cache
+    if: needs.get-retrieval-cache.outputs.cache_found != 'true'
+    uses: ./.github/workflows/build-retrieval-cache.yml
+    with:
+      retention_days: 2
+
+  fill-retrieval-context:
+    needs:
+      - get-retrieval-cache
+      - build-vector-database
+    if: >-
+      always() &&
+      needs.get-retrieval-cache.result == 'success' &&
+      (
+        needs.build-vector-database.result == 'success' ||
+        needs.build-vector-database.result == 'skipped'
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install backend dependencies
+        run: make IS_CPU_REQ=1 setup-backend
+
+      - name: Download cached retrieval vector database
+        if: needs.get-retrieval-cache.outputs.cache_found == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.get-retrieval-cache.outputs.artifact_name }}
+          path: .
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.get-retrieval-cache.outputs.run_id }}
+
+      - name: Download fallback retrieval vector database
+        if: needs.get-retrieval-cache.outputs.cache_found != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-vector-database.outputs.artifact_name }}
+          path: .
+
+      - name: Fill retrieval_context
+        run: |
+          chatbot-core/venv/bin/python \
+            chatbot-core/tests/eval/runners/generate_responses.py \
+            --retrieval-only \
+            --responses artifacts/retrieval/responses.json
+
+      - name: Validate retrieval context
+        run: |
+          python3 chatbot-core/tests/eval/runners/validate_responses.py \
+            artifacts/retrieval/responses.json \
+            --config chatbot-core/tests/eval/config.json \
+            --retrieval-only
+
+      - name: Upload retrieval-complete responses
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrieval-responses-${{ github.run_id }}
+          path: artifacts/retrieval/responses.json
+          if-no-files-found: error
+          retention-days: 7
+
+  prepare-response-matrix:
+    needs: fill-retrieval-context
+    if: always() && needs.fill-retrieval-context.result == 'success'
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      question_count: ${{ steps.plan.outputs.question_count }}
+      shard_count: ${{ steps.plan.outputs.shard_count }}
+      max_parallel: ${{ steps.config.outputs.max_parallel }}
+      response_model: ${{ steps.config.outputs.response_model }}
+      judge_model: ${{ steps.config.outputs.judge_model }}
+      response_max_tokens: ${{ steps.config.outputs.response_max_tokens }}
+      response_num_ctx: ${{ steps.config.outputs.response_num_ctx }}
+      response_temperature: ${{ steps.config.outputs.response_temperature }}
+      response_request_timeout: ${{ steps.config.outputs.response_request_timeout }}
+      response_prompt_profile: ${{ steps.config.outputs.response_prompt_profile }}
+      response_keep_alive: ${{ steps.config.outputs.response_keep_alive }}
+      warm_prompt_cache: ${{ steps.config.outputs.warm_prompt_cache }}
+      judge_max_tokens: ${{ steps.config.outputs.judge_max_tokens }}
+      judge_num_ctx: ${{ steps.config.outputs.judge_num_ctx }}
+      metric_threshold: ${{ steps.config.outputs.metric_threshold }}
+      minimum_metric_coverage: ${{ steps.config.outputs.minimum_metric_coverage }}
+      missing_metric_retry_attempts: ${{ steps.config.outputs.missing_metric_retry_attempts }}
+      missing_metric_retry_concurrency: ${{ steps.config.outputs.missing_metric_retry_concurrency }}
+      deepeval_per_task_timeout_seconds: ${{ steps.config.outputs.deepeval_per_task_timeout_seconds }}
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Load eval config
+        id: config
+        run: |
+          python3 chatbot-core/tests/eval/runners/export_config_outputs.py \
+            --config chatbot-core/tests/eval/config.json \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Plan response shards
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 chatbot-core/tests/eval/runners/build_shard_matrix.py \
+            --dataset chatbot-core/tests/eval/datasets/golden_dataset.json \
+            --question-count "${{ steps.config.outputs.question_count }}" \
+            --shard-size "${{ steps.config.outputs.shard_size }}" \
+            --github-output "$GITHUB_OUTPUT"
+
+  generate-responses:
+    needs:
+      - fill-retrieval-context
+      - prepare-response-matrix
+    if: >-
+      always() &&
+      needs.fill-retrieval-context.result == 'success' &&
+      needs.prepare-response-matrix.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(needs.prepare-response-matrix.outputs.max_parallel) }}
+      matrix:
+        include: ${{ fromJSON(needs.prepare-response-matrix.outputs.matrix) }}
+    env:
+      RESULTS_DIR: artifacts/generated/shard-${{ matrix.shard }}
+      RESPONSE_MODEL: ${{ needs.prepare-response-matrix.outputs.response_model }}
+      JUDGE_MODEL: ${{ needs.prepare-response-matrix.outputs.judge_model }}
+      DEEPEVAL_DISABLE_DOTENV: "1"
+      DEEPEVAL_TELEMETRY_OPT_OUT: "1"
+      DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE: ${{ needs.prepare-response-matrix.outputs.deepeval_per_task_timeout_seconds }}
+      DEEPEVAL_JUDGE_NUM_CTX: ${{ needs.prepare-response-matrix.outputs.judge_num_ctx }}
+      DEEPEVAL_JUDGE_NUM_PREDICT: ${{ needs.prepare-response-matrix.outputs.judge_max_tokens }}
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_FLASH_ATTENTION: "1"
+      OLLAMA_KV_CACHE_TYPE: "q8_0"
+      OLLAMA_LLM_LIBRARY: "cpu_avx2"
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: chatbot-core/tests/eval/requirements-eval.txt
+
+      - name: Initialize shard results
+        run: mkdir -p "$RESULTS_DIR"
+
+      - name: Install evaluation dependencies
+        run: |
+          python3 -m pip install -r chatbot-core/tests/eval/requirements-eval.txt \
+            2>&1 | tee "$RESULTS_DIR/dependency-install.log"
+
+      - name: Download retrieval-context responses
+        uses: actions/download-artifact@v4
+        with:
+          name: retrieval-responses-${{ github.run_id }}
+          path: artifacts/retrieval
+
+      - name: Install Ollama
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://ollama.com/install.sh -o /tmp/install-ollama.sh
+          sh /tmp/install-ollama.sh 2>&1 | tee "$RESULTS_DIR/ollama-install.log"
+
+      - name: Start Ollama service
+        shell: bash
+        run: |
+          bash chatbot-core/tests/eval/scripts/start_ollama_service.sh "$RESULTS_DIR"
+
+      - name: Pull response model
+        run: |
+          ollama pull "$RESPONSE_MODEL" 2>&1 | tee "$RESULTS_DIR/response-model-pull.log"
+
+      - name: Generate responses for shard
+        id: generation
+        shell: bash
+        run: |
+          set -euo pipefail
+          WARM_PROMPT_CACHE_ARGS=()
+          if [[ '${{ needs.prepare-response-matrix.outputs.warm_prompt_cache }}' == 'true' ]]; then
+            WARM_PROMPT_CACHE_ARGS+=(--warm-prompt-cache)
+          fi
+          python3 \
+            chatbot-core/tests/eval/runners/generate_responses.py \
+            --generation-only \
+            --source-responses artifacts/retrieval/responses.json \
+            --responses "$RESULTS_DIR/responses.json" \
+            --response-model "$RESPONSE_MODEL" \
+            --max-tokens '${{ needs.prepare-response-matrix.outputs.response_max_tokens }}' \
+            --num-ctx '${{ needs.prepare-response-matrix.outputs.response_num_ctx }}' \
+            --temperature '${{ needs.prepare-response-matrix.outputs.response_temperature }}' \
+            --request-timeout '${{ needs.prepare-response-matrix.outputs.response_request_timeout }}' \
+            --prompt-profile '${{ needs.prepare-response-matrix.outputs.response_prompt_profile }}' \
+            --keep-alive '${{ needs.prepare-response-matrix.outputs.response_keep_alive }}' \
+            "${WARM_PROMPT_CACHE_ARGS[@]}" \
+            --offset '${{ matrix.offset }}' \
+            --limit '${{ matrix.limit }}' \
+            2>&1 | tee "$RESULTS_DIR/generation.log"
+
+      - name: Validate generated shard
+        id: validation
+        run: |
+          python3 chatbot-core/tests/eval/runners/validate_responses.py \
+            "$RESULTS_DIR/responses.json" \
+            --expected-count '${{ matrix.limit }}' \
+            2>&1 | tee "$RESULTS_DIR/validation.log"
+
+      - name: Evaluate generated shard
+        id: evaluation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$RESPONSE_MODEL" != "$JUDGE_MODEL" ]]; then
+            ollama stop "$RESPONSE_MODEL" || true
+            ollama rm "$RESPONSE_MODEL"
+            ollama pull "$JUDGE_MODEL" 2>&1 | tee "$RESULTS_DIR/judge-model-pull.log"
+          fi
+          python3 chatbot-core/tests/eval/runners/run_evaluation.py \
+            --responses "$RESULTS_DIR/responses.json" \
+            --goldens chatbot-core/tests/eval/datasets/golden_dataset.json \
+            --output-dir "$RESULTS_DIR" \
+            --response-model "$RESPONSE_MODEL" \
+            --judge-model "$JUDGE_MODEL" \
+            --expected-count '${{ matrix.limit }}' \
+            --threshold '${{ needs.prepare-response-matrix.outputs.metric_threshold }}' \
+            --retry-attempts '${{ needs.prepare-response-matrix.outputs.missing_metric_retry_attempts }}' \
+            --retry-concurrency '${{ needs.prepare-response-matrix.outputs.missing_metric_retry_concurrency }}' \
+            --identifier "chatbot-${{ github.run_id }}-shard-${{ matrix.shard }}" \
+            2>&1 | tee "$RESULTS_DIR/deepeval.log"
+
+      - name: Upload shard outputs and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: response-shard-${{ matrix.shard }}
+          path: ${{ env.RESULTS_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
+
+  merge-responses:
+    needs:
+      - prepare-response-matrix
+      - generate-responses
+    if: >-
+      always() &&
+      needs.prepare-response-matrix.result == 'success' &&
+      needs.generate-responses.result == 'success'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Download retrieval-context responses
+        uses: actions/download-artifact@v4
+        with:
+          name: retrieval-responses-${{ github.run_id }}
+          path: artifacts/retrieval
+
+      - name: Download generated response shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: response-shard-*
+          path: artifacts/shards
+
+      - name: Aggregate responses and evaluation results
+        id: aggregate
+        run: |
+          python3 chatbot-core/tests/eval/runners/aggregate_evaluations.py \
+            --source artifacts/retrieval/responses.json \
+            --shards-dir artifacts/shards \
+            --output-dir artifacts/combined \
+            --question-count '${{ needs.prepare-response-matrix.outputs.question_count }}' \
+            --expected-shards '${{ needs.prepare-response-matrix.outputs.shard_count }}' \
+            --minimum-metric-coverage '${{ needs.prepare-response-matrix.outputs.minimum_metric_coverage }}' \
+            --threshold-score '${{ needs.prepare-response-matrix.outputs.metric_threshold }}'
+
+      - name: Publish evaluation report
+        if: always()
+        run: |
+          if [[ -f artifacts/combined/evaluation-report.md ]]; then
+            cat artifacts/combined/evaluation-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Prepare PR comment artifact
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          mkdir -p artifacts/pr-comment
+          echo '${{ github.event.pull_request.number }}' > artifacts/pr-comment/pr_number
+          echo '${{ github.sha }}' > artifacts/pr-comment/commit_sha
+          if [[ -f artifacts/combined/evaluation-report.md ]]; then
+            cp artifacts/combined/evaluation-report.md artifacts/pr-comment/evaluation-report.md
+          else
+            {
+              echo "# Chatbot evaluation report"
+              echo
+              echo "Evaluation did not produce a combined report. Check the workflow logs."
+            } > artifacts/pr-comment/evaluation-report.md
+          fi
+
+      - name: Upload PR comment artifact
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-as-judge-pr-comment
+          path: artifacts/pr-comment/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload combined responses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-responses-${{ github.run_id }}
+          path: artifacts/combined/
+          if-no-files-found: error
+          retention-days: 14

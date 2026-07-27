@@ -1,0 +1,45 @@
+name: LLM-as-a-Judge Comment
+
+on:
+  workflow_run:
+    workflows:
+      - LLM-as-a-Judge
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download PR comment artifact
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: llm-as-judge-pr-comment
+          path: artifacts/pr-comment
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment evaluation report on pull request
+        if: steps.download.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 chatbot-core/tests/eval/runners/comment_evaluation_report.py \
+            --report artifacts/pr-comment/evaluation-report.md \
+            --issue-number "$(cat artifacts/pr-comment/pr_number)" \
+            --commit-sha "$(cat artifacts/pr-comment/commit_sha)" \
+            --workflow-run-id "${{ github.event.workflow_run.id }}"
