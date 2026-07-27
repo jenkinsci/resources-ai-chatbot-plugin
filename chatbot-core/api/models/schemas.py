@@ -38,11 +38,13 @@ class ChatRequest(BaseModel):
 
     Fields:
         message (str): The user's input message.
+        log_context (Optional[str]): Optional Jenkins build log text.
 
     Validation:
         - Rejects messages that are empty.
     """
     message: str
+    log_context: Optional[str] = None
 
     @field_validator("message")
     def message_must_not_be_empty(cls, v): # pylint: disable=no-self-argument
