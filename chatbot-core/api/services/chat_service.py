@@ -21,6 +21,7 @@ from api.prompts.prompts import (
 
 from api.services.memory import get_session, get_session_async
 from api.services.file_service import format_file_context
+from api.tools.log_parser import extract_relevant_log_lines
 from api.tools.sanitizer import sanitize_logs
 from api.tools.tools import TOOL_REGISTRY
 from api.tools.utils import (
@@ -41,12 +42,6 @@ SOURCE_TOP_K_CONFIG_KEYS = {
     "discourse": "top_k_discourse",
 }
 
-LOG_ANALYSIS_PATTERN = re.compile(
-    r"Here are the last \d+ characters of the log:\s*```\s*(.*?)\s*```\s*(.*)",
-    re.DOTALL
-)
-
-
 def _sanitize_log_payload(payload: object) -> str:
     """
     Convert payloads to strings and redact common secrets before logging them.
@@ -60,7 +55,8 @@ def _sanitize_log_payload(payload: object) -> str:
 def get_chatbot_reply(
     session_id: str,
     user_input: str,
-    files: Optional[List[FileAttachment]] = None
+    files: Optional[List[FileAttachment]] = None,
+    log_context: Optional[str] = None,
 ) -> ChatResponse:
     """
     Main chatbot entry point. Retrieves context, constructs a prompt with memory,
@@ -70,6 +66,7 @@ def get_chatbot_reply(
         session_id (str): The unique ID for the chat session.
         user_input (str): The latest user message.
         files (Optional[List[FileAttachment]]): Optional list of file attachments.
+        log_context (Optional[str]): Sanitized Jenkins log excerpt.
 
     Returns:
         ChatResponse: The generated assistant response.
@@ -83,13 +80,22 @@ def get_chatbot_reply(
         raise RuntimeError(
             f"Session '{session_id}' not found in the memory store.")
 
-    context = retrieve_context(user_input)
+    relevant_log_context = log_context.strip() if log_context else ""
+    retrieval_query = _build_retrieval_query(
+        user_input, relevant_log_context)
+
+    context = retrieve_context(retrieval_query)
     logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
 
     # Process file context if files are provided
     context = _process_file_context(context, files)
 
-    prompt = build_prompt(user_input, context, memory)
+    prompt = build_prompt(
+        user_input,
+        context,
+        memory,
+        log_context=relevant_log_context,
+    )
 
     logger.debug("Generating answer with prompt: %s",
                  _sanitize_log_payload(prompt))
@@ -102,6 +108,46 @@ def get_chatbot_reply(
     memory.chat_memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)
+
+
+def prepare_log_context(log_text: str) -> str:
+    """
+    Extract and sanitize relevant build-log lines for display and diagnosis.
+
+    Args:
+        log_text (str): Raw Jenkins build log text.
+
+    Returns:
+        str: Sanitized relevant log excerpt, or an empty string.
+    """
+    if not log_text or not log_text.strip():
+        return ""
+
+    relevant_log = extract_relevant_log_lines(log_text)
+    sanitized_log = sanitize_logs(relevant_log)
+    logger.info(
+        "Prepared build log context: raw=%d chars, sanitized excerpt=%d chars",
+        len(log_text),
+        len(sanitized_log),
+    )
+    return sanitized_log
+
+
+def _build_retrieval_query(user_input: str, log_context: str) -> str:
+    """
+    Build a retrieval query from the user message and safe log excerpt.
+
+    Args:
+        user_input (str): User message.
+        log_context (str): Sanitized relevant log excerpt.
+
+    Returns:
+        str: Query text for retrieval.
+    """
+    if not log_context:
+        return user_input
+
+    return f"{user_input}\n\nBuild log excerpt:\n{log_context}"
 
 
 def _process_file_context(context: str, files: Optional[List[FileAttachment]]) -> str:

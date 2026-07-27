@@ -36,6 +36,8 @@ from fastapi import (
 from api.models.schemas import (
     ChatRequest,
     ChatResponse,
+    LogPreviewRequest,
+    LogPreviewResponse,
     DeleteResponse,
     MessageHistoryResponse,
     SessionResponse,
@@ -45,6 +47,7 @@ from api.models.schemas import (
 from api.services.chat_service import (
     get_chatbot_reply,
     get_chatbot_reply_stream,
+    prepare_log_context,
 )
 from api.services.memory import (
     delete_session,
@@ -78,6 +81,12 @@ except ImportError:
     logger.warning("Retrieval not available - limited functionality")
 
 router = APIRouter()
+
+
+@router.post("/log-preview", response_model=LogPreviewResponse)
+def log_preview(request: LogPreviewRequest) -> LogPreviewResponse:
+    """Extract and sanitize Jenkins output without invoking the LLM."""
+    return LogPreviewResponse(preview=prepare_log_context(request.log_text))
 
 
 # =========================
