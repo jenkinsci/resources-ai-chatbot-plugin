@@ -5,6 +5,7 @@ import { type ChatSession } from "../model/ChatSession";
 import {
   fetchChatbotReply,
   fetchChatbotReplyWithFiles,
+  fetchLogPreview,
   createChatSession,
   deleteChatSession,
   fetchSupportedExtensions,
@@ -30,9 +31,6 @@ import { useContextObserver } from "../utils/useContextObserver";
  * Chatbot is the core component responsible for managing the chatbot display.
  */
 
-const LOG_PATTERN =
-  /(Started by user|Running as SYSTEM|Building in workspace|FATAL:|ERROR:|Exception:|Stack trace|Build step .*? marked build as failure)/i;
-
 export const Chatbot = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -50,6 +48,9 @@ export const Chatbot = () => {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [supportedExtensions, setSupportedExtensions] =
     useState<SupportedExtensions | null>(null);
+  const [pendingLogContext, setPendingLogContext] = useState<string | null>(
+    null,
+  );
 
   const { showToast, setShowToast } = useContextObserver(isOpen);
 
@@ -114,6 +115,7 @@ export const Chatbot = () => {
     const updatedSessions = sessions.filter((s) => s.id !== sessionIdToDelete);
     setSessions(updatedSessions);
     setIsPopupOpen(false);
+    setPendingLogContext(null);
     if (updatedSessions.length === 0) {
       setCurrentSessionId(null);
     } else {
@@ -142,6 +144,7 @@ export const Chatbot = () => {
 
     setSessions((prev) => [newSession, ...prev]);
     setCurrentSessionId(id);
+    setPendingLogContext(null);
   };
 
   const appendMessageToCurrentSession = (message: Message) => {
@@ -158,9 +161,10 @@ export const Chatbot = () => {
    * Handles the send process in a chat session.
    */
 
-  const sendMessage = async () => {
-    const trimmed = input.trim();
+  const sendMessageWithPayload = async (messageOverride?: string) => {
+    const trimmed = (messageOverride ?? input).trim();
     const hasFiles = attachedFiles.length > 0;
+    const logContext = pendingLogContext || undefined;
 
     if (!currentSessionId) return;
     if (!trimmed && !hasFiles) return;
@@ -175,9 +179,10 @@ export const Chatbot = () => {
     };
 
     setInput("");
+    setPendingLogContext(null);
     const filesToSend = [...attachedFiles];
     setAttachedFiles([]);
-    const isLogAnalysis = LOG_PATTERN.test(trimmed);
+    const isLogAnalysis = Boolean(logContext) || trimmed.includes("build failure");
     const statusMessage = isLogAnalysis
       ? getChatbotText("analyzingLogs")
       : getChatbotText("generatingMessage");
@@ -195,21 +200,19 @@ export const Chatbot = () => {
     appendMessageToCurrentSession(userMessage);
 
     try {
-      const botReply =
-        filesToSend.length > 0
-          ? await fetchChatbotReplyWithFiles(
-              currentSessionId,
-              trimmed || "Please analyze the attached file(s).",
-              filesToSend,
-              controller.signal,
-            )
-          : controller.signal
-            ? await fetchChatbotReply(
-                currentSessionId,
-                trimmed,
-                controller.signal,
-              )
-            : await fetchChatbotReply(currentSessionId, trimmed);
+      const botReply = filesToSend.length > 0
+        ? await fetchChatbotReplyWithFiles(
+            currentSessionId,
+            trimmed || "Please analyze the attached file(s).",
+            filesToSend,
+            controller.signal,
+          )
+        : await fetchChatbotReply(
+            currentSessionId,
+            trimmed,
+            controller.signal,
+            logContext,
+          );
       appendMessageToCurrentSession(botReply);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -227,6 +230,10 @@ export const Chatbot = () => {
         ),
       );
     }
+  };
+
+  const sendMessage = async () => {
+    await sendMessageWithPayload();
   };
   const handleCancelMessage = () => {
     abortControllerRef.current?.abort();
@@ -279,6 +286,7 @@ export const Chatbot = () => {
   const onSwitchChat = (chatSessionId: string) => {
     openSideBar();
     setCurrentSessionId(chatSessionId);
+    setPendingLogContext(null);
   };
 
   const openConfirmDeleteChatPopup = (chatSessionId: string) => {
@@ -287,46 +295,49 @@ export const Chatbot = () => {
   };
 
   const getConsoleLogContext = (): string => {
-    // 1. Try standard Jenkins console selector
     const consoleElement = document.querySelector("pre.console-output");
 
     if (!consoleElement || !consoleElement.textContent) {
       return "";
     }
 
-    const fullLog = consoleElement.textContent;
-
-    // 2. Truncate if too large (e.g., last 5000 characters)
-    // We only need the error at the end, and we don't want to overload the LLM.
-    const maxLength = 5000;
-    if (fullLog.length > maxLength) {
-      return "...(logs truncated due to size)...\n" + fullLog.slice(-maxLength);
-    }
-
-    return fullLog;
+    return consoleElement.textContent;
   };
 
   /**
    * Handlers for Proactive Toast
    */
-  const handleToastConfirm = () => {
+  const handleToastConfirm = async () => {
     setShowToast(false);
     setIsOpen(true);
 
-    // 1. Scrape the logs
     const logs = getConsoleLogContext();
 
-    // 2. Construct the prompt
     if (logs) {
-      const messageWithContext = `I found a build failure. Here are the last 5000 characters of the log:\n\n\`\`\`\n${logs}\n\`\`\`\n\nCan you analyze this error?`;
-      setInput(messageWithContext);
-
-      // Optional: If you want to send it immediately without clicking the arrow button:
-      // sendMessage(messageWithContext);
+      const preview = await fetchLogPreview(logs);
+      if (preview) {
+        setPendingLogContext(preview);
+        appendMessageToCurrentSession({
+          id: uuidv4(),
+          sender: "jenkins-bot",
+          text: `Sanitized log preview:\n\n${preview}`,
+        });
+        setInput("Analyze this build failure.");
+      } else {
+        appendMessageToCurrentSession({
+          id: uuidv4(),
+          sender: "jenkins-bot",
+          text: getChatbotText("logPreviewUnavailable"),
+        });
+        setInput("");
+      }
     } else {
-      setInput(
-        "I noticed a build failure, but I couldn't read the logs automatically. Can you paste them?",
-      );
+      appendMessageToCurrentSession({
+        id: uuidv4(),
+        sender: "jenkins-bot",
+        text: getChatbotText("logOutputUnavailable"),
+      });
+      setInput("");
     }
   };
 
