@@ -48,6 +48,7 @@ def build_aliases() -> dict[str, str]:
             "junit",
             "legacy-plugin",
             "port-allocator",
+            "kubernetes",
             "source-plugin",
             "target-plugin",
             "jenkins",
@@ -89,6 +90,18 @@ def test_reverse_target_scan_returns_targets_in_text_order():
     )
 
     assert [target.entity_id for target in targets] == ["git", "credentials"]
+
+
+def test_target_scan_keeps_targets_after_boundary_words():
+    """
+    Verify explanatory words do not hide a valid target plugin.
+    """
+    targets = resolve_target_entities(
+        "support for the Kubernetes Plugin",
+        build_aliases(),
+    )
+
+    assert [target.entity_id for target in targets] == ["kubernetes"]
 
 
 def test_extracts_depends_on_triple_from_chunk():

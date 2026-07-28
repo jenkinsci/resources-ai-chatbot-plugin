@@ -24,22 +24,6 @@ EXPLICIT_PLUGIN_WORDING_TARGET_IDS = {
     "seed",
     "ssh",
 }
-TARGET_SCAN_BOUNDARY_TOKENS = {
-    "after",
-    "before",
-    "for",
-    "if",
-    "only",
-    "so",
-    "that",
-    "to",
-    "when",
-    "where",
-    "which",
-    "while",
-    "with",
-}
-
 RELATION_PATTERNS = (
     (
         GraphRelationType.OPTIONAL_DEPENDS_ON.value,
@@ -166,8 +150,6 @@ def resolve_target_entities(
         list[GraphEntity]: Resolved target entities in text order.
     """
     tokens = TARGET_TOKEN_PATTERN.findall(text)
-    if not scan_from_end:
-        tokens = truncate_target_tokens(tokens)
     target_entities: list[tuple[int, GraphEntity]] = []
     seen_target_ids = set()
     consumed_until = 0
@@ -207,22 +189,6 @@ def resolve_target_entities(
         target_entities.reverse()
 
     return [target for _, target in target_entities]
-
-
-def truncate_target_tokens(tokens: list[str]) -> list[str]:
-    """
-    Stop target scanning before explanatory text after plugin mentions.
-
-    Args:
-        tokens (list[str]): Candidate relation-tail tokens.
-
-    Returns:
-        list[str]: Tokens before the first explanatory boundary.
-    """
-    for index, token in enumerate(tokens):
-        if token.lower() in TARGET_SCAN_BOUNDARY_TOKENS:
-            return tokens[:index]
-    return tokens
 
 
 def is_aws_sdk_grouping_text(
