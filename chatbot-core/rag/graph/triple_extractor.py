@@ -221,6 +221,8 @@ def extract_triples_from_sentence(
         chunk (dict): Source chunk payload.
         plugin_aliases (dict[str, PluginAliasRule]): Alias rules built from
             plugin IDs.
+        preceding_text (str): Previous sentence used for optional dependency
+            target resolution when the current sentence omits the target.
 
     Returns:
         list[Triple]: Extracted triples for the sentence.
