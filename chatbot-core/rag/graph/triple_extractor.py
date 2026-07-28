@@ -2,7 +2,11 @@
 
 import re
 
-from rag.graph.entity_normalizer import resolve_plugin_name
+from rag.graph.entity_normalizer import (
+    PluginAliasRule,
+    resolve_plugin_alias,
+    resolve_plugin_name,
+)
 from rag.graph.models import GraphEntity, GraphEvidence, Triple
 from rag.graph.schema import GraphEntityType, GraphRelationType
 
@@ -12,18 +16,6 @@ MAX_TARGET_SCAN_OFFSET = 8
 TARGET_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._-]*")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 SKIPPED_TARGET_PLUGIN_IDS = {"jenkins"}
-EXPLICIT_PLUGIN_WORDING_TARGET_IDS = {
-    "coverage",
-    "credentials",
-    "github",
-    "notification",
-    "python",
-    "release",
-    "repository",
-    "s3",
-    "seed",
-    "ssh",
-}
 RELATION_PATTERNS = (
     (
         GraphRelationType.OPTIONAL_DEPENDS_ON.value,
@@ -134,7 +126,7 @@ def build_candidate_variants(candidate: str) -> list[str]:
 
 def resolve_target_entities(
     text: str,
-    plugin_aliases: dict[str, str],
+    plugin_aliases: dict[str, PluginAliasRule],
     scan_from_end: bool = False,
 ) -> list[GraphEntity]:
     """
@@ -142,7 +134,8 @@ def resolve_target_entities(
 
     Args:
         text (str): Sentence text after a relation trigger.
-        plugin_aliases (dict[str, str]): Alias map built from plugin IDs.
+        plugin_aliases (dict[str, PluginAliasRule]): Alias rules built from
+            plugin IDs.
         scan_from_end (bool): Search from the end when resolving target-before
             relation wording while preserving all non-overlapping targets.
 
@@ -166,19 +159,21 @@ def resolve_target_entities(
         for end_index in range(max_end_index, start_index, -1):
             candidate = " ".join(tokens[start_index:end_index])
             for variant in build_candidate_variants(candidate):
-                target_id = resolve_plugin_name(variant, plugin_aliases)
-                if not target_id or target_id in SKIPPED_TARGET_PLUGIN_IDS:
+                alias_rule = resolve_plugin_alias(variant, plugin_aliases)
+                if not alias_rule or alias_rule.plugin_id in SKIPPED_TARGET_PLUGIN_IDS:
                     continue
-                if target_id in seen_target_ids:
+                if alias_rule.plugin_id in seen_target_ids:
                     continue
                 if (
-                    target_id in EXPLICIT_PLUGIN_WORDING_TARGET_IDS
+                    alias_rule.requires_explicit_plugin_word
                     and "plugin" not in candidate.lower()
                 ):
                     continue
 
-                target_entities.append((start_index, make_plugin_entity(target_id)))
-                seen_target_ids.add(target_id)
+                target_entities.append(
+                    (start_index, make_plugin_entity(alias_rule.plugin_id))
+                )
+                seen_target_ids.add(alias_rule.plugin_id)
                 consumed_until = end_index
                 found_target_at_start = True
                 break
@@ -241,7 +236,7 @@ def extract_triples_from_sentence(
     source_entity: GraphEntity,
     sentence: str,
     chunk: dict,
-    plugin_aliases: dict[str, str],
+    plugin_aliases: dict[str, PluginAliasRule],
     preceding_text: str = "",
 ) -> list[Triple]:
     """
@@ -251,7 +246,8 @@ def extract_triples_from_sentence(
         source_entity (GraphEntity): Canonical source plugin entity.
         sentence (str): Sentence to inspect.
         chunk (dict): Source chunk payload.
-        plugin_aliases (dict[str, str]): Alias map built from plugin IDs.
+        plugin_aliases (dict[str, PluginAliasRule]): Alias rules built from
+            plugin IDs.
 
     Returns:
         list[Triple]: Extracted triples for the sentence.
@@ -298,14 +294,15 @@ def extract_triples_from_sentence(
 
 def extract_triples_from_chunk(
     chunk: dict,
-    plugin_aliases: dict[str, str],
+    plugin_aliases: dict[str, PluginAliasRule],
 ) -> list[Triple]:
     """
     Extract graph triples from one plugin chunk.
 
     Args:
         chunk (dict): Chunk payload from chunks_plugin_docs.json.
-        plugin_aliases (dict[str, str]): Alias map built from plugin IDs.
+        plugin_aliases (dict[str, PluginAliasRule]): Alias rules built from
+            plugin IDs.
 
     Returns:
         list[Triple]: Validated triples found in the chunk.
@@ -347,14 +344,15 @@ def extract_triples_from_chunk(
 
 def extract_triples(
     chunks: list[dict],
-    plugin_aliases: dict[str, str],
+    plugin_aliases: dict[str, PluginAliasRule],
 ) -> list[Triple]:
     """
     Extract graph triples from plugin chunks.
 
     Args:
         chunks (list[dict]): Plugin documentation chunks.
-        plugin_aliases (dict[str, str]): Alias map built from plugin IDs.
+        plugin_aliases (dict[str, PluginAliasRule]): Alias rules built from
+            plugin IDs.
 
     Returns:
         list[Triple]: All validated triples found across chunks.

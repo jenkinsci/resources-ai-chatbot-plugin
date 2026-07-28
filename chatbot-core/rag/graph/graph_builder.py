@@ -2,6 +2,7 @@
 
 import networkx as nx
 
+from rag.graph.entity_normalizer import PluginAliasRule
 from rag.graph.models import Triple
 from rag.graph.triple_extractor import extract_triples
 
@@ -79,14 +80,15 @@ def build_graph(triples: list[Triple]) -> nx.MultiDiGraph:
 
 def build_graph_from_chunks(
     chunks: list[dict],
-    plugin_aliases: dict[str, str],
+    plugin_aliases: dict[str, PluginAliasRule],
 ) -> tuple[nx.MultiDiGraph, list[Triple]]:
     """
     Extract triples from chunks and build the graph artifact.
 
     Args:
         chunks (list[dict]): Plugin documentation chunks.
-        plugin_aliases (dict[str, str]): Alias map built from plugin IDs.
+        plugin_aliases (dict[str, PluginAliasRule]): Alias rules built from
+            plugin IDs.
 
     Returns:
         tuple[nx.MultiDiGraph, list[Triple]]: Built graph and extracted triples.
