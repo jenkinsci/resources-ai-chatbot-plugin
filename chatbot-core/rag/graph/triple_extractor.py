@@ -186,34 +186,9 @@ def resolve_target_entities(
     return [target for _, target in target_entities]
 
 
-def is_aws_sdk_grouping_text(
-    source_entity: GraphEntity,
-    target_entity: GraphEntity,
-    sentence: str,
-) -> bool:
-    """
-    Detect AWS SDK module-family text that is not a source-plugin dependency.
-
-    Args:
-        source_entity (GraphEntity): Source plugin entity.
-        target_entity (GraphEntity): Target plugin entity.
-        sentence (str): Evidence sentence.
-
-    Returns:
-        bool: True when the relation is a known grouping false positive.
-    """
-    sentence_lower = sentence.lower()
-    return (
-        source_entity.entity_id.startswith("aws-java-sdk-")
-        and target_entity.entity_id == "aws-java-sdk"
-        and "depends on all other aws-java-sdk plugins" in sentence_lower
-    )
-
-
 def should_skip_target(
     source_entity: GraphEntity,
     target_entity: GraphEntity,
-    sentence: str,
 ) -> bool:
     """
     Check whether a resolved target should be rejected for this sentence.
@@ -221,14 +196,12 @@ def should_skip_target(
     Args:
         source_entity (GraphEntity): Source plugin entity.
         target_entity (GraphEntity): Target plugin entity.
-        sentence (str): Evidence sentence.
 
     Returns:
         bool: True when the target should not become a triple.
     """
     return (
         target_entity.entity_id == source_entity.entity_id
-        or is_aws_sdk_grouping_text(source_entity, target_entity, sentence)
     )
 
 
@@ -276,7 +249,7 @@ def extract_triples_from_sentence(
                     )
 
             for target_entity in target_entities:
-                if should_skip_target(source_entity, target_entity, sentence):
+                if should_skip_target(source_entity, target_entity):
                     continue
 
                 extracted_triples.append(
