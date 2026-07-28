@@ -5,6 +5,7 @@ from rag.graph.schema import GraphRelationType
 from rag.graph.triple_extractor import (
     build_candidate_variants,
     extract_triples_from_chunk,
+    resolve_target_entities,
     sentence_split,
 )
 
@@ -75,6 +76,19 @@ def test_build_candidate_variants_handles_jenkins_plugin_names():
         "Jenkins Credentials",
         "Credentials",
     ]
+
+
+def test_reverse_target_scan_returns_targets_in_text_order():
+    """
+    Verify reverse scans return all targets in normal text order.
+    """
+    targets = resolve_target_entities(
+        "Git Plugin and Credentials Plugin",
+        build_aliases(),
+        scan_from_end=True,
+    )
+
+    assert [target.entity_id for target in targets] == ["git", "credentials"]
 
 
 def test_extracts_depends_on_triple_from_chunk():

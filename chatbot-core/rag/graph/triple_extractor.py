@@ -154,13 +154,13 @@ def resolve_target_entities(
     scan_from_end: bool = False,
 ) -> list[GraphEntity]:
     """
-    Resolve target plugin entities from text after a relation phrase.
+    Resolve target plugin entities from a relation text span.
 
     Args:
         text (str): Sentence text after a relation trigger.
         plugin_aliases (dict[str, str]): Alias map built from plugin IDs.
-        scan_from_end (bool): Search nearest target text first for target-before
-            relation wording.
+        scan_from_end (bool): Search from the end when resolving target-before
+            relation wording while preserving all non-overlapping targets.
 
     Returns:
         list[GraphEntity]: Resolved target entities in text order.
@@ -168,7 +168,7 @@ def resolve_target_entities(
     tokens = TARGET_TOKEN_PATTERN.findall(text)
     if not scan_from_end:
         tokens = truncate_target_tokens(tokens)
-    target_entities: list[GraphEntity] = []
+    target_entities: list[tuple[int, GraphEntity]] = []
     seen_target_ids = set()
     consumed_until = 0
 
@@ -177,7 +177,7 @@ def resolve_target_entities(
         start_indices = range(len(tokens) - 1, -1, -1)
 
     for start_index in start_indices:
-        if start_index < consumed_until:
+        if not scan_from_end and start_index < consumed_until:
             continue
         max_end_index = min(len(tokens), start_index + MAX_TARGET_TOKENS)
         found_target_at_start = False
@@ -195,7 +195,7 @@ def resolve_target_entities(
                 ):
                     continue
 
-                target_entities.append(make_plugin_entity(target_id))
+                target_entities.append((start_index, make_plugin_entity(target_id)))
                 seen_target_ids.add(target_id)
                 consumed_until = end_index
                 found_target_at_start = True
@@ -203,7 +203,10 @@ def resolve_target_entities(
             if found_target_at_start:
                 break
 
-    return target_entities
+    if scan_from_end:
+        target_entities.reverse()
+
+    return [target for _, target in target_entities]
 
 
 def truncate_target_tokens(tokens: list[str]) -> list[str]:
