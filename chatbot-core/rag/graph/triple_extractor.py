@@ -239,8 +239,6 @@ def extract_triples_from_sentence(
                     plugin_aliases,
                     scan_from_end=True,
                 )
-                if not target_entities:
-                    target_entities = resolve_target_entities(sentence, plugin_aliases)
                 if not target_entities and preceding_text:
                     target_entities = resolve_target_entities(
                         preceding_text,

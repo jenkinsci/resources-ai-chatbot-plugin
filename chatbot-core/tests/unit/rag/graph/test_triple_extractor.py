@@ -157,6 +157,22 @@ def test_extracts_optional_dependency_without_hard_dependency_duplicate():
     assert triples[0].confidence == 0.75
 
 
+def test_extracts_optional_target_before_relation_phrase():
+    """
+    Verify optional dependencies can resolve a target before the relation.
+    """
+    chunk = build_chunk(
+        "source-plugin",
+        "The Git Plugin is an optional dependency for this plugin.",
+    )
+
+    triples = extract_triples_from_chunk(chunk, build_aliases())
+
+    assert len(triples) == 1
+    assert triples[0].relation == GraphRelationType.OPTIONAL_DEPENDS_ON.value
+    assert triples[0].target.entity_id == "git"
+
+
 def test_extracts_conflict_triple_from_chunk():
     """
     Verify incompatibility text becomes a conflict triple.
