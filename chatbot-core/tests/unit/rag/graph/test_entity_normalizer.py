@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from rag.graph.entity_normalizer import (
     build_plugin_aliases,
     load_canonical_plugin_ids,
@@ -20,9 +22,9 @@ def test_normalize_lookup_value_removes_case_and_separators():
     assert normalize_lookup_value("matrix-auth-plugin") == "matrixauthplugin"
 
 
-def test_load_canonical_plugin_ids_keeps_string_values(tmp_path):
+def test_load_canonical_plugin_ids_rejects_invalid_values(tmp_path):
     """
-    Verify plugin IDs are loaded from JSON and non-string values are skipped.
+    Verify malformed plugin IDs are rejected during loading.
     """
     plugin_names_path = tmp_path / "plugin_names.json"
     plugin_names_path.write_text(
@@ -30,9 +32,8 @@ def test_load_canonical_plugin_ids_keeps_string_values(tmp_path):
         encoding="utf-8",
     )
 
-    plugin_ids = load_canonical_plugin_ids(plugin_names_path)
-
-    assert plugin_ids == ["blueocean", "git"]
+    with pytest.raises(ValueError, match="invalid plugin ID"):
+        load_canonical_plugin_ids(plugin_names_path)
 
 
 def test_build_plugin_aliases_resolves_common_name_forms():

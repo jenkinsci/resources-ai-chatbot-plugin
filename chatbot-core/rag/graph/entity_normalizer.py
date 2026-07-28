@@ -60,11 +60,10 @@ def load_canonical_plugin_ids(
         list[str]: Canonical plugin IDs in file order.
     """
     plugin_ids = load_json_list(path)
-    return [
-        plugin_id
-        for plugin_id in plugin_ids
-        if isinstance(plugin_id, str) and plugin_id.strip()
-    ]
+    if any(not isinstance(plugin_id, str) or not plugin_id.strip() for plugin_id in plugin_ids):
+        raise ValueError(f"Plugin names JSON contains an invalid plugin ID: {path}")
+
+    return [plugin_id for plugin_id in plugin_ids if isinstance(plugin_id, str)]
 
 
 def build_plugin_aliases(plugin_ids: list[str]) -> dict[str, PluginAliasRule]:
