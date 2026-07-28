@@ -19,6 +19,33 @@ GRAPH_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PLUGIN_CHUNKS_PATH = GRAPH_ROOT / "data" / "processed" / "chunks_plugin_docs.json"
 
 
+def is_valid_plugin_chunk(chunk: object) -> bool:
+    """
+    Check the required shape of one plugin documentation chunk.
+
+    Args:
+        chunk (object): JSON value to validate.
+
+    Returns:
+        bool: True when the chunk contains required string fields.
+    """
+    if not isinstance(chunk, dict):
+        return False
+
+    metadata = chunk.get("metadata")
+    return (
+        isinstance(chunk.get("id"), str)
+        and bool(chunk["id"].strip())
+        and isinstance(chunk.get("chunk_text"), str)
+        and bool(chunk["chunk_text"].strip())
+        and isinstance(metadata, dict)
+        and isinstance(metadata.get("title"), str)
+        and bool(metadata["title"].strip())
+        and isinstance(metadata.get("data_source"), str)
+        and bool(metadata["data_source"].strip())
+    )
+
+
 def load_plugin_chunks(path: Path) -> list[dict]:
     """
     Load plugin chunks from a JSON artifact file.
@@ -31,7 +58,10 @@ def load_plugin_chunks(path: Path) -> list[dict]:
     """
     with path.open(encoding="utf-8") as chunks_file:
         chunks = json.load(chunks_file)
-    return [chunk for chunk in chunks if isinstance(chunk, dict)]
+    if not isinstance(chunks, list):
+        raise ValueError("Plugin chunks JSON must contain a list")
+
+    return [chunk for chunk in chunks if is_valid_plugin_chunk(chunk)]
 
 
 def run_graph_build(

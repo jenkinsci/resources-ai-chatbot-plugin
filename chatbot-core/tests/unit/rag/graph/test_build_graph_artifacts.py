@@ -35,13 +35,20 @@ def test_load_plugin_chunks_keeps_dict_records(tmp_path):
     """
     chunks_path = tmp_path / "chunks_plugin_docs.json"
     chunks_path.write_text(
-        json.dumps([{"id": "chunk-1"}, "bad-record", 123]),
+        json.dumps(
+            [
+                build_chunk("source-plugin", "valid text"),
+                {"id": "chunk-2"},
+                "bad-record",
+                123,
+            ]
+        ),
         encoding="utf-8",
     )
 
     chunks = load_plugin_chunks(chunks_path)
 
-    assert chunks == [{"id": "chunk-1"}]
+    assert chunks == [build_chunk("source-plugin", "valid text")]
 
 
 def test_run_graph_build_writes_artifacts_from_fake_inputs(tmp_path):
