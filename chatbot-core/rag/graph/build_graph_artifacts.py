@@ -1,7 +1,6 @@
 """Build GraphRAG plugin graph artifacts from plugin chunks."""
 
 import argparse
-import json
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +11,7 @@ from rag.graph.entity_normalizer import (
 )
 from rag.graph.graph_artifacts import GraphArtifactPaths, write_graph_artifacts
 from rag.graph.graph_builder import build_graph_from_chunks
+from rag.graph.json_loader import load_json_list
 from utils import LoggerFactory
 
 
@@ -56,11 +56,7 @@ def load_plugin_chunks(path: Path) -> list[dict]:
     Returns:
         list[dict]: Plugin chunk records.
     """
-    with path.open(encoding="utf-8") as chunks_file:
-        chunks = json.load(chunks_file)
-    if not isinstance(chunks, list):
-        raise ValueError("Plugin chunks JSON must contain a list")
-
+    chunks = load_json_list(path)
     return [chunk for chunk in chunks if is_valid_plugin_chunk(chunk)]
 
 

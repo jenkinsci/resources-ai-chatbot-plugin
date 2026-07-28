@@ -1,9 +1,10 @@
 """Normalize plugin entity names against the known plugin index."""
 
-import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
+from rag.graph.json_loader import load_json_list
 
 
 GRAPH_ROOT = Path(__file__).resolve().parents[2]
@@ -58,8 +59,7 @@ def load_canonical_plugin_ids(
     Returns:
         list[str]: Canonical plugin IDs in file order.
     """
-    with path.open(encoding="utf-8") as plugin_names_file:
-        plugin_ids = json.load(plugin_names_file)
+    plugin_ids = load_json_list(path)
     return [
         plugin_id
         for plugin_id in plugin_ids
