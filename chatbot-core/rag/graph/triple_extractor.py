@@ -3,7 +3,7 @@
 import re
 
 from rag.graph.entity_normalizer import (
-    PluginAliasRule,
+    PluginAliasValue,
     resolve_plugin_alias,
     resolve_plugin_name,
 )
@@ -126,7 +126,7 @@ def build_candidate_variants(candidate: str) -> list[str]:
 
 def resolve_target_entities(
     text: str,
-    plugin_aliases: dict[str, PluginAliasRule],
+    plugin_aliases: dict[str, PluginAliasValue],
     scan_from_end: bool = False,
 ) -> list[GraphEntity]:
     """
@@ -209,7 +209,7 @@ def extract_triples_from_sentence(
     source_entity: GraphEntity,
     sentence: str,
     chunk: dict,
-    plugin_aliases: dict[str, PluginAliasRule],
+    plugin_aliases: dict[str, PluginAliasValue],
     preceding_text: str = "",
 ) -> list[Triple]:
     """
@@ -267,7 +267,7 @@ def extract_triples_from_sentence(
 
 def extract_triples_from_chunk(
     chunk: dict,
-    plugin_aliases: dict[str, PluginAliasRule],
+    plugin_aliases: dict[str, PluginAliasValue],
 ) -> list[Triple]:
     """
     Extract graph triples from one plugin chunk.
@@ -317,7 +317,7 @@ def extract_triples_from_chunk(
 
 def extract_triples(
     chunks: list[dict],
-    plugin_aliases: dict[str, PluginAliasRule],
+    plugin_aliases: dict[str, PluginAliasValue],
 ) -> list[Triple]:
     """
     Extract graph triples from plugin chunks.

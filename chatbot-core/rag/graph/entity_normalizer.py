@@ -33,6 +33,9 @@ class PluginAliasRule:
     requires_explicit_plugin_word: bool = False
 
 
+PluginAliasValue = PluginAliasRule | str
+
+
 def normalize_lookup_value(value: str) -> str:
     """
     Normalize plugin text into a stable lookup key.
@@ -108,15 +111,15 @@ def build_plugin_aliases(plugin_ids: list[str]) -> dict[str, PluginAliasRule]:
 
 def resolve_plugin_name(
     plugin_name: str,
-    plugin_aliases: dict[str, PluginAliasRule],
+    plugin_aliases: dict[str, PluginAliasValue],
 ) -> str | None:
     """
     Resolve plugin text to a canonical plugin ID.
 
     Args:
         plugin_name (str): Plugin name or alias from a query or chunk.
-        plugin_aliases (dict[str, PluginAliasRule]): Alias rules built from
-            canonical IDs.
+        plugin_aliases (dict[str, PluginAliasValue]): Alias rules built from
+            canonical IDs, or a legacy alias-to-ID mapping.
 
     Returns:
         str | None: Canonical plugin ID when a match is found, otherwise None.
@@ -125,13 +128,21 @@ def resolve_plugin_name(
     if not alias_key:
         return None
     rule = plugin_aliases.get(alias_key)
-    return rule.plugin_id if rule else None
+    if isinstance(rule, PluginAliasRule):
+        return rule.plugin_id
+    return rule
 
 
 def resolve_plugin_alias(
     plugin_name: str,
-    plugin_aliases: dict[str, PluginAliasRule],
+    plugin_aliases: dict[str, PluginAliasValue],
 ) -> PluginAliasRule | None:
     """Resolve plugin text to its complete alias rule."""
     alias_key = normalize_lookup_value(plugin_name)
-    return plugin_aliases.get(alias_key) if alias_key else None
+    if not alias_key:
+        return None
+
+    rule = plugin_aliases.get(alias_key)
+    if isinstance(rule, PluginAliasRule):
+        return rule
+    return PluginAliasRule(plugin_id=rule) if isinstance(rule, str) else None

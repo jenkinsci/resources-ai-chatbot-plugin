@@ -2,7 +2,7 @@
 
 import networkx as nx
 
-from rag.graph.entity_normalizer import PluginAliasRule
+from rag.graph.entity_normalizer import PluginAliasValue
 from rag.graph.models import Triple
 from rag.graph.triple_extractor import extract_triples
 
@@ -80,7 +80,7 @@ def build_graph(triples: list[Triple]) -> nx.MultiDiGraph:
 
 def build_graph_from_chunks(
     chunks: list[dict],
-    plugin_aliases: dict[str, PluginAliasRule],
+    plugin_aliases: dict[str, PluginAliasValue],
 ) -> tuple[nx.MultiDiGraph, list[Triple]]:
     """
     Extract triples from chunks and build the graph artifact.
