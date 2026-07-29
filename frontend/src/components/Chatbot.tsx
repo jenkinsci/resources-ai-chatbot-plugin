@@ -27,6 +27,8 @@ import { v4 as uuidv4 } from "uuid";
 import { ProactiveToast } from "./Toast";
 import { useContextObserver } from "../utils/useContextObserver";
 
+const ANALYZE_BUILD_MESSAGE = "Analyze this Jenkins Build Failure.";
+
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
  */
@@ -165,6 +167,9 @@ export const Chatbot = () => {
     const trimmed = (messageOverride ?? input).trim();
     const hasFiles = attachedFiles.length > 0;
     const logContext = pendingLogContext || undefined;
+    const messageWithoutLog = logContext
+      ? trimmed.replace(logContext, "").trim()
+      : trimmed;
 
     if (!currentSessionId) return;
     if (!trimmed && !hasFiles) return;
@@ -174,7 +179,7 @@ export const Chatbot = () => {
     const userMessage: Message = {
       id: uuidv4(),
       sender: "user",
-      text: trimmed || (hasFiles ? "📎 Attached file(s)" : ""),
+      text: messageWithoutLog || (hasFiles ? "📎 Attached file(s)" : ""),
       files: fileAttachments.length > 0 ? fileAttachments : undefined,
     };
 
@@ -182,7 +187,8 @@ export const Chatbot = () => {
     setPendingLogContext(null);
     const filesToSend = [...attachedFiles];
     setAttachedFiles([]);
-    const isLogAnalysis = Boolean(logContext) || trimmed.includes("build failure");
+    const isLogAnalysis =
+      Boolean(logContext) || trimmed.includes("build failure");
     const statusMessage = isLogAnalysis
       ? getChatbotText("analyzingLogs")
       : getChatbotText("generatingMessage");
@@ -200,19 +206,20 @@ export const Chatbot = () => {
     appendMessageToCurrentSession(userMessage);
 
     try {
-      const botReply = filesToSend.length > 0
-        ? await fetchChatbotReplyWithFiles(
-            currentSessionId,
-            trimmed || "Please analyze the attached file(s).",
-            filesToSend,
-            controller.signal,
-          )
-        : await fetchChatbotReply(
-            currentSessionId,
-            trimmed,
-            controller.signal,
-            logContext,
-          );
+      const botReply =
+        filesToSend.length > 0
+          ? await fetchChatbotReplyWithFiles(
+              currentSessionId,
+              messageWithoutLog || "Please analyze the attached file(s).",
+              filesToSend,
+              controller.signal,
+            )
+          : await fetchChatbotReply(
+              currentSessionId,
+              messageWithoutLog,
+              controller.signal,
+              logContext,
+            );
       appendMessageToCurrentSession(botReply);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -304,11 +311,27 @@ export const Chatbot = () => {
     return consoleElement.textContent;
   };
 
-  /**
-   * Handlers for Proactive Toast
-   */
-  const handleToastConfirm = async () => {
+  const prepareBuildFailureAnalysis = async () => {
     setShowToast(false);
+
+    if (!isOpen) {
+      const id = await createChatSession();
+      if (!id) {
+        console.error("Failed to create a session for build analysis.");
+        return;
+      }
+
+      const newSession: ChatSession = {
+        id,
+        messages: [],
+        createdAt: new Date().toISOString(),
+        isLoading: false,
+        loadingStatus: null,
+      };
+      setSessions((prev) => [newSession, ...prev]);
+      setCurrentSessionId(id);
+    }
+
     setIsOpen(true);
 
     const logs = getConsoleLogContext();
@@ -317,27 +340,14 @@ export const Chatbot = () => {
       const preview = await fetchLogPreview(logs);
       if (preview) {
         setPendingLogContext(preview);
-        appendMessageToCurrentSession({
-          id: uuidv4(),
-          sender: "jenkins-bot",
-          text: `Sanitized log preview:\n\n${preview}`,
-        });
-        setInput("Analyze this build failure.");
+        setInput(`${ANALYZE_BUILD_MESSAGE}\n\n${preview}`);
       } else {
-        appendMessageToCurrentSession({
-          id: uuidv4(),
-          sender: "jenkins-bot",
-          text: getChatbotText("logPreviewUnavailable"),
-        });
-        setInput("");
+        setPendingLogContext(null);
+        setInput(ANALYZE_BUILD_MESSAGE);
       }
     } else {
-      appendMessageToCurrentSession({
-        id: uuidv4(),
-        sender: "jenkins-bot",
-        text: getChatbotText("logOutputUnavailable"),
-      });
-      setInput("");
+      setPendingLogContext(null);
+      setInput(ANALYZE_BUILD_MESSAGE);
     }
   };
 
@@ -402,7 +412,7 @@ export const Chatbot = () => {
       </button>
       {showToast && !isOpen && (
         <ProactiveToast
-          onConfirm={handleToastConfirm}
+          onConfirm={prepareBuildFailureAnalysis}
           onDismiss={handleToastDismiss}
         />
       )}
