@@ -13,6 +13,7 @@ const buildStatusUrl = (): string => {
  * Shows the log-analysis toast for a failed Jenkins build console.
  */
 export const useContextObserver = (isChatOpen: boolean) => {
+  const [buildFailed, setBuildFailed] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
@@ -29,7 +30,8 @@ export const useContextObserver = (isChatOpen: boolean) => {
     const loadBuildStatus = async () => {
       setShowToast(false);
 
-      if (isChatOpen || !window.location.pathname.includes("/console")) {
+      if (!window.location.pathname.includes("/console")) {
+        setBuildFailed(false);
         return;
       }
 
@@ -42,15 +44,19 @@ export const useContextObserver = (isChatOpen: boolean) => {
         }
 
         const status = (await response.json()) as BuildStatusResponse;
-        if (cancelled || status.result !== "FAILURE") {
+        const failed = status.result === "FAILURE";
+        if (cancelled) {
           return;
         }
+        setBuildFailed(failed);
+        if (!failed || isChatOpen) return;
 
         timer = setTimeout(() => {
           setShowToast(true);
           timer = null;
         }, 2000);
       } catch {
+        setBuildFailed(false);
         setShowToast(false);
       }
     };
@@ -63,5 +69,5 @@ export const useContextObserver = (isChatOpen: boolean) => {
     };
   }, [isChatOpen]);
 
-  return { showToast, setShowToast };
+  return { buildFailed, showToast, setShowToast };
 };

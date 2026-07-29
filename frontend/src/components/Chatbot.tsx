@@ -26,6 +26,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { ProactiveToast } from "./Toast";
 import { useContextObserver } from "../utils/useContextObserver";
+import { Search } from "lucide-react";
 
 const ANALYZE_BUILD_MESSAGE = "Analyze this Jenkins Build Failure.";
 
@@ -54,7 +55,7 @@ export const Chatbot = () => {
     null,
   );
 
-  const { showToast, setShowToast } = useContextObserver(isOpen);
+  const { buildFailed, showToast, setShowToast } = useContextObserver(isOpen);
 
   /**
    * Fetch supported file extensions on component mount.
@@ -448,6 +449,38 @@ export const Chatbot = () => {
                 isLoading={getChatLoading()}
                 loadingStatus={getChatLoadingStatus()}
               />
+              {buildFailed && (
+                <button
+                  type="button"
+                  style={chatbotStyles.analyzeBuildButton}
+                  onClick={prepareBuildFailureAnalysis}
+                  onFocus={(event) => {
+                    event.currentTarget.style.outline =
+                      "2px solid rgba(0, 115, 230, 0.35)";
+                    event.currentTarget.style.outlineOffset = "2px";
+                  }}
+                  onBlur={(event) => {
+                    event.currentTarget.style.outline = "none";
+                  }}
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.backgroundColor = "#0059b3";
+                  }}
+                  onMouseDown={(event) => {
+                    event.currentTarget.style.transform = "translateY(1px)";
+                  }}
+                  onMouseUp={(event) => {
+                    event.currentTarget.style.transform = "translateY(0)";
+                  }}
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.backgroundColor = "#0073e6";
+                    event.currentTarget.style.transform = "translateY(0)";
+                  }}
+                  title={getChatbotText("analyzeCurrentBuild")}
+                >
+                  <Search size={16} aria-hidden="true" />
+                  <span>{getChatbotText("analyzeCurrentBuild")}</span>
+                </button>
+              )}
               <Input
                 input={input}
                 setInput={setInput}

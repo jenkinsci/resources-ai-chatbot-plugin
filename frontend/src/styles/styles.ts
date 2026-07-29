@@ -135,6 +135,27 @@ export const chatbotStyles = {
     borderTop: "1px solid #eee",
   } as CSSProperties,
 
+  analyzeBuildButton: {
+    alignSelf: "center",
+    width: "fit-content",
+    minHeight: "40px",
+    margin: "8px 12px",
+    padding: "9px 16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    border: "1px solid #0059b3",
+    borderRadius: "6px",
+    backgroundColor: "#0073e6",
+    color: "#ffffff",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: 600,
+    lineHeight: 1.2,
+    transition: "background-color 150ms ease, transform 120ms ease",
+  } as CSSProperties,
+
   attachedFilesContainer: {
     display: "flex",
     flexWrap: "wrap",
