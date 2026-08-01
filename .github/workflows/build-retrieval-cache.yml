@@ -97,7 +97,7 @@ jobs:
           EOF
 
       - name: Upload retrieval vector cache
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.cache-name.outputs.artifact_name }}
           path: |
