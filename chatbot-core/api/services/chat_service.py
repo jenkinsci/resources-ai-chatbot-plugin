@@ -526,8 +526,9 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
             "LLM provider not available - returning fallback response")
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     try:
+        sanitized_prompt = sanitize_logs(prompt)
         return llm_provider.generate(
-            prompt=prompt,
+            prompt=sanitized_prompt,
             max_tokens=max_tokens or llm_config["max_tokens"])
     except (ImportError, AttributeError) as e:
         logger.error("LLM provider unavailable: %s", e)
@@ -564,8 +565,9 @@ async def generate_answer_stream(
         yield "LLM is not available. Please install llama-cpp-python and configure a model."
         return
     try:
+        sanitized_prompt = sanitize_logs(prompt)
         async for token in llm_provider.generate_stream(
-            prompt=prompt,
+            prompt=sanitized_prompt,
             max_tokens=max_tokens or llm_config["max_tokens"]
         ):
             yield token
