@@ -160,6 +160,13 @@ export const Chatbot = () => {
     );
   };
 
+  const handleInputChange = (value: string) => {
+    setInput(value);
+    setPendingLogContext((currentContext) =>
+      currentContext && !value.includes(currentContext) ? null : currentContext,
+    );
+  };
+
   /**
    * Handles the send process in a chat session.
    */
@@ -167,7 +174,10 @@ export const Chatbot = () => {
   const sendMessageWithPayload = async (messageOverride?: string) => {
     const trimmed = (messageOverride ?? input).trim();
     const hasFiles = attachedFiles.length > 0;
-    const logContext = pendingLogContext || undefined;
+    const logContext =
+      pendingLogContext && trimmed.includes(pendingLogContext)
+        ? pendingLogContext
+        : undefined;
     const messageWithoutLog = logContext
       ? trimmed.replace(logContext, "").trim()
       : trimmed;
@@ -483,7 +493,7 @@ export const Chatbot = () => {
               )}
               <Input
                 input={input}
-                setInput={setInput}
+                setInput={handleInputChange}
                 onSend={sendMessage}
                 onCancel={handleCancelMessage}
                 isLoading={getChatLoading()}
