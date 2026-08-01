@@ -80,7 +80,7 @@ jobs:
 
       - name: Download cached retrieval vector database
         if: needs.get-retrieval-cache.outputs.cache_found == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.get-retrieval-cache.outputs.artifact_name }}
           path: .
@@ -90,7 +90,7 @@ jobs:
 
       - name: Download fallback retrieval vector database
         if: needs.get-retrieval-cache.outputs.cache_found != 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build-vector-database.outputs.artifact_name }}
           path: .
@@ -215,7 +215,7 @@ jobs:
             2>&1 | tee "$RESULTS_DIR/dependency-install.log"
 
       - name: Download retrieval-context responses
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: retrieval-responses-${{ github.run_id }}
           path: artifacts/retrieval
@@ -317,13 +317,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download retrieval-context responses
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: retrieval-responses-${{ github.run_id }}
           path: artifacts/retrieval
 
       - name: Download generated response shards
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: response-shard-*
           path: artifacts/shards
