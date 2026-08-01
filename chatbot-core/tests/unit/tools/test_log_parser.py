@@ -49,6 +49,34 @@ def test_wrapper_error_is_fallback_anchor_but_can_be_context():
     )
 
 
+def test_keeps_failure_footer_after_meaningful_error():
+    """Include Jenkins wrapper failure lines after a meaningful error section."""
+    log = "\n".join(
+        [
+            "start",
+            "[ERROR] deployment failed",
+            "stack trace line",
+            "[Pipeline] }",
+            "[Pipeline] // stage",
+            "ERROR: script returned exit code 1",
+            "Finished: FAILURE",
+        ]
+    )
+
+    assert extract_relevant_log_lines(
+        log,
+        context_before=0,
+        context_after=0,
+    ) == "\n".join(
+        [
+            "2: [ERROR] deployment failed",
+            "[... unrelated log lines omitted ...]",
+            "6: ERROR: script returned exit code 1",
+            "7: Finished: FAILURE",
+        ]
+    )
+
+
 def test_returns_configured_tail_when_no_error_matches():
     """Return the configured tail when the log has no recognized error."""
     log = "\n".join(["line 1", "line 2", "line 3"])
