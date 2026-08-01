@@ -64,6 +64,7 @@ from api.services.file_service import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+DEFAULT_LOG_ANALYSIS_MESSAGE = "Analyze the provided failed Jenkins build logs."
 
 # --- Optional dependency checks (feature flags) ---
 LLM_AVAILABLE = False  # pylint: disable=invalid-name
@@ -282,9 +283,10 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
             status_code=404,
             detail="Session not found.",
         )
+    message = request.message.strip() or DEFAULT_LOG_ANALYSIS_MESSAGE
     reply = get_chatbot_reply(
         session_id,
-        request.message,
+        message,
         log_context=request.log_context,
     )
     _background_tasks.add_task(
