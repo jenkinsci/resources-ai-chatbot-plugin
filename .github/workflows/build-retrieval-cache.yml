@@ -7,7 +7,7 @@ on:
         type: string
       retention_days:
         type: number
-        default: 2
+        default: 28
     outputs:
       artifact_name:
         description: Name of the uploaded retrieval vector cache artifact.
@@ -18,21 +18,21 @@ on:
         type: string
       retention_days:
         type: number
-        default: 2
+        default: 28
   schedule:
-    # Temporary testing: run nightly while validating cache reuse.
-    - cron: "0 2 * * *"
+    # Keep a recent retrieval cache available for eval workflow reuse.
+    - cron: "0 2 1,15 * *"
 
 permissions:
   contents: read
 
 env:
   RETRIEVAL_CACHE_ARTIFACT: ${{ inputs.artifact_name || '' }}
-  RETRIEVAL_CACHE_RETENTION_DAYS: ${{ inputs.retention_days || 2 }}
+  RETRIEVAL_CACHE_RETENTION_DAYS: ${{ inputs.retention_days || 28 }}
 
 concurrency:
-  group: retrieval-vector-cache
-  cancel-in-progress: false
+  group: retrieval-vector-cache-${{ github.event_name == 'workflow_call' && github.ref || 'scheduled' }}
+  cancel-in-progress: ${{ github.event_name == 'workflow_call' }}
 
 jobs:
   build-retrieval-cache:
@@ -57,7 +57,7 @@ jobs:
           set -euo pipefail
           artifact_name="${RETRIEVAL_CACHE_ARTIFACT}"
           if [[ -z "$artifact_name" ]]; then
-            artifact_name="retrieval-vector-database-$(date -u +%d%m)"
+            artifact_name="retrieval-vector-database"
           fi
           echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
 
@@ -104,6 +104,6 @@ jobs:
             chatbot-core/data/embeddings/
             logs/data-pipeline.log
           if-no-files-found: error
-          # Temporary testing retention: keep only the last couple of days.
+          # Keep cache artifacts short-lived because they are regenerated regularly.
           retention-days: ${{ env.RETRIEVAL_CACHE_RETENTION_DAYS }}
           compression-level: 0

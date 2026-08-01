@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: llm-as-judge-eval-${{ github.event.pull_request.number || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -50,7 +50,7 @@ jobs:
     if: needs.get-retrieval-cache.outputs.cache_found != 'true'
     uses: ./.github/workflows/build-retrieval-cache.yml
     with:
-      retention_days: 2
+      retention_days: 28
 
   fill-retrieval-context:
     needs:
