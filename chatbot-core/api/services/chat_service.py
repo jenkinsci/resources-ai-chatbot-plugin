@@ -81,8 +81,14 @@ def get_chatbot_reply(
             f"Session '{session_id}' not found in the memory store.")
 
     relevant_log_context = log_context.strip() if log_context else ""
+    clean_user_input = _remove_embedded_log_context(
+        user_input,
+        relevant_log_context,
+    )
     retrieval_query = _build_retrieval_query(
-        user_input, relevant_log_context)
+        clean_user_input,
+        relevant_log_context,
+    )
 
     context = retrieve_context(retrieval_query)
     logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
@@ -91,7 +97,7 @@ def get_chatbot_reply(
     context = _process_file_context(context, files)
 
     prompt = build_prompt(
-        user_input,
+        clean_user_input,
         context,
         memory,
         log_context=relevant_log_context,
@@ -102,7 +108,7 @@ def get_chatbot_reply(
     reply = generate_answer(prompt)
 
     # Format user message with file info for memory
-    user_message = _format_user_message_for_memory(user_input, files)
+    user_message = _format_user_message_for_memory(clean_user_input, files)
 
     memory.chat_memory.add_user_message(user_message)
     memory.chat_memory.add_ai_message(reply)
@@ -148,6 +154,23 @@ def _build_retrieval_query(user_input: str, log_context: str) -> str:
         return user_input
 
     return f"{user_input}\n\nBuild log excerpt:\n{log_context}"
+
+
+def _remove_embedded_log_context(user_input: str, log_context: str) -> str:
+    """
+    Remove an exact attached log block from the normal user message.
+
+    Args:
+        user_input (str): User message that may include the log block.
+        log_context (str): Attached log context.
+
+    Returns:
+        str: User message without a duplicated log block.
+    """
+    if not log_context or log_context not in user_input:
+        return user_input
+
+    return user_input.replace(log_context, "", 1).strip()
 
 
 def _process_file_context(context: str, files: Optional[List[FileAttachment]]) -> str:
