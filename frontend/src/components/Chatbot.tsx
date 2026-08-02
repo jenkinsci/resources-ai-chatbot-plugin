@@ -200,11 +200,14 @@ export const Chatbot = () => {
       : messageForRequest;
 
     const fileAttachments = attachedFiles.map(fileToAttachment);
+    const displayMessage = logContext
+      ? `${messageWithoutLog || ANALYZE_BUILD_MESSAGE}\n\n${logContext}`
+      : messageWithoutLog || (hasFiles ? "📎 Attached file(s)" : "");
 
     const userMessage: Message = {
       id: uuidv4(),
       sender: "user",
-      text: messageWithoutLog || (hasFiles ? "📎 Attached file(s)" : ""),
+      text: displayMessage,
       files: fileAttachments.length > 0 ? fileAttachments : undefined,
     };
 
