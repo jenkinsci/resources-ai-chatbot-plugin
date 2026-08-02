@@ -29,6 +29,7 @@ import { useContextObserver } from "../utils/useContextObserver";
 import { Search } from "lucide-react";
 
 const ANALYZE_BUILD_MESSAGE = "Analyze this Jenkins Build Failure.";
+const ANALYZE_BUILD_INPUT_PREFIX = `${ANALYZE_BUILD_MESSAGE}\n\n`;
 
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
@@ -174,16 +175,29 @@ export const Chatbot = () => {
   const sendMessageWithPayload = async (messageOverride?: string) => {
     const trimmed = (messageOverride ?? input).trim();
     const hasFiles = attachedFiles.length > 0;
-    const logContext =
+    let logContext =
       pendingLogContext && trimmed.includes(pendingLogContext)
         ? pendingLogContext
         : undefined;
-    const messageWithoutLog = logContext
-      ? trimmed.replace(logContext, "").trim()
-      : trimmed;
 
     if (!currentSessionId) return;
     if (!trimmed && !hasFiles) return;
+
+    let messageForRequest = trimmed;
+    if (!logContext && trimmed.startsWith(ANALYZE_BUILD_INPUT_PREFIX)) {
+      const editedLog = trimmed.slice(ANALYZE_BUILD_INPUT_PREFIX.length).trim();
+      if (editedLog) {
+        const refreshedLogContext = await fetchLogPreview(editedLog);
+        if (refreshedLogContext) {
+          logContext = refreshedLogContext;
+          messageForRequest = ANALYZE_BUILD_MESSAGE;
+        }
+      }
+    }
+
+    const messageWithoutLog = logContext
+      ? messageForRequest.replace(logContext, "").trim()
+      : messageForRequest;
 
     const fileAttachments = attachedFiles.map(fileToAttachment);
 
@@ -199,7 +213,7 @@ export const Chatbot = () => {
     const filesToSend = [...attachedFiles];
     setAttachedFiles([]);
     const isLogAnalysis =
-      Boolean(logContext) || trimmed.includes("build failure");
+      Boolean(logContext) || messageForRequest.includes("build failure");
     const statusMessage = isLogAnalysis
       ? getChatbotText("analyzingLogs")
       : getChatbotText("generatingMessage");
