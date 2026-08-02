@@ -108,6 +108,7 @@ export const fetchChatbotReply = async (
  * @param userMessage - The message input from the user
  * @param files - Array of File objects to upload
  * @param signal - External abort signal for user-initiated cancellation
+ * @param logContext - Sanitized Jenkins log context for diagnosis
  * @returns A Promise resolving to a bot-generated Message
  */
 export const fetchChatbotReplyWithFiles = async (
@@ -115,6 +116,7 @@ export const fetchChatbotReplyWithFiles = async (
   userMessage: string,
   files: File[],
   signal: AbortSignal,
+  logContext?: string,
 ): Promise<Message> => {
   // Combine external signal with timeout using AbortSignal.any()
   const timeoutSignal = AbortSignal.timeout(
@@ -125,6 +127,9 @@ export const fetchChatbotReplyWithFiles = async (
   try {
     const formData = new FormData();
     formData.append("message", userMessage);
+    if (logContext) {
+      formData.append("log_context", logContext);
+    }
 
     files.forEach((file) => {
       formData.append("files", file);

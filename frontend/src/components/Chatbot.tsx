@@ -224,6 +224,7 @@ export const Chatbot = () => {
               messageWithoutLog || "Please analyze the attached file(s).",
               filesToSend,
               controller.signal,
+              logContext,
             )
           : await fetchChatbotReply(
               currentSessionId,
