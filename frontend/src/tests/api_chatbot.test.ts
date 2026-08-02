@@ -10,6 +10,8 @@ import { callChatbotApi } from "../utils/callChatbotApi";
 import { getChatbotText } from "../data/chatbotTexts";
 import { API_BASE_URL, CHATBOT_API_TIMEOUTS_MS } from "../config";
 
+declare const global: typeof globalThis;
+
 jest.mock("uuid", () => ({
   v4: () => "mock-uuid",
 }));
@@ -346,10 +348,14 @@ describe("chatbotApi", () => {
         "Test message",
         files,
         controller.signal,
+        "[ERROR] deployment failed",
       );
 
       const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
       expect(fetchCall[1]?.body).toBeInstanceOf(FormData);
+      expect((fetchCall[1]?.body as FormData).get("log_context")).toBe(
+        "[ERROR] deployment failed",
+      );
     });
   });
 });
