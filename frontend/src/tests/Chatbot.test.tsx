@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import { Chatbot } from "../components/Chatbot";
 import * as chatbotApi from "../api/chatbot";
 import { getChatbotText } from "../data/chatbotTexts";
@@ -219,6 +225,7 @@ describe("Chatbot component", () => {
   });
 
   it("does not send deleted build logs from pending context", async () => {
+    jest.useFakeTimers();
     sessionStorage.setItem(
       "chatbot-sessions",
       JSON.stringify([
@@ -246,6 +253,10 @@ describe("Chatbot component", () => {
     fireEvent.click(
       screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
     );
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+    jest.useRealTimers();
     fireEvent.click(
       screen.getByRole("button", {
         name: getChatbotText("analyzeCurrentBuild"),

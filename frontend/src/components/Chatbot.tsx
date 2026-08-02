@@ -29,6 +29,7 @@ import { useContextObserver } from "../utils/useContextObserver";
 
 const ANALYZE_BUILD_MESSAGE = "Analyze this Jenkins Build Failure.";
 const ANALYZE_BUILD_INPUT_PREFIX = `${ANALYZE_BUILD_MESSAGE}\n\n`;
+const BUILD_ANALYSIS_ACTION_DELAY_MS = 2000;
 
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
@@ -54,8 +55,24 @@ export const Chatbot = () => {
   const [pendingLogContext, setPendingLogContext] = useState<string | null>(
     null,
   );
+  const [showBuildAnalysisAction, setShowBuildAnalysisAction] = useState(false);
+  const [analysisActionSuppressed, setAnalysisActionSuppressed] =
+    useState(false);
 
   const { buildFailed, showToast, setShowToast } = useContextObserver(isOpen);
+
+  useEffect(() => {
+    if (!buildFailed || !isOpen || input.trim() || analysisActionSuppressed) {
+      setShowBuildAnalysisAction(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowBuildAnalysisAction(true);
+    }, BUILD_ANALYSIS_ACTION_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [analysisActionSuppressed, buildFailed, input, isOpen]);
 
   /**
    * Fetch supported file extensions on component mount.
@@ -148,6 +165,7 @@ export const Chatbot = () => {
     setSessions((prev) => [newSession, ...prev]);
     setCurrentSessionId(id);
     setPendingLogContext(null);
+    setAnalysisActionSuppressed(false);
   };
 
   const appendMessageToCurrentSession = (message: Message) => {
@@ -162,6 +180,9 @@ export const Chatbot = () => {
 
   const handleInputChange = (value: string) => {
     setInput(value);
+    if (!value.trim()) {
+      setAnalysisActionSuppressed(false);
+    }
     setPendingLogContext((currentContext) =>
       currentContext && !value.includes(currentContext) ? null : currentContext,
     );
@@ -211,6 +232,7 @@ export const Chatbot = () => {
     };
 
     setInput("");
+    setAnalysisActionSuppressed(false);
     setPendingLogContext(null);
     const filesToSend = [...attachedFiles];
     setAttachedFiles([]);
@@ -322,6 +344,7 @@ export const Chatbot = () => {
     openSideBar();
     setCurrentSessionId(chatSessionId);
     setPendingLogContext(null);
+    setAnalysisActionSuppressed(false);
   };
 
   const openConfirmDeleteChatPopup = (chatSessionId: string) => {
@@ -341,6 +364,8 @@ export const Chatbot = () => {
 
   const prepareBuildFailureAnalysis = async () => {
     setShowToast(false);
+    setShowBuildAnalysisAction(false);
+    setAnalysisActionSuppressed(true);
 
     if (!isOpen) {
       const id = await createChatSession();
@@ -487,7 +512,7 @@ export const Chatbot = () => {
                 onFileRemoved={handleFileRemoved}
                 enableFileUpload={true}
                 validateFile={handleValidateFile}
-                showBuildFailureAction={buildFailed}
+                showBuildFailureAction={showBuildAnalysisAction}
                 onAnalyzeBuild={prepareBuildFailureAnalysis}
               />
             </>
