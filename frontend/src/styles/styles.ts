@@ -132,23 +132,27 @@ export const chatbotStyles = {
   inputWrapper: {
     display: "flex",
     flexDirection: "column",
-    borderTop: "1px solid #eee",
+  } as CSSProperties,
+
+  buildFailureActionBar: {
+    display: "flex",
+    justifyContent: "center",
+    padding: "10px 12px",
+    backgroundColor: "transparent",
   } as CSSProperties,
 
   analyzeBuildButton: {
-    alignSelf: "center",
     width: "fit-content",
-    minHeight: "40px",
-    margin: "8px 12px",
-    padding: "9px 16px",
+    minHeight: "36px",
+    padding: "8px 14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "8px",
-    border: "1px solid #0059b3",
+    gap: "6px",
+    border: "1px solid #b8cde5",
     borderRadius: "6px",
-    backgroundColor: "#0073e6",
-    color: "#ffffff",
+    backgroundColor: "#eef4fb",
+    color: "#0b66d4",
     cursor: "pointer",
     fontSize: "13px",
     fontWeight: 600,
@@ -218,8 +222,8 @@ export const chatbotStyles = {
   inputContainer: {
     padding: "0.75rem",
     backgroundColor: "var(--panel-background)",
-    borderTop: "var(--jenkins-border)",
     border: "1px solid var(--border-color)",
+    borderTop: "var(--jenkins-border)",
     color: "var(--text-color)",
 
     display: "flex",

@@ -6,7 +6,7 @@
   "noInputWarningMessage": "Please enter a message before sending.",
   "generatingMessage": "Generating...",
   "analyzingLogs": "Analyzing stack trace patterns...",
-  "analyzeCurrentBuild": "Analyze this build failure",
+  "analyzeCurrentBuild": "Analyze build failure",
   "logPreviewUnavailable": "Log preview unavailable: sanitization failed. Paste the relevant Jenkins failure output manually.",
   "logOutputUnavailable": "No Jenkins console output found. Paste the failure output manually.",
   "exportChat": "Export chat",

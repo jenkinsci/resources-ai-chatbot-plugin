@@ -68,8 +68,19 @@ jest.mock("../components/Header", () => ({
 }));
 
 jest.mock("../components/Input", () => ({
-  Input: ({ input, setInput, onSend }: InputProps) => (
+  Input: ({
+    input,
+    setInput,
+    onSend,
+    showBuildFailureAction,
+    onAnalyzeBuild,
+  }: InputProps) => (
     <div data-testid="input">
+      {showBuildFailureAction && onAnalyzeBuild && (
+        <button onClick={onAnalyzeBuild}>
+          {getChatbotText("analyzeCurrentBuild")}
+        </button>
+      )}
       <textarea
         aria-label="chat-input"
         value={input}
