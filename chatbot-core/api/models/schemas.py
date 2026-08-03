@@ -52,7 +52,7 @@ class ChatRequest(BaseModel):
         has_message = bool(self.message and self.message.strip())
         has_log_context = bool(self.log_context and self.log_context.strip())
         if not has_message and not has_log_context:
-            raise ValueError("Message or log context must be provided.")
+            raise ValueError("Message cannot be empty.")
         return self
 
 

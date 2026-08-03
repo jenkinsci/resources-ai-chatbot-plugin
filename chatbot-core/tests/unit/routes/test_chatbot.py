@@ -79,7 +79,7 @@ def test_chatbot_reply_empty_message_returns_422(client, mock_session_exists):
     errors = response.json()["detail"]
 
     assert response.status_code == 422
-    assert "Message or log context must be provided." in errors[0]["msg"]
+    assert "Message cannot be empty." in errors[0]["msg"]
 
 
 def test_delete_chat_success(client, mock_delete_session):
