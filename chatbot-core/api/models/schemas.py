@@ -8,6 +8,10 @@ clients and the chatbot API endpoints.
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, field_validator, model_validator
+from api.config.loader import CONFIG
+
+chat_config = CONFIG.get("chat", {})
+MAX_MESSAGE_LENGTH = chat_config.get("max_message_length", 5000)
 
 
 class FileType(str, Enum):
@@ -46,9 +50,13 @@ class ChatRequest(BaseModel):
 
     @field_validator("message")
     def message_must_not_be_empty(cls, v): # pylint: disable=no-self-argument
-        """Validator that checks that a message is not empty."""
+        """Validator that checks that a message is not empty or too long."""
         if not v.strip():
             raise ValueError("Message cannot be empty.")
+        if len(v) > MAX_MESSAGE_LENGTH:
+            raise ValueError(
+                f"Message too long. Maximum {MAX_MESSAGE_LENGTH} characters."
+            )
         return v
 
 
@@ -68,11 +76,15 @@ class ChatRequestWithFiles(BaseModel):
 
     @model_validator(mode="after")
     def validate_message_or_files(self):
-        """Validates that at least message or files are present."""
+        """Validates that at least message or files are present, and message is not too long."""
         has_message = bool(self.message and self.message.strip())
         has_files = bool(self.files and len(self.files) > 0)
         if not has_message and not has_files:
             raise ValueError("Either message or files must be provided.")
+        if has_message and len(self.message) > MAX_MESSAGE_LENGTH:
+            raise ValueError(
+                f"Message too long. Maximum {MAX_MESSAGE_LENGTH} characters."
+            )
         return self
 
 class ChatResponse(BaseModel):
