@@ -9,20 +9,6 @@ from rag.graph.json_loader import load_json_list
 
 GRAPH_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PLUGIN_NAMES_PATH = GRAPH_ROOT / "data" / "raw" / "plugin_names.json"
-EXPLICIT_PLUGIN_WORDING_IDS = frozenset(
-    {
-        "coverage",
-        "credentials",
-        "github",
-        "notification",
-        "python",
-        "release",
-        "repository",
-        "s3",
-        "seed",
-        "ssh",
-    }
-)
 
 
 @dataclass(frozen=True)
@@ -30,7 +16,6 @@ class PluginAliasRule:
     """Metadata used to resolve one plugin alias."""
 
     plugin_id: str
-    requires_explicit_plugin_word: bool = False
 
 
 PluginAliasValue = PluginAliasRule | str
@@ -99,12 +84,7 @@ def build_plugin_aliases(plugin_ids: list[str]) -> dict[str, PluginAliasRule]:
         for alias in alias_candidates:
             alias_key = normalize_lookup_value(alias)
             if alias_key and alias_key not in alias_map:
-                alias_map[alias_key] = PluginAliasRule(
-                    plugin_id=plugin_id,
-                    requires_explicit_plugin_word=(
-                        plugin_id in EXPLICIT_PLUGIN_WORDING_IDS
-                    ),
-                )
+                alias_map[alias_key] = PluginAliasRule(plugin_id=plugin_id)
 
     return alias_map
 
@@ -119,7 +99,7 @@ def resolve_plugin_name(
     Args:
         plugin_name (str): Plugin name or alias from a query or chunk.
         plugin_aliases (dict[str, PluginAliasValue]): Alias rules built from
-            canonical IDs, or a legacy alias-to-ID mapping.
+            canonical IDs.
 
     Returns:
         str | None: Canonical plugin ID when a match is found, otherwise None.
@@ -128,9 +108,7 @@ def resolve_plugin_name(
     if not alias_key:
         return None
     rule = plugin_aliases.get(alias_key)
-    if isinstance(rule, PluginAliasRule):
-        return rule.plugin_id
-    return rule
+    return rule.plugin_id if isinstance(rule, PluginAliasRule) else rule
 
 
 def resolve_plugin_alias(

@@ -164,11 +164,6 @@ def resolve_target_entities(
                     continue
                 if alias_rule.plugin_id in seen_target_ids:
                     continue
-                if (
-                    alias_rule.requires_explicit_plugin_word
-                    and "plugin" not in candidate.lower()
-                ):
-                    continue
 
                 target_entities.append(
                     (start_index, make_plugin_entity(alias_rule.plugin_id))

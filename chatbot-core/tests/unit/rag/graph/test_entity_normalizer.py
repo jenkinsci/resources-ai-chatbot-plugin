@@ -8,7 +8,6 @@ from rag.graph.entity_normalizer import (
     build_plugin_aliases,
     load_canonical_plugin_ids,
     normalize_lookup_value,
-    resolve_plugin_alias,
     resolve_plugin_name,
 )
 
@@ -64,16 +63,3 @@ def test_resolve_plugin_name_returns_none_for_unknown_alias():
 
     assert resolve_plugin_name("not a real plugin", aliases) is None
     assert resolve_plugin_name("   ", aliases) is None
-
-
-def test_alias_rules_mark_ambiguous_names_for_explicit_plugin_wording():
-    """
-    Verify ambiguous aliases carry their extraction rule as metadata.
-    """
-    aliases = build_plugin_aliases(["credentials", "git"])
-
-    assert resolve_plugin_alias(
-        "credentials",
-        aliases,
-    ).requires_explicit_plugin_word
-    assert not resolve_plugin_alias("git", aliases).requires_explicit_plugin_word
