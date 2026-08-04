@@ -11,6 +11,18 @@ MAX_TARGET_TOKENS = 8
 MAX_TARGET_SCAN_OFFSET = 8
 TARGET_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._-]*")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
+CODE_BLOCK_PLACEHOLDER_PATTERN = re.compile(r"\[\[CODE_BLOCK_[^\]]+\]\]")
+LIST_ENTRY_PATTERN = re.compile(r"^(?:[-*+]\s+|\d+[.)]\s+)")
+MARKDOWN_HEADING_PATTERN = re.compile(r"^#{1,6}\s+")
+VERSION_HEADING_PATTERN = re.compile(
+    r"^(?:version\s+|v?\d+\.\d+(?:\.\d+)*(?:\s|$))",
+    re.IGNORECASE,
+)
+KNOWN_HEADING_PATTERN = re.compile(
+    r"^(?:changelog|release notes?|version history|requirements?|"
+    r"dependencies?|optional dependencies?)\s*:?$",
+    re.IGNORECASE,
+)
 SKIPPED_TARGET_PLUGIN_IDS = {"jenkins"}
 RELATION_PATTERNS = (
     (
@@ -79,7 +91,7 @@ def build_chunk_evidence(chunk: dict, evidence_text: str) -> GraphEvidence:
 
 def sentence_split(text: str) -> list[str]:
     """
-    Split chunk text into simple sentence spans.
+    Split documentation into sentence and structural spans.
 
     Args:
         text (str): Chunk text to split.
@@ -87,11 +99,71 @@ def sentence_split(text: str) -> list[str]:
     Returns:
         list[str]: Non-empty sentences.
     """
-    return [
-        sentence.strip()
-        for sentence in SENTENCE_SPLIT_PATTERN.split(text)
-        if sentence.strip()
-    ]
+    spans: list[str] = []
+    for section in CODE_BLOCK_PLACEHOLDER_PATTERN.split(text.replace("\r\n", "\n")):
+        spans.extend(_split_structural_section(section))
+    return spans
+
+
+def _split_structural_section(section: str) -> list[str]:
+    """
+    Split one non-code section while preserving soft line breaks.
+
+    Args:
+        section (str): Documentation section without code placeholders.
+
+    Returns:
+        list[str]: Non-empty sentence or structural spans.
+    """
+    spans: list[str] = []
+    current_lines: list[str] = []
+
+    def flush_lines() -> None:
+        if not current_lines:
+            return
+        joined_text = " ".join(current_lines)
+        spans.extend(
+            sentence.strip()
+            for sentence in SENTENCE_SPLIT_PATTERN.split(joined_text)
+            if sentence.strip()
+        )
+        current_lines.clear()
+
+    for line in section.split("\n"):
+        stripped_line = line.strip()
+        if not stripped_line:
+            flush_lines()
+            continue
+
+        if _is_structural_line(stripped_line):
+            flush_lines()
+            list_text = LIST_ENTRY_PATTERN.sub("", stripped_line).strip()
+            if list_text:
+                spans.append(list_text)
+            continue
+
+        current_lines.append(stripped_line)
+
+    flush_lines()
+    return spans
+
+
+def _is_structural_line(line: str) -> bool:
+    """
+    Identify headings and list entries that must not join adjacent text.
+
+    Args:
+        line (str): Trimmed documentation line.
+
+    Returns:
+        bool: True when the line starts a structural span.
+    """
+    return bool(
+        LIST_ENTRY_PATTERN.match(line)
+        or MARKDOWN_HEADING_PATTERN.match(line)
+        or VERSION_HEADING_PATTERN.match(line)
+        or KNOWN_HEADING_PATTERN.match(line)
+    )
 
 
 def build_candidate_variants(candidate: str) -> list[str]:

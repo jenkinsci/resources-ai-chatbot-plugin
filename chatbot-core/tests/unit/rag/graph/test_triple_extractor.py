@@ -129,6 +129,32 @@ def test_sentence_split_drops_empty_sentences():
     assert sentences == ["First sentence.", "Second sentence!"]
 
 
+def test_sentence_split_preserves_soft_lines_and_structural_boundaries():
+    """
+    Verify soft plugin-name lines join while documentation sections split.
+    """
+    text = "\n".join(
+        [
+            "Requirements:",
+            "This plugin depends on Git",
+            "Client Plugin.",
+            "",
+            "[[CODE_BLOCK_0]]",
+            "Changelog",
+            "v1.2.0",
+            "- Fixed a build issue.",
+        ]
+    )
+
+    assert sentence_split(text) == [
+        "Requirements:",
+        "This plugin depends on Git Client Plugin.",
+        "Changelog",
+        "v1.2.0",
+        "Fixed a build issue.",
+    ]
+
+
 def test_build_candidate_variants_handles_jenkins_plugin_names():
     """
     Verify candidate variants strip Jenkins prefixes and plugin suffixes.
