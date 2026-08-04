@@ -176,7 +176,7 @@ def build_candidate_variants(candidate: str) -> list[str]:
     Returns:
         list[str]: Candidate variants in resolution order.
     """
-    candidate = candidate.strip(" ,:;()[]{}")
+    candidate = candidate.strip(" .,!?;:()[]{}")
     candidate_lower = candidate.lower()
     variants = [candidate]
 
@@ -352,6 +352,7 @@ def extract_triples_from_sentence(
 
     for relation, confidence, pattern in RELATION_PATTERNS:
         for match in pattern.finditer(sentence):
+            evidence_text = sentence
             target_entities = resolve_target_entities(
                 sentence[match.end():],
                 plugin_ids,
@@ -368,6 +369,8 @@ def extract_triples_from_sentence(
                         plugin_ids,
                         scan_from_end=True,
                     )
+                    if target_entities:
+                        evidence_text = f"{preceding_text.strip()} {sentence.strip()}"
 
             for target_entity in target_entities:
                 if should_skip_target(source_entity, target_entity):
@@ -378,7 +381,7 @@ def extract_triples_from_sentence(
                         source=source_entity,
                         relation=relation,
                         target=target_entity,
-                        evidence=build_chunk_evidence(chunk, sentence),
+                        evidence=build_chunk_evidence(chunk, evidence_text),
                         confidence=confidence,
                     )
                 )

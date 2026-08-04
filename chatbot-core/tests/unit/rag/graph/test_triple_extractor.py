@@ -263,6 +263,24 @@ def test_extracts_optional_target_before_relation_phrase():
     assert triples[0].target.entity_id == "git"
 
 
+def test_preceding_target_is_included_in_dependency_evidence():
+    """
+    Verify preceding-span target resolution keeps complete evidence.
+    """
+    chunk = build_chunk(
+        "source-plugin",
+        "Git Client Plugin. This plugin optionally depends on it.",
+    )
+
+    triples = extract_triples_from_chunk(chunk, build_plugin_ids())
+
+    assert len(triples) == 1
+    assert triples[0].target.entity_id == "git-client"
+    assert triples[0].evidence.evidence == (
+        "Git Client Plugin. This plugin optionally depends on it."
+    )
+
+
 def test_extracts_conflict_triple_from_chunk():
     """
     Verify incompatibility text becomes a conflict triple.
