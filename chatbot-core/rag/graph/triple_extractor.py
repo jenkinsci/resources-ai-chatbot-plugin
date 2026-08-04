@@ -128,9 +128,9 @@ def resolve_plugin_id(
     """
     Resolve a documentation phrase against canonical plugin IDs.
 
-    Matching is derived from the canonical ID itself. Hyphens can be written
-    as spaces, and common Jenkins documentation prefixes and suffixes are
-    accepted without a manually maintained alias table.
+    Matching is derived from the canonical ID itself. Hyphens and underscores
+    can be written as spaces, and common Jenkins documentation prefixes and
+    suffixes are accepted without a manually maintained alias table.
 
     Args:
         candidate (str): Candidate plugin phrase from documentation.
@@ -155,19 +155,20 @@ def resolve_plugin_id(
     )
 
     for plugin_id in plugin_ids:
+        readable_plugin_id = re.sub(r"[-_]+", " ", plugin_id.lower())
         plugin_forms = {
             plugin_id.lower(),
-            plugin_id.lower().replace("-", " "),
+            readable_plugin_id,
         }
         if plugin_id.endswith("-plugin"):
             base_name = plugin_id[:-7].lower()
-            plugin_forms.update({base_name, base_name.replace("-", " ")})
-        if (
-            require_explicit_plugin_word
-            and "-" not in plugin_id
-            and "_" not in plugin_id
-            and "plugin" not in candidate_key.split()
-        ):
+            plugin_forms.update(
+                {
+                    base_name,
+                    re.sub(r"[-_]+", " ", base_name),
+                }
+            )
+        if require_explicit_plugin_word and "plugin" not in candidate_key.split():
             continue
         if candidate_forms.intersection(plugin_forms):
             return plugin_id

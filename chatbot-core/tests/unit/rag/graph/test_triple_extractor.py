@@ -44,6 +44,8 @@ def build_plugin_ids() -> set[str]:
         "blueocean",
         "credentials",
         "git",
+        "git-client",
+        "http_request",
         "job-dsl",
         "junit",
         "legacy-plugin",
@@ -80,13 +82,42 @@ def test_bare_single_word_target_requires_plugin_wording():
     ] == ["git"]
 
 
-def test_separator_based_plugin_ids_allow_multiword_forms():
+def test_all_dependency_targets_require_plugin_wording():
     """
-    Verify separator-based canonical IDs support their readable names.
+    Verify every dependency target uses explicit plugin wording.
     """
-    targets = resolve_target_entities("Job DSL", build_plugin_ids())
+    plugin_ids = build_plugin_ids()
 
-    assert [target.entity_id for target in targets] == ["job-dsl"]
+    assert not resolve_target_entities("Job DSL", plugin_ids)
+    assert [
+        target.entity_id
+        for target in resolve_target_entities("Job DSL Plugin", plugin_ids)
+    ] == ["job-dsl"]
+
+
+def test_hyphenated_plugin_names_accept_hyphen_and_space_forms():
+    """
+    Verify separator variants resolve to the same canonical plugin ID.
+    """
+    plugin_ids = build_plugin_ids()
+
+    assert [
+        target.entity_id
+        for target in resolve_target_entities("git-client plugin", plugin_ids)
+    ] == ["git-client"]
+
+
+def test_underscore_plugin_names_accept_space_forms():
+    """
+    Verify underscore-separated IDs use the same readable-name matching.
+    """
+    targets = resolve_target_entities("http request plugin", build_plugin_ids())
+
+    assert [target.entity_id for target in targets] == ["http_request"]
+    assert [
+        target.entity_id
+        for target in resolve_target_entities("git client plugin", plugin_ids)
+    ] == ["git-client"]
 
 
 def test_sentence_split_drops_empty_sentences():
