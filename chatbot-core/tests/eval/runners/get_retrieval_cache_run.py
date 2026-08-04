@@ -1,7 +1,6 @@
 """Resolve the latest successful retrieval vector cache artifact."""
 
 import argparse
-from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -15,12 +14,12 @@ CACHE_BUILD_JOB_NAME = "build-retrieval-cache"
 
 def default_artifact_name() -> str:
     """
-    Build the default cache artifact name for the current UTC day.
+    Build the default cache artifact name.
 
     Returns:
-        str: Cache artifact name using a DDMM suffix.
+        str: Stable retrieval cache artifact name.
     """
-    return f"retrieval-vector-database-{datetime.now(timezone.utc):%d%m}"
+    return "retrieval-vector-database"
 
 
 def github_api_get(path: str, token: str) -> dict[str, Any]:

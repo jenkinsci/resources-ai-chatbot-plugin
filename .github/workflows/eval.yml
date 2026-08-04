@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: llm-as-judge-eval-${{ github.event.pull_request.number || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -30,10 +30,10 @@ jobs:
 
     steps:
       - name: Check out pull request
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -50,7 +50,7 @@ jobs:
     if: needs.get-retrieval-cache.outputs.cache_found != 'true'
     uses: ./.github/workflows/build-retrieval-cache.yml
     with:
-      retention_days: 2
+      retention_days: 28
 
   fill-retrieval-context:
     needs:
@@ -68,10 +68,10 @@ jobs:
 
     steps:
       - name: Check out pull request
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -80,7 +80,7 @@ jobs:
 
       - name: Download cached retrieval vector database
         if: needs.get-retrieval-cache.outputs.cache_found == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.get-retrieval-cache.outputs.artifact_name }}
           path: .
@@ -90,7 +90,7 @@ jobs:
 
       - name: Download fallback retrieval vector database
         if: needs.get-retrieval-cache.outputs.cache_found != 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build-vector-database.outputs.artifact_name }}
           path: .
@@ -110,7 +110,7 @@ jobs:
             --retrieval-only
 
       - name: Upload retrieval-complete responses
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: retrieval-responses-${{ github.run_id }}
           path: artifacts/retrieval/responses.json
@@ -145,7 +145,7 @@ jobs:
 
     steps:
       - name: Check out pull request
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Load eval config
         id: config
@@ -197,10 +197,10 @@ jobs:
 
     steps:
       - name: Check out pull request
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -215,7 +215,7 @@ jobs:
             2>&1 | tee "$RESULTS_DIR/dependency-install.log"
 
       - name: Download retrieval-context responses
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: retrieval-responses-${{ github.run_id }}
           path: artifacts/retrieval
@@ -295,7 +295,7 @@ jobs:
 
       - name: Upload shard outputs and logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: response-shard-${{ matrix.shard }}
           path: ${{ env.RESULTS_DIR }}/
@@ -314,16 +314,16 @@ jobs:
 
     steps:
       - name: Check out pull request
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download retrieval-context responses
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: retrieval-responses-${{ github.run_id }}
           path: artifacts/retrieval
 
       - name: Download generated response shards
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: response-shard-*
           path: artifacts/shards
@@ -365,7 +365,7 @@ jobs:
 
       - name: Upload PR comment artifact
         if: always() && github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: llm-as-judge-pr-comment
           path: artifacts/pr-comment/
@@ -374,7 +374,7 @@ jobs:
 
       - name: Upload combined responses
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: generated-responses-${{ github.run_id }}
           path: artifacts/combined/
