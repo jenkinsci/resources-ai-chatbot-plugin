@@ -39,3 +39,6 @@ tool_names:
 cors:
   allowed_origins:
     - "*"
+
+tools:
+  max_tool_output_length: 4000
