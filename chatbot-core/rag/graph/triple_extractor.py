@@ -9,6 +9,7 @@ from rag.graph.schema import GraphEntityType, GraphRelationType
 
 MAX_TARGET_TOKENS = 8
 MAX_TARGET_SCAN_OFFSET = 8
+MAX_TARGET_CONTEXT_TOKENS = MAX_TARGET_TOKENS + MAX_TARGET_SCAN_OFFSET
 TARGET_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._-]*")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 CODE_BLOCK_PLACEHOLDER_PATTERN = re.compile(r"\[\[CODE_BLOCK_[^\]]+\]\]")
@@ -266,6 +267,10 @@ def resolve_target_entities(
         list[GraphEntity]: Resolved target entities in text order.
     """
     tokens = TARGET_TOKEN_PATTERN.findall(text)
+    if scan_from_end:
+        tokens = tokens[-MAX_TARGET_CONTEXT_TOKENS:]
+    else:
+        tokens = tokens[:MAX_TARGET_CONTEXT_TOKENS]
     target_entities: list[tuple[int, GraphEntity]] = []
     seen_target_ids = set()
     consumed_until = 0

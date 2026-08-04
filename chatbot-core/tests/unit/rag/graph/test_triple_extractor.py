@@ -107,6 +107,21 @@ def test_hyphenated_plugin_names_accept_hyphen_and_space_forms():
     ] == ["git-client"]
 
 
+def test_target_lookup_is_bounded_to_relation_local_context():
+    """
+    Verify target lookup does not scan an entire unrelated text span.
+    """
+    plugin_ids = build_plugin_ids()
+    distant_target = "noise " * 20 + "Git Client Plugin"
+
+    assert not resolve_target_entities(distant_target, plugin_ids)
+    assert not resolve_target_entities(
+        "Git Client Plugin " + "noise " * 20,
+        plugin_ids,
+        scan_from_end=True,
+    )
+
+
 def test_underscore_plugin_names_accept_space_forms():
     """
     Verify underscore-separated IDs use the same readable-name matching.
