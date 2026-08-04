@@ -113,7 +113,7 @@ ranx==0.3.21
 Unidecode==1.4.0
 
 # Web Scraping
-beautifulsoup4==4.13.4
+beautifulsoup4==4.15.0
 lxml==6.0.2
 soupsieve==2.7
 
