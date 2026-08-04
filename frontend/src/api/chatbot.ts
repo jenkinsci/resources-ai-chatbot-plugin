@@ -2,7 +2,7 @@ import { type Message, type FileAttachment } from "../model/Message";
 import { getChatbotText } from "../data/chatbotTexts";
 import { v4 as uuidv4 } from "uuid";
 import { CHATBOT_API_TIMEOUTS_MS, API_BASE_URL } from "../config";
-import { callChatbotApi } from "../utils/callChatbotApi";
+import { callChatbotApi, SessionNotFoundError } from "../utils/callChatbotApi";
 
 /**
  * Supported file extensions response from the backend.
@@ -41,9 +41,11 @@ export const createChatSession = async (): Promise<string> => {
 /**
  * Sends the user's message to the backend chatbot API and returns the bot's response.
  * If the API call fails or returns an invalid response, a fallback error message is used.
+ * Throws SessionNotFoundError if the session does not exist on the backend.
  *
  * @param sessionId - The session id of the chat
  * @param userMessage - The message input from the user
+ * @param signal - Optional AbortSignal for cancellation
  * @returns A Promise resolving to a bot-generated Message
  */
 export const fetchChatbotReply = async (
@@ -61,6 +63,7 @@ export const fetchChatbotReply = async (
     },
     {},
     CHATBOT_API_TIMEOUTS_MS.GENERATE_MESSAGE,
+    true, // throwOnSessionNotFound: propagate 404 so caller can create a new session
   );
 
   const botReply = data.reply || getChatbotText("errorMessage");
@@ -70,6 +73,7 @@ export const fetchChatbotReply = async (
 /**
  * Sends the user's message with file attachments to the backend chatbot API.
  * Uses multipart/form-data to upload files along with the message.
+ * Throws SessionNotFoundError if the session does not exist on the backend.
  *
  * @param sessionId - The session id of the chat
  * @param userMessage - The message input from the user
@@ -107,6 +111,10 @@ export const fetchChatbotReplyWithFiles = async (
     );
 
     if (!response.ok) {
+      // Check for session not found (404) — let caller handle it
+      if (response.status === 404) {
+        throw new SessionNotFoundError(sessionId);
+      }
       const errorData = await response.json().catch(() => ({}));
       const errorMessage = errorData.detail || `HTTP error: ${response.status}`;
       console.error(`API error: ${response.status} - ${errorMessage}`);
@@ -117,6 +125,9 @@ export const fetchChatbotReplyWithFiles = async (
     const botReply = data.reply || getChatbotText("errorMessage");
     return createBotMessage(botReply);
   } catch (error: unknown) {
+    if (error instanceof SessionNotFoundError) {
+      throw error;
+    }
     if (error instanceof DOMException && error.name === "AbortError") {
       if (signal.aborted) {
         console.error("API request cancelled by user");

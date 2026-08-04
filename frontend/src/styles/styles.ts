@@ -10,8 +10,8 @@ export const chatbotStyles = {
 
   toggleButton: {
     position: "fixed",
-    bottom: "3rem",
-    right: "2rem",
+    bottom: "1.5rem",
+    right: "1.5rem",
     zIndex: 1000,
     borderRadius: "50%",
     width: "60px",
@@ -21,21 +21,26 @@ export const chatbotStyles = {
     fontSize: "24px",
     border: "none",
     cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(0, 115, 230, 0.4)",
+    transition: "transform 0.2s, box-shadow 0.2s",
   } as CSSProperties,
 
   container: {
     position: "fixed",
-    bottom: "6rem",
-    right: "2rem",
-    width: "600px",
-    height: "800px",
+    bottom: "5.5rem",
+    right: "1.5rem",
+    width: "420px",
+    maxWidth: "calc(100vw - 2rem)",
+    height: "600px",
+    maxHeight: "calc(100vh - 7rem)",
     backgroundColor: "var(--card-background)",
-    border: "var(--jenkins-border)",
+    border: "1px solid var(--border-color)",
     borderRadius: "0.75rem",
-    boxShadow: "var(--dialog-box-shadow)",
+    boxShadow: "0 8px 30px rgba(0, 0, 0, 0.2)",
     display: "flex",
     flexDirection: "column",
     zIndex: 999,
+    overflow: "hidden",
   } as CSSProperties,
 
   containerWelcomePage: {
@@ -133,6 +138,7 @@ export const chatbotStyles = {
     display: "flex",
     flexDirection: "column",
     borderTop: "1px solid #eee",
+    flexShrink: 0,
   } as CSSProperties,
 
   attachedFilesContainer: {
@@ -197,15 +203,14 @@ export const chatbotStyles = {
   inputContainer: {
     padding: "0.75rem",
     backgroundColor: "var(--panel-background)",
-    borderTop: "var(--jenkins-border)",
-    border: "1px solid var(--border-color)",
+    borderTop: "1px solid var(--border-color)",
     color: "var(--text-color)",
-
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
     gap: "8px",
+    flexShrink: 0,
   } as CSSProperties,
 
   attachButton: {
@@ -269,12 +274,13 @@ export const chatbotStyles = {
     gap: "8px",
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: "1rem",
-    backgroundColor: "var(--panel-background)",
-    borderBottom: "var(--jenkins-border)",
-    color: "var(--text-color)",
+    padding: "0.75rem 1rem",
+    backgroundColor: "#0073e6",
+    borderBottom: "1px solid var(--border-color)",
+    color: "#ffffff",
     fontWeight: "bold",
-    fontSize: "16px",
+    fontSize: "15px",
+    flexShrink: 0,
   } as CSSProperties,
 
   headerActions: {
@@ -286,7 +292,7 @@ export const chatbotStyles = {
   clearButton: {
     backgroundColor: "transparent",
     border: "none",
-    color: "inherit",
+    color: "#ffffff",
     cursor: "pointer",
     fontSize: "14px",
   } as CSSProperties,
@@ -294,7 +300,7 @@ export const chatbotStyles = {
   exportButton: {
     backgroundColor: "transparent",
     border: "none",
-    color: "inherit",
+    color: "#ffffff",
     cursor: "pointer",
     fontSize: "14px",
     display: "flex",
@@ -345,8 +351,10 @@ export const chatbotStyles = {
   openSidebarButton: {
     background: "transparent",
     border: "none",
-    fontSize: "1.5rem",
+    fontSize: "1.25rem",
     cursor: "pointer",
+    color: "#ffffff",
+    padding: "4px",
   } as CSSProperties,
 
   // Messages

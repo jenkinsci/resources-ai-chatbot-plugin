@@ -14,48 +14,43 @@ import {
 } from "../api/chatbot";
 import { Header } from "./Header";
 import { Messages } from "./Messages";
-import { Sidebar } from "./Sidebar";
 import { Input } from "./Input";
-import { chatbotStyles } from "../styles/styles";
 import { getChatbotText } from "../data/chatbotTexts";
 import {
   loadChatbotSessions,
   loadChatbotLastSessionId,
 } from "../utils/chatbotStorage";
 import { v4 as uuidv4 } from "uuid";
+import { SessionNotFoundError } from "../utils/callChatbotApi";
 import { ProactiveToast } from "./Toast";
 import { useContextObserver } from "../utils/useContextObserver";
-
-/**
- * Chatbot is the core component responsible for managing the chatbot display.
- */
 
 const LOG_PATTERN =
   /(Started by user|Running as SYSTEM|Building in workspace|FATAL:|ERROR:|Exception:|Stack trace|Build step .*? marked build as failure)/i;
 
-export const Chatbot = () => {
+export interface ChatbotProps {
+  onClose?: () => void;
+}
+
+export const Chatbot = ({ onClose }: ChatbotProps) => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ChatSession[]>(loadChatbotSessions);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(
-    loadChatbotLastSessionId,
+    loadChatbotLastSessionId
   );
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [sessionIdToDelete, setSessionIdToDelete] = useState<string | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
-  const [sessionIdToDelete, setSessionIdToDelete] = useState<string | null>(
-    null,
-  );
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [supportedExtensions, setSupportedExtensions] =
     useState<SupportedExtensions | null>(null);
+  const [isDark, setIsDark] = useState<boolean>(false);
 
   const { showToast, setShowToast } = useContextObserver(isOpen);
 
-  /**
-   * Fetch supported file extensions on component mount.
-   */
+  // Load supported extensions once
   useEffect(() => {
     const loadSupportedExtensions = async () => {
       const extensions = await fetchSupportedExtensions();
@@ -66,72 +61,56 @@ export const Chatbot = () => {
     loadSupportedExtensions();
   }, []);
 
-  /**
-   * Saving the chat sessions in the session storage only
-   * when the component unmounts to avoid continuos savings.
-   */
+  // Persist sessions on unload
   useEffect(() => {
     const handleBeforeUnload = () => {
       sessionStorage.setItem("chatbot-sessions", JSON.stringify(sessions));
-      sessionStorage.setItem("chatbot-last-session-id", currentSessionId || "");
+      sessionStorage.setItem(
+        "chatbot-last-session-id",
+        currentSessionId || ""
+      );
     };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
-
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [sessions, currentSessionId]);
 
-  /**
-   * Returns the messages of a chat session.
-   * @param sessionId The sessionId of the chat session.
-   * @returns The messages of the chat with id equals to sessionId
-   */
+  // Dark mode class toggle on <html> element
+  useEffect(() => {
+    const html = document.documentElement;
+    if (isDark) {
+      html.classList.add("dark");
+    } else {
+      html.classList.remove("dark");
+    }
+  }, [isDark]);
+
   const getSessionMessages = (sessionId: string | null) => {
-    if (sessionId === null) {
-      return [];
-    }
+    if (!sessionId) return [];
     const chatSession = sessions.find((item) => item.id === sessionId);
-
-    if (chatSession) {
-      return chatSession.messages;
-    }
-
-    return [];
+    return chatSession ? chatSession.messages : [];
   };
 
-  /**
-   * Handles the delete process of a chat session.
-   */
   const handleDeleteChat = async () => {
-    if (sessionIdToDelete === null) {
-      console.error("No current selected to delete");
-      return;
-    }
-
+    if (!sessionIdToDelete) return;
     await deleteChatSession(sessionIdToDelete);
-    const updatedSessions = sessions.filter((s) => s.id !== sessionIdToDelete);
-    setSessions(updatedSessions);
+    const updated = sessions.filter((s) => s.id !== sessionIdToDelete);
+    setSessions(updated);
     setIsPopupOpen(false);
-    if (updatedSessions.length === 0) {
+    if (updated.length === 0) {
       setCurrentSessionId(null);
     } else {
-      setCurrentSessionId(updatedSessions[0].id);
+      setCurrentSessionId(updated[0].id);
     }
   };
 
-  /**
-   * Handles the creation process of a chat session.
-   */
   const handleNewChat = async () => {
-    const id = await createChatSession();
-
+    let id = await createChatSession();
     if (id === "") {
-      console.error("Add error showage for a couple of seconds.");
-      return;
+      console.warn("Backend unavailable — creating local session as fallback.");
+      id = uuidv4();
     }
-
     const newSession: ChatSession = {
       id,
       messages: [],
@@ -139,34 +118,27 @@ export const Chatbot = () => {
       isLoading: false,
       loadingStatus: null,
     };
-
     setSessions((prev) => [newSession, ...prev]);
     setCurrentSessionId(id);
   };
 
   const appendMessageToCurrentSession = (message: Message) => {
-    setSessions((prevSessions) =>
-      prevSessions.map((session) =>
+    setSessions((prev) =>
+      prev.map((session) =>
         session.id === currentSessionId
           ? { ...session, messages: [...session.messages, message] }
-          : session,
-      ),
+          : session
+      )
     );
   };
-
-  /**
-   * Handles the send process in a chat session.
-   */
 
   const sendMessage = async () => {
     const trimmed = input.trim();
     const hasFiles = attachedFiles.length > 0;
-
     if (!currentSessionId) return;
     if (!trimmed && !hasFiles) return;
 
     const fileAttachments = attachedFiles.map(fileToAttachment);
-
     const userMessage: Message = {
       id: uuidv4(),
       sender: "user",
@@ -175,7 +147,6 @@ export const Chatbot = () => {
     };
 
     setInput("");
-    const filesToSend = [...attachedFiles];
     setAttachedFiles([]);
     const isLogAnalysis = LOG_PATTERN.test(trimmed);
     const statusMessage = isLogAnalysis
@@ -186,35 +157,57 @@ export const Chatbot = () => {
       prev.map((s) =>
         s.id === currentSessionId
           ? { ...s, isLoading: true, loadingStatus: statusMessage }
-          : s,
-      ),
+          : s
+      )
     );
+
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     appendMessageToCurrentSession(userMessage);
-
     try {
       const botReply =
-        filesToSend.length > 0
+        fileAttachments.length > 0
           ? await fetchChatbotReplyWithFiles(
               currentSessionId,
               trimmed || "Please analyze the attached file(s).",
-              filesToSend,
-              controller.signal,
+              attachedFiles,
+              controller.signal
             )
-          : controller.signal
-            ? await fetchChatbotReply(
-                currentSessionId,
-                trimmed,
-                controller.signal,
-              )
-            : await fetchChatbotReply(currentSessionId, trimmed);
+          : await fetchChatbotReply(
+              currentSessionId,
+              trimmed,
+              controller.signal
+            );
       appendMessageToCurrentSession(botReply);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        // Request was intentionally cancelled
         return;
+      }
+      if (error instanceof SessionNotFoundError) {
+        console.warn(
+          `Session "${currentSessionId}" not found on backend. Creating new session and retrying...`,
+        );
+        // Attempt to create a new session and replace the current one
+        const newSessionId = await createChatSession();
+        if (newSessionId) {
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === currentSessionId
+                ? { ...s, id: newSessionId }
+                : s
+            )
+          );
+          setCurrentSessionId(newSessionId);
+          // Retry sending the same message with the new session
+          const retryReply = await fetchChatbotReply(
+            newSessionId,
+            trimmed,
+            controller.signal,
+          );
+          appendMessageToCurrentSession(retryReply);
+          return;
+        }
       }
       throw error;
     } finally {
@@ -223,62 +216,34 @@ export const Chatbot = () => {
         prev.map((s) =>
           s.id === currentSessionId
             ? { ...s, isLoading: false, loadingStatus: null }
-            : s,
-        ),
+            : s
+        )
       );
     }
   };
+
   const handleCancelMessage = () => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
-
     setSessions((prev) =>
       prev.map((s) =>
-        s.id === currentSessionId
-          ? { ...s, isLoading: false, loadingStatus: null }
-          : s,
-      ),
+        s.id === currentSessionId ? { ...s, isLoading: false, loadingStatus: null } : s
+      )
     );
   };
 
-  /**
-   * Handles attaching files to the current message.
-   */
-  const handleFilesAttached = (files: File[]) => {
-    setAttachedFiles(files);
-  };
-
-  /**
-   * Handles removing a file from attachments.
-   */
-  const handleFileRemoved = (index: number) => {
+  const handleFilesAttached = (files: File[]) => setAttachedFiles(files);
+  const handleFileRemoved = (index: number) =>
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  /**
-   * Validates a file for upload.
-   */
-  const handleValidateFile = (file: File) => {
-    return validateFile(file, supportedExtensions);
-  };
+  const handleValidateFile = (file: File) => validateFile(file, supportedExtensions);
 
   const getChatLoading = (): boolean => {
-    const currentChat = sessions.find((chat) => chat.id === currentSessionId);
-    return currentChat ? currentChat.isLoading : false;
+    const cur = sessions.find((c) => c.id === currentSessionId);
+    return cur ? cur.isLoading : false;
   };
-
   const getChatLoadingStatus = (): string | null => {
-    const currentChat = sessions.find((chat) => chat.id === currentSessionId);
-    return currentChat ? currentChat.loadingStatus : null;
-  };
-
-  const openSideBar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const onSwitchChat = (chatSessionId: string) => {
-    openSideBar();
-    setCurrentSessionId(chatSessionId);
+    const cur = sessions.find((c) => c.id === currentSessionId);
+    return cur ? cur.loadingStatus : null;
   };
 
   const openConfirmDeleteChatPopup = (chatSessionId: string) => {
@@ -286,89 +251,47 @@ export const Chatbot = () => {
     setIsPopupOpen(true);
   };
 
-  const getConsoleLogContext = (): string => {
-    // 1. Try standard Jenkins console selector
-    const consoleElement = document.querySelector("pre.console-output");
-
-    if (!consoleElement || !consoleElement.textContent) {
-      return "";
-    }
-
-    const fullLog = consoleElement.textContent;
-
-    // 2. Truncate if too large (e.g., last 5000 characters)
-    // We only need the error at the end, and we don't want to overload the LLM.
-    const maxLength = 5000;
-    if (fullLog.length > maxLength) {
-      return "...(logs truncated due to size)...\n" + fullLog.slice(-maxLength);
-    }
-
-    return fullLog;
-  };
-
-  /**
-   * Handlers for Proactive Toast
-   */
   const handleToastConfirm = () => {
     setShowToast(false);
     setIsOpen(true);
-
-    // 1. Scrape the logs
-    const logs = getConsoleLogContext();
-
-    // 2. Construct the prompt
-    if (logs) {
-      const messageWithContext = `I found a build failure. Here are the last 5000 characters of the log:\n\n\`\`\`\n${logs}\n\`\`\`\n\nCan you analyze this error?`;
-      setInput(messageWithContext);
-
-      // Optional: If you want to send it immediately without clicking the arrow button:
-      // sendMessage(messageWithContext);
-    } else {
-      setInput(
-        "I noticed a build failure, but I couldn't read the logs automatically. Can you paste them?",
-      );
-    }
+    setInput(getChatbotText("welcomeMessage"));
   };
+  const handleToastDismiss = () => setShowToast(false);
 
-  const handleToastDismiss = () => {
-    setShowToast(false);
-  };
+  const handleClose = onClose || (() => setIsOpen(false));
 
-  const getWelcomePage = () => {
-    return (
-      <div style={chatbotStyles.containerWelcomePage}>
-        <div style={chatbotStyles.boxWelcomePage}>
-          <h2 style={chatbotStyles.welcomePageH2}>
-            {getChatbotText("welcomeMessage")}
-          </h2>
-          <p>{getChatbotText("welcomeDescription")}</p>
-          <button
-            style={chatbotStyles.welcomePageNewChatButton}
-            onClick={handleNewChat}
-          >
-            {getChatbotText("createNewChat")}
-          </button>
-        </div>
+  const getWelcomePage = () => (
+    <div className="welcome-screen-container">
+      <div className="welcome-avatar-wrapper">
+        <img
+          alt="Jenkins Logo"
+          className="welcome-logo"
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBD-X7_6zh-ve42nEMOBvzUZNAGW5qZCOPJoNux3Sox9zhpFT0_yvHAvb0fevBzZVypWMKePiD14uHvXtDbp4nK8a-_v6Wa2zgzbj5iHLjH4TgihzAZXVpx8oYgRJlEBhd21CBwOVCqsE1SLQL-9JDU4ou12kT2yZ_g09-4aHn34jOJRIwGcCh4VuMrLwAvPbPjE3mNTSM2CO9uZa-MJCho1OSmjOr6rG6LEHjl8CJ_sJHOHXNDIDQx0BEoY1GcxcWYNC0IuTk2bn1G"
+        />
       </div>
-    );
-  };
+      <h2 className="welcome-title">{getChatbotText("welcomeMessage")}</h2>
+      <p className="welcome-desc">{getChatbotText("welcomeDescription")}</p>
+      <button className="welcome-btn" onClick={handleNewChat}>
+        {getChatbotText("createNewChat")}
+      </button>
+    </div>
+  );
 
-  const getDeletePopup = () => {
-    return (
-      <div style={chatbotStyles.popupContainer}>
-        <h2 style={chatbotStyles.popupTitle}>{getChatbotText("popupTitle")}</h2>
-        <p style={chatbotStyles.popupMessage}>
-          {getChatbotText("popupMessage")}
-        </p>
-        <div style={chatbotStyles.popupButtonsContainer}>
+  const getDeletePopup = () => (
+    <div className="delete-popup-overlay">
+      <div className="delete-popup-container">
+        <h2 className="delete-popup-title">{getChatbotText("popupTitle")}</h2>
+        <p className="delete-popup-message">{getChatbotText("popupMessage")}</p>
+        <div className="delete-popup-actions">
           <button
-            style={chatbotStyles.popupDeleteButton}
+            className="toast-btn toast-btn-confirm"
+            style={{ backgroundColor: "#ef4444" }}
             onClick={handleDeleteChat}
           >
             {getChatbotText("popupDeleteButton")}
           </button>
           <button
-            style={chatbotStyles.popupCancelButton}
+            className="toast-btn toast-btn-cancel"
             onClick={() => {
               setIsPopupOpen(false);
               setSessionIdToDelete(null);
@@ -378,47 +301,23 @@ export const Chatbot = () => {
           </button>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={chatbotStyles.toggleButton}
-      >
-        {getChatbotText("toggleButtonLabel")}
-      </button>
       {showToast && !isOpen && (
-        <ProactiveToast
-          onConfirm={handleToastConfirm}
-          onDismiss={handleToastDismiss}
-        />
+        <ProactiveToast onConfirm={handleToastConfirm} onDismiss={handleToastDismiss} />
       )}
-
       {isOpen && (
-        <div
-          style={{
-            ...chatbotStyles.container,
-            pointerEvents: isPopupOpen ? "none" : "auto",
-          }}
-        >
-          {isSidebarOpen && (
-            <Sidebar
-              onClose={() => setIsSidebarOpen(false)}
-              onCreateChat={handleNewChat}
-              onSwitchChat={onSwitchChat}
-              chatList={sessions}
-              activeChatId={currentSessionId}
-              openConfirmDeleteChatPopup={openConfirmDeleteChatPopup}
-            />
-          )}
-          {isPopupOpen && getDeletePopup()}
+        <div className="chatbot-container">
           <Header
             currentSessionId={currentSessionId}
-            openSideBar={openSideBar}
             clearMessages={openConfirmDeleteChatPopup}
             messages={getSessionMessages(currentSessionId)}
+            isDark={isDark}
+            setIsDark={setIsDark}
+            onClose={handleClose}
           />
           {currentSessionId !== null ? (
             <>
@@ -443,6 +342,7 @@ export const Chatbot = () => {
           ) : (
             getWelcomePage()
           )}
+          {isPopupOpen && getDeletePopup()}
         </div>
       )}
     </>

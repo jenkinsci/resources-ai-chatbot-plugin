@@ -14,9 +14,13 @@ jest.mock("uuid", () => ({
   v4: () => "mock-uuid",
 }));
 
-jest.mock("../utils/callChatbotApi", () => ({
-  callChatbotApi: jest.fn(),
-}));
+jest.mock("../utils/callChatbotApi", () => {
+  const actual = jest.requireActual("../utils/callChatbotApi");
+  return {
+    callChatbotApi: jest.fn(),
+    SessionNotFoundError: actual.SessionNotFoundError,
+  };
+});
 
 jest.mock("../data/chatbotTexts", () => ({
   getChatbotText: jest.fn().mockReturnValue("Fallback error message"),
@@ -94,6 +98,7 @@ describe("chatbotApi", () => {
         },
         {},
         expect.any(Number),
+        true,
       );
     });
 

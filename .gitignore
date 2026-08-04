@@ -47,3 +47,13 @@ src/main/webapp/static/*
 
 # VS Code
 .vscode/
+
+# Added by fix: cleanup large binaries
+chatbot-core/venv_old/
+*.dll
+*.png
+code.html
+stitch_screens/
+*.gguf
+__pycache__/
+*.pyc
