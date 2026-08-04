@@ -1,5 +1,6 @@
 .PHONY: all api setup-backend build-frontend test run-data-pipeline clean \
-	run-data-storage run-data-storage-plugins run-data-storage-docs run-data-storage-discourse
+	run-data-storage run-data-storage-plugins run-data-storage-docs run-data-storage-discourse \
+	run-data-graph run-data-graph-plugins
 
 BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate && export PYTHONPATH=$$(pwd)
 
@@ -127,6 +128,15 @@ run-data-chunking-stack: setup-backend
 
 run-data-chunking: run-data-chunking-docs run-data-chunking-plugins run-data-chunking-discourse run-data-chunking-stack
 
+## GRAPH ARTIFACTS
+
+run-data-graph-plugins: setup-backend
+	@$(BACKEND_SHELL) && \
+	echo "### BUILDING GRAPHRAG PLUGIN GRAPH ARTIFACTS ###" && \
+	python3 rag/graph/build_graph_artifacts.py
+
+run-data-graph: run-data-graph-plugins
+
 ## EMBEDDING & STORAGE
 # One FAISS index per source — file naming ({source}_index.idx / {source}_metadata.pkl)
 # matches what rag/retriever/retriever_utils.load_vector_index expects and the
@@ -150,7 +160,7 @@ run-data-storage-discourse: setup-backend
 run-data-storage: run-data-storage-plugins run-data-storage-docs run-data-storage-discourse
 
 
-run-pipeline-core: run-data-collection run-data-preprocessing run-data-chunking run-data-storage
+run-pipeline-core: run-data-collection run-data-preprocessing run-data-chunking run-data-graph run-data-storage
 
 run-data-pipeline:
 	@echo "Logging data pipeline to logs/data-pipeline.log"

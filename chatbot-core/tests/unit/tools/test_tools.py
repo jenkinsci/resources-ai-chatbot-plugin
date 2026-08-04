@@ -1,5 +1,7 @@
 """Unit tests for api/tools/tools.py."""
 from unittest.mock import patch, MagicMock
+
+from api.config.loader import CONFIG
 from api.tools.tools import (
     search_plugin_docs,
     search_jenkins_docs,
@@ -67,6 +69,36 @@ class TestSearchPluginDocs:
         logger = MagicMock()
         result = search_plugin_docs("query", "keywords", logger, plugin_name="invalid")
         assert result == "unfiltered result"
+
+    @patch("api.tools.tools.build_graph_runtime_context")
+    @patch("api.tools.tools.retrieve_documents")
+    @patch("api.tools.tools.extract_top_chunks")
+    def test_appends_graph_context(
+        self, mock_extract, mock_retrieve, mock_graph_context
+    ):
+        """Test plugin search appends GraphRAG context when available."""
+        mock_retrieve.return_value = (["doc1"], [0.9], ["doc2"], [0.8])
+        mock_extract.return_value = "plugin result"
+        mock_graph_context.return_value = "graph result"
+
+        result = search_plugin_docs("query", "keywords", MagicMock())
+
+        assert result == "plugin result\n\ngraph result"
+
+    @patch("api.tools.tools.build_graph_runtime_context")
+    @patch("api.tools.tools.retrieve_documents")
+    @patch("api.tools.tools.extract_top_chunks")
+    def test_returns_graph_context_when_plugin_context_empty(
+        self, mock_extract, mock_retrieve, mock_graph_context
+    ):
+        """Test graph context replaces the empty plugin retrieval message."""
+        mock_retrieve.return_value = ([], [], [], [])
+        mock_extract.return_value = CONFIG["retrieval"]["empty_context_message"]
+        mock_graph_context.return_value = "graph result"
+
+        result = search_plugin_docs("query", "keywords", MagicMock())
+
+        assert result == "graph result"
 
 
 class TestSearchJenkinsDocs:

@@ -28,6 +28,7 @@ from api.tools.utils import (
     make_placeholder_replacer,
     validate_tool_calls,
 )
+from rag.graph.runtime_context import build_graph_runtime_context
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
 
@@ -457,6 +458,10 @@ def retrieve_context(user_input: str) -> str:
             replace = make_placeholder_replacer(code_iter, item_id, logger)
             text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
             context_texts.append(f"[Source: {source_name}]\n{text}")
+
+    graph_context = build_graph_runtime_context(user_input, logger)
+    if graph_context:
+        context_texts.append(graph_context)
 
     if not context_texts:
         logger.warning(retrieval_config["empty_context_message"])
