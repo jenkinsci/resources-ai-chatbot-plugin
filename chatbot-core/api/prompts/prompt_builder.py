@@ -20,7 +20,7 @@ def build_prompt(
         user_query (str): The raw question from the user.
         context (str): The relevant retrieved chunks to ground the answer.
         memory (ConversationBufferMemory): LangChain memory holding prior chat turns.
-        log_context (Optional[str]): Raw logs provided by the user (e.g. build failure logs).
+        log_context (Optional[str]): Sanitized build log excerpt.
 
     Returns:
         str: A structured prompt for the language model.

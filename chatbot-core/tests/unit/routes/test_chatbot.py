@@ -23,6 +23,42 @@ def test_chatbot_reply_success(client, mock_session_exists, mock_get_chatbot_rep
     assert response.json() == {"reply": "This is a valid response"}
 
 
+def test_log_preview_extracts_and_sanitizes_console_output(client):
+    """Preview endpoint returns relevant output with secrets redacted."""
+    response = client.post(
+        "/log-preview",
+        json={
+            "log_text": "PASSWORD=raw-secret\n[ERROR] deployment failed",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "PASSWORD=[REDACTED]" in response.json()["preview"]
+    assert "[ERROR] deployment failed" in response.json()["preview"]
+
+
+def test_chatbot_reply_accepts_log_only_request(
+    client,
+    mock_session_exists,
+    mock_get_chatbot_reply,
+):
+    """Log context alone receives the default diagnosis message."""
+    mock_session_exists.return_value = True
+    mock_get_chatbot_reply.return_value = {"reply": "Diagnosis"}
+
+    response = client.post(
+        "/sessions/test-session-id/message",
+        json={"log_context": "[ERROR] deployment failed"},
+    )
+
+    assert response.status_code == 200
+    mock_get_chatbot_reply.assert_called_once_with(
+        "test-session-id",
+        "Analyze the provided failed Jenkins build logs.",
+        log_context="[ERROR] deployment failed",
+    )
+
+
 def test_chatbot_reply_invalid_session(client, mock_session_exists):
     """Testing that sending a message to an invalid session returns 404."""
     mock_session_exists.return_value = False

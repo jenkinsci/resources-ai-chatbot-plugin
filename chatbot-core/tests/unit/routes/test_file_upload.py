@@ -47,6 +47,29 @@ def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chat
     assert "print('Hello, World!')" in args[2][0].content
 
 
+def test_chatbot_reply_with_file_preserves_log_context(
+    client,
+    mock_session_exists,
+    mock_get_chatbot_reply,
+):
+    """Upload requests forward build-log context to the chat service."""
+    mock_session_exists.return_value = True
+    mock_get_chatbot_reply.return_value = {"reply": "Diagnosis"}
+    files = [("files", ("script.py", BytesIO(b"print('ok')"), "text/plain"))]
+
+    response = client.post(
+        "/sessions/test-session-id/message/upload",
+        data={
+            "message": "Analyze the build",
+            "log_context": "[ERROR] deployment failed",
+        },
+        files=files,
+    )
+
+    assert response.status_code == 200
+    assert mock_get_chatbot_reply.call_args.args[3] == "[ERROR] deployment failed"
+
+
 def test_chatbot_reply_with_files_persists_session(
     client, mock_session_exists, mock_get_chatbot_reply
 ):

@@ -98,7 +98,7 @@ def test_get_chatbot_reply_debug_logs_are_sanitized(
 
     sanitized_query = "api_key=[REDACTED]"
     sanitized_context = "password=[REDACTED]"
-    sanitized_prompt = "Bearer [REDACTED_TOKEN]"
+    sanitized_prompt = "Authorization: [REDACTED]"
 
     mock_chat_memory = MagicMock()
     mock_session = mock_get_session.return_value

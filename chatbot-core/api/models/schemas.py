@@ -38,18 +38,42 @@ class ChatRequest(BaseModel):
 
     Fields:
         message (str): The user's input message.
+        log_context (Optional[str]): Sanitized Jenkins log excerpt.
 
     Validation:
-        - Rejects messages that are empty.
+        - Rejects requests that contain neither a message nor log context.
     """
-    message: str
+    message: str = ""
+    log_context: Optional[str] = None
 
-    @field_validator("message")
-    def message_must_not_be_empty(cls, v): # pylint: disable=no-self-argument
-        """Validator that checks that a message is not empty."""
-        if not v.strip():
+    @model_validator(mode="after")
+    def message_or_log_context_must_be_present(self):
+        """Allow log-only diagnosis requests while rejecting empty chats."""
+        has_message = bool(self.message and self.message.strip())
+        has_log_context = bool(self.log_context and self.log_context.strip())
+        if not has_message and not has_log_context:
             raise ValueError("Message cannot be empty.")
+        return self
+
+
+class LogPreviewRequest(BaseModel):
+    """Request containing raw Jenkins console output for preview sanitization."""
+
+    log_text: str
+
+    @field_validator("log_text")
+    @classmethod
+    def log_text_must_not_be_empty(cls, v):
+        """Validate that console output is present."""
+        if not v.strip():
+            raise ValueError("Log text cannot be empty.")
         return v
+
+
+class LogPreviewResponse(BaseModel):
+    """Sanitized Jenkins log excerpt safe to display and send for analysis."""
+
+    preview: str
 
 
 class ChatRequestWithFiles(BaseModel):

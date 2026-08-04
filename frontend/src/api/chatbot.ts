@@ -14,6 +14,31 @@ export interface SupportedExtensions {
   max_image_size_mb: number;
 }
 
+interface LogPreviewResponse {
+  preview: string;
+}
+
+/**
+ * Extracts and sanitizes Jenkins console output for display before analysis.
+ *
+ * @param logText - Raw Jenkins console output
+ * @returns A sanitized relevant log excerpt, or an empty string on failure
+ */
+export const fetchLogPreview = async (logText: string): Promise<string> => {
+  const data = await callChatbotApi<LogPreviewResponse>(
+    "log-preview",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ log_text: logText }),
+    },
+    { preview: "" },
+    CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION,
+  );
+
+  return data.preview;
+};
+
 /**
  * Send a request to the backend to create a new chat session and returns the id of the
  * chat session created.
@@ -50,13 +75,21 @@ export const fetchChatbotReply = async (
   sessionId: string,
   userMessage: string,
   signal?: AbortSignal,
+  logContext?: string,
 ): Promise<Message> => {
+  const payload: { message: string; log_context?: string } = {
+    message: userMessage,
+  };
+  if (logContext) {
+    payload.log_context = logContext;
+  }
+
   const data = await callChatbotApi<{ reply?: string }>(
     `sessions/${sessionId}/message`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMessage }),
+      body: JSON.stringify(payload),
       signal,
     },
     {},
@@ -75,6 +108,7 @@ export const fetchChatbotReply = async (
  * @param userMessage - The message input from the user
  * @param files - Array of File objects to upload
  * @param signal - External abort signal for user-initiated cancellation
+ * @param logContext - Sanitized Jenkins log context for diagnosis
  * @returns A Promise resolving to a bot-generated Message
  */
 export const fetchChatbotReplyWithFiles = async (
@@ -82,6 +116,7 @@ export const fetchChatbotReplyWithFiles = async (
   userMessage: string,
   files: File[],
   signal: AbortSignal,
+  logContext?: string,
 ): Promise<Message> => {
   // Combine external signal with timeout using AbortSignal.any()
   const timeoutSignal = AbortSignal.timeout(
@@ -92,6 +127,9 @@ export const fetchChatbotReplyWithFiles = async (
   try {
     const formData = new FormData();
     formData.append("message", userMessage);
+    if (logContext) {
+      formData.append("log_context", logContext);
+    }
 
     files.forEach((file) => {
       formData.append("files", file);
