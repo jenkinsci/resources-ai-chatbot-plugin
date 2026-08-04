@@ -231,7 +231,8 @@ def test_chatbot_reply_text_truncation(
 ):
     """Test that text content is truncated when exceeding limit."""
     mock_session_exists.return_value = True
-    mock_get_chatbot_reply.return_value = {"reply": "Analyzed truncated content."}
+    mock_get_chatbot_reply.return_value = {
+        "reply": "Analyzed truncated content."}
 
     # Create content larger than MAX_TEXT_CONTENT_LENGTH (10000 chars)
     large_text = "x" * 15000
@@ -252,4 +253,26 @@ def test_chatbot_reply_text_truncation(
     args, _ = mock_get_chatbot_reply.call_args
     assert args[2][0].filename == "large_text.txt"
     # Content should be truncated to MAX_TEXT_CONTENT_LENGTH (10000)
-    assert len(args[2][0].content) <= 10000 + 50  # Allow for truncation message
+    assert len(args[2][0].content) <= 10000 + \
+        50  # Allow for truncation message
+
+
+def test_upload_rejects_spoofed_binary_file(client, mock_session_exists):
+    """Test that the upload endpoint rejects spoofed binary files."""
+    mock_session_exists.return_value = True
+
+    # Create a simulated binary payload containing a null byte
+    malicious_content = b"Fake text header \x00 followed by binary garbage..."
+    files = [
+        ("files", ("malicious_payload.txt", BytesIO(malicious_content), "text/plain"))
+    ]
+
+    response = client.post(
+        "/sessions/test-session-id/message/upload",
+        data={"message": "Process this totally normal text file."},
+        files=files
+    )
+
+    # Assert the security validator intercepts it
+    assert response.status_code == 400
+    assert "appears to be a binary file" in response.text.lower()
