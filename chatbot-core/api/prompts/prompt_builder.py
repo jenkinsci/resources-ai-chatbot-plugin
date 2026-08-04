@@ -5,6 +5,8 @@ chat history, context retrieved from the knowledge base, and the user's question
 from typing import Optional
 from langchain.memory import ConversationBufferMemory
 from api.prompts.prompts import SYSTEM_INSTRUCTION, LOG_ANALYSIS_INSTRUCTION
+from api.services.context_manager import enforce_context_limit
+from api.config.loader import CONFIG
 
 def build_prompt(
     user_query: str,
@@ -26,10 +28,14 @@ def build_prompt(
         str: A structured prompt for the language model.
     """
     if memory:
+        trimmed_messages = enforce_context_limit(
+            memory.chat_memory.messages,
+            CONFIG["llm"]["max_history_tokens"]
+        )
         history = "\n".join(
             f"{'User' if msg.type == 'human' else 'Jenkins Assistant'}: {msg.content or ''}"
-            for msg in memory.chat_memory.messages
-        ) if memory.chat_memory.messages else ""
+            for msg in trimmed_messages
+        ) if trimmed_messages else ""
     else:
         history = ""
 

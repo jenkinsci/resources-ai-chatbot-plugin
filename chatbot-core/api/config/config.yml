@@ -14,6 +14,7 @@ llm:
   max_tokens_retriever_agent: 35
   max_tokens_query_context_relevance: 50
   context_length: 2048
+  max_history_tokens: 1500
   threads: 8
   gpu_layers: 0
   verbose: false
