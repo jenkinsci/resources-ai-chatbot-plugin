@@ -206,8 +206,10 @@ def is_valid_plugin(plugin_name: str) -> bool:
     def tokenize(item: str) -> str:
         item = item.replace('-', '')
         return item.replace(' ', '').lower()
-    list_plugin_names_path = os.path.join(os.path.abspath(__file__),
-                                          "..", "..", "data", "raw", "plugin_names.json")
+    tools_dir = os.path.dirname(os.path.abspath(__file__))
+    list_plugin_names_path = os.path.normpath(
+        os.path.join(tools_dir, "..", "..", "data", "raw", "plugin_names.json")
+    )
     with open(list_plugin_names_path, "r", encoding="utf-8") as f:
         list_plugin_names = json.load(f)
 
