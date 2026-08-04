@@ -128,6 +128,14 @@ Development-related documentation can be found in the [`docs/`](docs/) directory
 
 Refer to our [contribution guidelines](https://github.com/jenkinsci/.github/blob/master/CONTRIBUTING.md)
 
+### Jenkins Log Fetcher
+
+To enable the Jenkins live log fetching tool, set the following environment variables:
+
+- `JENKINS_URL`: The base URL of your Jenkins server (defaults to `http://localhost:8080`).
+- `JENKINS_USER`: Your Jenkins username.
+- `JENKINS_TOKEN`: Your Jenkins API token (requires read access to job workspaces).
+
 ## LICENSE
 
 Licensed under MIT, see [LICENSE](LICENSE.md)
