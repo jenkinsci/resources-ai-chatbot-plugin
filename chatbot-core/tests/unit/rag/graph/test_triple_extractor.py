@@ -44,6 +44,7 @@ def build_plugin_ids() -> set[str]:
         "blueocean",
         "credentials",
         "git",
+        "job-dsl",
         "junit",
         "legacy-plugin",
         "port-allocator",
@@ -64,6 +65,28 @@ def test_resolve_plugin_id_matches_canonical_documentation_forms():
     assert resolve_plugin_id("Target Plugin", plugin_ids) == "target-plugin"
     assert resolve_plugin_id("Jenkins Credentials Plugin", plugin_ids) == "credentials"
     assert resolve_plugin_id("not-a-plugin", plugin_ids) is None
+
+
+def test_bare_single_word_target_requires_plugin_wording():
+    """
+    Verify ambiguous single-word plugin names are not inferred as targets.
+    """
+    plugin_ids = build_plugin_ids()
+
+    assert not resolve_target_entities("Git", plugin_ids)
+    assert [
+        target.entity_id
+        for target in resolve_target_entities("Git Plugin", plugin_ids)
+    ] == ["git"]
+
+
+def test_separator_based_plugin_ids_allow_multiword_forms():
+    """
+    Verify separator-based canonical IDs support their readable names.
+    """
+    targets = resolve_target_entities("Job DSL", build_plugin_ids())
+
+    assert [target.entity_id for target in targets] == ["job-dsl"]
 
 
 def test_sentence_split_drops_empty_sentences():

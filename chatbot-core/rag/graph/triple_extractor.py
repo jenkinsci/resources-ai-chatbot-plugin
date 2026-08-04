@@ -120,7 +120,11 @@ def build_candidate_variants(candidate: str) -> list[str]:
     return list(dict.fromkeys(variant for variant in variants if variant))
 
 
-def resolve_plugin_id(candidate: str, plugin_ids: Collection[str]) -> str | None:
+def resolve_plugin_id(
+    candidate: str,
+    plugin_ids: Collection[str],
+    require_explicit_plugin_word: bool = False,
+) -> str | None:
     """
     Resolve a documentation phrase against canonical plugin IDs.
 
@@ -131,6 +135,8 @@ def resolve_plugin_id(candidate: str, plugin_ids: Collection[str]) -> str | None
     Args:
         candidate (str): Candidate plugin phrase from documentation.
         plugin_ids (Collection[str]): Canonical IDs from plugin_names.json.
+        require_explicit_plugin_word (bool): Require the word Plugin for
+            single-word target IDs.
 
     Returns:
         str | None: Matching canonical ID, if one exists.
@@ -156,6 +162,13 @@ def resolve_plugin_id(candidate: str, plugin_ids: Collection[str]) -> str | None
         if plugin_id.endswith("-plugin"):
             base_name = plugin_id[:-7].lower()
             plugin_forms.update({base_name, base_name.replace("-", " ")})
+        if (
+            require_explicit_plugin_word
+            and "-" not in plugin_id
+            and "_" not in plugin_id
+            and "plugin" not in candidate_key.split()
+        ):
+            continue
         if candidate_forms.intersection(plugin_forms):
             return plugin_id
 
@@ -196,7 +209,11 @@ def resolve_target_entities(
         for end_index in range(max_end_index, start_index, -1):
             candidate = " ".join(tokens[start_index:end_index])
             for variant in build_candidate_variants(candidate):
-                plugin_id = resolve_plugin_id(variant, plugin_ids)
+                plugin_id = resolve_plugin_id(
+                    variant,
+                    plugin_ids,
+                    require_explicit_plugin_word=True,
+                )
                 if not plugin_id or plugin_id in SKIPPED_TARGET_PLUGIN_IDS:
                     continue
                 if plugin_id in seen_target_ids:
