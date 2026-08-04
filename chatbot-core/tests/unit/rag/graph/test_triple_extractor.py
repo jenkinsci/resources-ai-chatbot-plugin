@@ -228,6 +228,33 @@ def test_extracts_depends_on_triple_from_chunk():
     assert triples[0].evidence.source_chunk_id == "chunk-1"
 
 
+def test_rejects_unresolved_pronoun_relation_subject():
+    """
+    Verify unresolved pronouns do not create dependency relationships.
+    """
+    chunk = build_chunk(
+        "source-plugin",
+        "It depends on the Git Plugin.",
+    )
+
+    assert not extract_triples_from_chunk(chunk, build_plugin_ids())
+
+
+def test_accepts_explicit_plugin_relation_subject():
+    """
+    Verify explicitly named source plugins create relationships.
+    """
+    chunk = build_chunk(
+        "source-plugin",
+        "Source Plugin depends on the Git Plugin.",
+    )
+
+    triples = extract_triples_from_chunk(chunk, build_plugin_ids())
+
+    assert len(triples) == 1
+    assert triples[0].target.entity_id == "git"
+
+
 def test_extracts_requires_triple_with_lower_confidence():
     """
     Verify requires text becomes a dependency triple with rule confidence.

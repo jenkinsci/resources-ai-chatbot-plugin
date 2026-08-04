@@ -24,6 +24,7 @@ KNOWN_HEADING_PATTERN = re.compile(
     r"dependencies?|optional dependencies?)\s*:?$",
     re.IGNORECASE,
 )
+UNRESOLVED_SUBJECT_PATTERN = re.compile(r"^(?:it|they)\b", re.IGNORECASE)
 SKIPPED_TARGET_PLUGIN_IDS = {"jenkins"}
 RELATION_PATTERNS = (
     (
@@ -332,6 +333,21 @@ def should_skip_target(
     )
 
 
+def has_valid_relation_subject(sentence: str, relation_start: int) -> bool:
+    """
+    Reject relation phrases introduced by unresolved pronouns.
+
+    Args:
+        sentence (str): Sentence containing the relation phrase.
+        relation_start (int): Start offset of the relation phrase.
+
+    Returns:
+        bool: False when the relation subject is unresolved.
+    """
+    subject = sentence[:relation_start].strip()
+    return not UNRESOLVED_SUBJECT_PATTERN.match(subject)
+
+
 def extract_triples_from_sentence(
     source_entity: GraphEntity,
     sentence: str,
@@ -357,6 +373,9 @@ def extract_triples_from_sentence(
 
     for relation, confidence, pattern in RELATION_PATTERNS:
         for match in pattern.finditer(sentence):
+            if not has_valid_relation_subject(sentence, match.start()):
+                continue
+
             evidence_text = sentence
             target_entities = resolve_target_entities(
                 sentence[match.end():],
