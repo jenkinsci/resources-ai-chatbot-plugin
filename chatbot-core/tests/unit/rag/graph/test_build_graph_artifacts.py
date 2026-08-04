@@ -3,7 +3,13 @@
 import json
 from unittest.mock import Mock
 
-from rag.graph.build_graph_artifacts import load_plugin_chunks, run_graph_build
+import pytest
+
+from rag.graph.build_graph_artifacts import (
+    load_plugin_chunks,
+    load_plugin_ids,
+    run_graph_build,
+)
 from rag.graph.graph_artifacts import GraphArtifactPaths
 from rag.graph.graph_store import load_graph
 
@@ -49,6 +55,17 @@ def test_load_plugin_chunks_keeps_dict_records(tmp_path):
     chunks = load_plugin_chunks(chunks_path)
 
     assert chunks == [build_chunk("source-plugin", "valid text")]
+
+
+def test_load_plugin_ids_rejects_invalid_values(tmp_path):
+    """
+    Verify the canonical plugin index rejects malformed records.
+    """
+    plugin_names_path = tmp_path / "plugin_names.json"
+    plugin_names_path.write_text(json.dumps(["source-plugin", 123]), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="invalid plugin ID"):
+        load_plugin_ids(plugin_names_path)
 
 
 def test_run_graph_build_writes_artifacts_from_fake_inputs(tmp_path):

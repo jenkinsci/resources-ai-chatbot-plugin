@@ -113,13 +113,9 @@ def test_build_graph_from_chunks_extracts_and_materializes_graph():
             },
         }
     ]
-    plugin_aliases = {
-        "sourceplugin": "source-plugin",
-        "targetplugin": "target-plugin",
-        "target": "target-plugin",
-    }
+    plugin_ids = {"source-plugin", "target-plugin"}
 
-    graph, triples = build_graph_from_chunks(chunks, plugin_aliases)
+    graph, triples = build_graph_from_chunks(chunks, plugin_ids)
 
     assert len(triples) == 1
     assert graph.number_of_nodes() == 2
