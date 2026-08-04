@@ -4,11 +4,6 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from rag.graph.entity_normalizer import (
-    DEFAULT_PLUGIN_NAMES_PATH,
-    build_plugin_aliases,
-    load_canonical_plugin_ids,
-)
 from rag.graph.graph_artifacts import GraphArtifactPaths, write_graph_artifacts
 from rag.graph.graph_builder import build_graph_from_chunks
 from rag.graph.json_loader import load_json_list
@@ -16,7 +11,27 @@ from utils import LoggerFactory
 
 
 GRAPH_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_PLUGIN_NAMES_PATH = GRAPH_ROOT / "data" / "raw" / "plugin_names.json"
 DEFAULT_PLUGIN_CHUNKS_PATH = GRAPH_ROOT / "data" / "processed" / "chunks_plugin_docs.json"
+
+
+def load_plugin_ids(path: Path) -> list[str]:
+    """
+    Load canonical plugin IDs from plugin_names.json.
+
+    Args:
+        path (Path): Path to the JSON array of plugin IDs.
+
+    Returns:
+        list[str]: Canonical plugin IDs in file order.
+
+    Raises:
+        ValueError: If the JSON root or an ID is invalid.
+    """
+    records = load_json_list(path)
+    if any(not isinstance(record, str) or not record.strip() for record in records):
+        raise ValueError(f"Plugin names JSON contains an invalid plugin ID: {path}")
+    return [record for record in records if isinstance(record, str)]
 
 
 def is_valid_plugin_chunk(chunk: object) -> bool:
@@ -78,14 +93,13 @@ def run_graph_build(
     Returns:
         dict[str, Any]: Extraction report payload.
     """
-    plugin_ids = load_canonical_plugin_ids(plugin_names_path)
-    plugin_aliases = build_plugin_aliases(plugin_ids)
+    plugin_ids = load_plugin_ids(plugin_names_path)
     chunks = load_plugin_chunks(chunks_path)
 
     logger.info("Loaded %d plugin IDs from %s.", len(plugin_ids), plugin_names_path)
     logger.info("Loaded %d plugin chunks from %s.", len(chunks), chunks_path)
 
-    graph, triples = build_graph_from_chunks(chunks, plugin_aliases)
+    graph, triples = build_graph_from_chunks(chunks, plugin_ids)
     report = write_graph_artifacts(
         graph,
         triples,

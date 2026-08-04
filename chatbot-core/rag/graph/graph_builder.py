@@ -1,8 +1,9 @@
 """Build a plugin relation graph from extracted triples."""
 
+from collections.abc import Collection
+
 import networkx as nx
 
-from rag.graph.entity_normalizer import PluginAliasValue
 from rag.graph.models import Triple
 from rag.graph.triple_extractor import extract_triples
 
@@ -80,18 +81,17 @@ def build_graph(triples: list[Triple]) -> nx.MultiDiGraph:
 
 def build_graph_from_chunks(
     chunks: list[dict],
-    plugin_aliases: dict[str, PluginAliasValue],
+    plugin_ids: Collection[str],
 ) -> tuple[nx.MultiDiGraph, list[Triple]]:
     """
     Extract triples from chunks and build the graph artifact.
 
     Args:
         chunks (list[dict]): Plugin documentation chunks.
-        plugin_aliases (dict[str, PluginAliasRule]): Alias rules built from
-            plugin IDs.
+        plugin_ids (Collection[str]): Canonical IDs from plugin_names.json.
 
     Returns:
         tuple[nx.MultiDiGraph, list[Triple]]: Built graph and extracted triples.
     """
-    triples = extract_triples(chunks, plugin_aliases)
+    triples = extract_triples(chunks, plugin_ids)
     return build_graph(triples), triples
