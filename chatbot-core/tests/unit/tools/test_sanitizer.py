@@ -1,58 +1,135 @@
-"""Unit tests for the sanitizer module."""
-import unittest
+"""Focused tests for Jenkins log sanitization."""
+
+import pytest
+
 from api.tools.sanitizer import sanitize_logs
 
-class TestLogSanitizer(unittest.TestCase):
-    """Test suite for log sanitization to ensure secrets are redacted."""
 
-    def test_sanitize_password_assignment(self):
-        """Test that simple password assignments are redacted."""
-        log = "Connecting to DB with password=superSecretPassword123!"
-        expected = "Connecting to DB with password=[REDACTED]"
-        self.assertEqual(sanitize_logs(log), expected)
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("TOKEN=abc123", "TOKEN=[REDACTED]"),
+        ("export TOKEN=abc123", "export TOKEN=[REDACTED]"),
+        ("+ TOKEN=abc123", "+ TOKEN=[REDACTED]"),
+        ("257: TOKEN=abc123", "257: TOKEN=[REDACTED]"),
+        ("clientSecret=abc123", "clientSecret=[REDACTED]"),
+        ("accessToken=abc123", "accessToken=[REDACTED]"),
+        ("AWS_SECRET_ACCESS_KEY=fake-secret", "AWS_SECRET_ACCESS_KEY=[REDACTED]"),
+        ("PASSWORD=my secret password", "PASSWORD=[REDACTED]"),
+        ('TOKEN="abc123"', 'TOKEN="[REDACTED]"'),
+        ("PASSWORD='abc123'", "PASSWORD='[REDACTED]'"),
+        ('"api_key": "abc", "status": "failed"', '"api_key": "[REDACTED]", "status": "failed"'),
+        (
+            '"api_key": "abc", "client_secret": "def", "status": "failed"',
+            '"api_key": "[REDACTED]", "client_secret": "[REDACTED]", '
+            '"status": "failed"',
+        ),
+    ],
+)
+def test_redacts_secret_assignments(raw, expected):
+    """Redact assignment-shaped secrets while preserving surrounding syntax."""
+    assert sanitize_logs(raw) == expected
 
-    def test_sanitize_docker_login(self):
-        """Test that docker login passwords are redacted."""
-        log = "docker login -u user -p myRealPassword123 registry.com"
-        # We expect the flag content to be masked
-        result = sanitize_logs(log)
-        self.assertNotIn("myRealPassword123", result)
-        self.assertIn("[REDACTED]", result)
 
-    def test_sanitize_aws_key(self):
-        """Test that AWS access keys are redacted."""
-        log = "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"
-        result = sanitize_logs(log)
-        self.assertNotIn("AKIAIOSFODNN7EXAMPLE", result)
-        self.assertIn("[REDACTED_AWS_KEY]", result)
+def test_redacts_authentication_headers():
+    """Redact values from common authentication headers."""
+    assert sanitize_logs("Authorization: Bearer secret-token") == (
+        "Authorization: [REDACTED]"
+    )
+    assert sanitize_logs("X-API-Key: secret-token") == "X-API-Key: [REDACTED]"
+    assert sanitize_logs("Cookie: session=fake-cookie") == "Cookie: [REDACTED]"
 
-    def test_sanitize_bearer_token(self):
-        """Test that Bearer tokens are redacted."""
-        log = "Authorization: Bearer hf_thisIsAFakeToken123"
-        expected = "Authorization: Bearer [REDACTED_TOKEN]"
-        self.assertEqual(sanitize_logs(log), expected)
 
-    def test_sanitize_github_token(self):
-        """Test that GitHub tokens are redacted."""
-        log = "Authenticating with ghp_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6"
-        expected = "Authenticating with [REDACTED_GITHUB_TOKEN]"
-        self.assertEqual(sanitize_logs(log), expected)
+def test_redacts_url_credentials():
+    """Redact passwords embedded in HTTP and database URLs."""
+    assert sanitize_logs("https://user:password@example.com/repository") == (
+        "https://user:[REDACTED]@example.com/repository"
+    )
+    assert sanitize_logs("mongodb://user:password@database.example.com/app") == (
+        "mongodb://user:[REDACTED]@database.example.com/app"
+    )
 
-    def test_sanitize_private_key(self):
-        """Test that private key blocks are redacted."""
-        log = (
-            "Found key:\n"
-            "-----BEGIN RSA PRIVATE KEY-----\n"
-            "someBase64ContentHere\n"
-            "-----END RSA PRIVATE KEY-----"
-        )
-        expected = "Found key:\n[REDACTED_PRIVATE_KEY]"
-        self.assertEqual(sanitize_logs(log), expected)
 
-    def test_no_false_positives(self):
-        """Test that normal logs without secrets remain unchanged."""
-        log = "Build step 'Execute Windows batch command' marked build as failure"
-        self.assertEqual(sanitize_logs(log), log)
+def test_redacts_secret_query_parameters():
+    """Redact secret query values without removing other parameters."""
+    assert sanitize_logs("https://example.com/api?token=secret&debug=true") == (
+        "https://example.com/api?token=[REDACTED]&debug=true"
+    )
+    assert sanitize_logs('curl "https://example.com?api_key=secret"') == (
+        'curl "https://example.com?api_key=[REDACTED]"'
+    )
+    assert sanitize_logs("https://example.com/login?password=secret") == (
+        "https://example.com/login?password=[REDACTED]"
+    )
 
-if __name__ == '__main__':
-    unittest.main()
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("AKIAIOSFODNN7EXAMPLE", "[REDACTED_AWS_KEY]"),
+        ("ASIAIOSFODNN7EXAMPLE", "[REDACTED_AWS_KEY]"),
+        (
+            "ghp_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+            "[REDACTED_GITHUB_TOKEN]",
+        ),
+        (
+            "github_pat_abcdefghijklmnopqrstuvwxyz1234567890",
+            "[REDACTED_GITHUB_TOKEN]",
+        ),
+        ("sk-abcdefghijklmnopqrstuvwxyz123456", "[REDACTED_API_KEY]"),
+        ("gsk_abcdefghijklmnopqrstuvwxyz123456", "[REDACTED_API_KEY]"),
+        ("sk-proj-abcdefghijklmnopqrstuvwxyz123456", "[REDACTED_API_KEY]"),
+        (
+            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.sig",
+            "[REDACTED_JWT]",
+        ),
+    ],
+)
+def test_redacts_known_token_formats(raw, expected):
+    """Redact common raw AWS, provider, GitHub, and JWT tokens."""
+    assert sanitize_logs(raw) == expected
+
+
+def test_redacts_complete_private_key_block():
+    """Replace a complete private-key block with one marker."""
+    raw = "\n".join(
+        [
+            "before",
+            "-----BEGIN RSA PRIVATE KEY-----",
+            "key material",
+            "-----END RSA PRIVATE KEY-----",
+            "after",
+        ]
+    )
+
+    assert sanitize_logs(raw) == "before\n[REDACTED_PRIVATE_KEY]\nafter"
+
+
+def test_redacts_truncated_private_key_block():
+    """Replace a private-key block even when its closing marker is missing."""
+    raw = "before\n-----BEGIN PRIVATE KEY-----\ntruncated key"
+
+    assert sanitize_logs(raw) == "before\n[REDACTED_PRIVATE_KEY]"
+
+
+def test_preserves_normal_non_secret_log_lines():
+    """Leave ordinary diagnostic lines unchanged."""
+    raw = "\n".join(
+        ["status=failed", "HTTP_STATUS=401", "BUILD_NUMBER=123", "[ERROR] failed"]
+    )
+
+    assert sanitize_logs(raw) == raw
+
+
+def test_is_idempotent():
+    """Keep the output unchanged when sanitization is applied twice."""
+    raw = "\n".join(
+        [
+            "TOKEN=abc123",
+            "Authorization: Bearer secret-token",
+            "https://user:password@example.com/repository",
+        ]
+    )
+    sanitized = sanitize_logs(raw)
+
+    assert sanitize_logs(sanitized) == sanitized
