@@ -35,7 +35,7 @@ def build_node_records(triples: list[Triple]) -> list[tuple[str, dict[str, str]]
 
 def build_edge_records(
     triples: list[Triple],
-) -> list[tuple[str, str, dict[str, str | float]]]:
+) -> list[tuple[str, str, dict[str, str]]]:
     """
     Build edge rows for graph insertion.
 
@@ -43,7 +43,7 @@ def build_edge_records(
         triples (list[Triple]): Validated triples ready for graph storage.
 
     Returns:
-        list[tuple[str, str, dict[str, str | float]]]: Edge rows for add_edges_from().
+        list[tuple[str, str, dict[str, str]]]: Edge rows for add_edges_from().
     """
     return [
         (
@@ -51,7 +51,6 @@ def build_edge_records(
             triple.target.entity_id,
             {
                 "relation": triple.relation,
-                "confidence": triple.confidence,
                 "source_chunk_id": triple.evidence.source_chunk_id,
                 "source_title": triple.evidence.source_title,
                 "source_data_source": triple.evidence.source_data_source,

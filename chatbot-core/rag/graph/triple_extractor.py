@@ -43,7 +43,6 @@ SKIPPED_TARGET_PLUGIN_IDS = {"jenkins"}
 RELATION_PATTERNS = (
     (
         GraphRelationType.OPTIONAL_DEPENDS_ON.value,
-        0.75,
         re.compile(
             r"\b(?:optionally depends on|optional dependencies include|"
             r"optional dependency(?: is|:)?|optionally requires)\b",
@@ -52,17 +51,14 @@ RELATION_PATTERNS = (
     ),
     (
         GraphRelationType.DEPENDS_ON.value,
-        0.9,
         re.compile(r"(?<!optionally )\bdepends on\b", re.IGNORECASE),
     ),
     (
         GraphRelationType.DEPENDS_ON.value,
-        0.85,
         re.compile(r"(?<!optionally )\brequires?\b", re.IGNORECASE),
     ),
     (
         GraphRelationType.CONFLICTS_WITH.value,
-        0.8,
         re.compile(r"\b(?:conflicts? with|incompatible with)\b", re.IGNORECASE),
     ),
 )
@@ -427,7 +423,7 @@ def extract_triples_from_sentence(
     if is_changelog_span(sentence):
         return extracted_triples
 
-    for relation, confidence, pattern in RELATION_PATTERNS:
+    for relation, pattern in RELATION_PATTERNS:
         for match in pattern.finditer(sentence):
             if not has_valid_relation_subject(sentence, match.start()):
                 continue
@@ -462,7 +458,6 @@ def extract_triples_from_sentence(
                         relation=relation,
                         target=target_entity,
                         evidence=build_chunk_evidence(chunk, evidence_text),
-                        confidence=confidence,
                     )
                 )
 
@@ -577,9 +572,6 @@ def _is_preferred_triple(candidate: Triple, current: Triple) -> bool:
     Returns:
         bool: True when the candidate should replace the current triple.
     """
-    if candidate.confidence != current.confidence:
-        return candidate.confidence > current.confidence
-
     candidate_has_plugin_word = "plugin" in candidate.evidence.evidence.lower()
     current_has_plugin_word = "plugin" in current.evidence.evidence.lower()
     if candidate_has_plugin_word != current_has_plugin_word:

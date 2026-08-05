@@ -40,7 +40,6 @@ def build_test_triple() -> Triple:
             source_data_source="jenkins_plugins_documentation",
             evidence="Source depends on target.",
         ),
-        confidence=0.9,
     )
 
 

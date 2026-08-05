@@ -29,10 +29,6 @@ class GraphRelationType(str, Enum):
     MENTIONS = "MENTIONS"
 
 
-MIN_RELATION_CONFIDENCE = 0.0
-MAX_RELATION_CONFIDENCE = 1.0
-DEFAULT_MIN_CONFIDENCE = 0.5
-
 REQUIRED_EVIDENCE_FIELDS = frozenset(
     {
         "source_chunk_id",
@@ -70,28 +66,6 @@ def is_valid_relation_type(relation_type: str) -> bool:
         bool: True when the relation type is supported, False otherwise.
     """
     return relation_type in ALLOWED_RELATION_TYPES
-
-
-def is_valid_confidence(
-    confidence: float,
-    min_confidence: float = DEFAULT_MIN_CONFIDENCE,
-) -> bool:
-    """
-    Check whether a confidence score is within range and above threshold.
-
-    Args:
-        confidence (float): Confidence score to validate.
-        min_confidence (float): Minimum accepted confidence score.
-
-    Returns:
-        bool: True when the confidence score is accepted, False otherwise.
-    """
-    return (
-        MIN_RELATION_CONFIDENCE
-        <= confidence
-        <= MAX_RELATION_CONFIDENCE
-        and confidence >= min_confidence
-    )
 
 
 def has_required_evidence_fields(evidence: dict) -> bool:

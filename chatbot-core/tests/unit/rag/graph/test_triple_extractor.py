@@ -235,7 +235,6 @@ def test_extracts_depends_on_triple_from_chunk():
     assert triples[0].source.entity_id == "android-signing"
     assert triples[0].relation == GraphRelationType.DEPENDS_ON.value
     assert triples[0].target.entity_id == "credentials"
-    assert triples[0].confidence == 0.9
     assert triples[0].evidence.source_chunk_id == "chunk-1"
 
 
@@ -326,9 +325,9 @@ def test_deduplicates_relationships_across_chunks():
     assert triples[0].evidence.source_chunk_id == "chunk-short"
 
 
-def test_extracts_requires_triple_with_lower_confidence():
+def test_extracts_requires_triple():
     """
-    Verify requires text becomes a dependency triple with rule confidence.
+    Verify requires text becomes a dependency triple.
     """
     chunk = build_chunk(
         "source-plugin",
@@ -340,7 +339,6 @@ def test_extracts_requires_triple_with_lower_confidence():
     assert len(triples) == 1
     assert triples[0].relation == GraphRelationType.DEPENDS_ON.value
     assert triples[0].target.entity_id == "port-allocator"
-    assert triples[0].confidence == 0.85
 
 
 def test_extracts_optional_dependency_without_hard_dependency_duplicate():
@@ -357,7 +355,6 @@ def test_extracts_optional_dependency_without_hard_dependency_duplicate():
     assert len(triples) == 1
     assert triples[0].relation == GraphRelationType.OPTIONAL_DEPENDS_ON.value
     assert triples[0].target.entity_id == "git"
-    assert triples[0].confidence == 0.75
 
 
 def test_extracts_optional_target_before_relation_phrase():
@@ -408,7 +405,6 @@ def test_extracts_conflict_triple_from_chunk():
     assert len(triples) == 1
     assert triples[0].relation == GraphRelationType.CONFLICTS_WITH.value
     assert triples[0].target.entity_id == "legacy-plugin"
-    assert triples[0].confidence == 0.8
 
 
 def test_skips_unknown_source_plugin():

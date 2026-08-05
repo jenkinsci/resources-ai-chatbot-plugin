@@ -59,7 +59,6 @@ def build_triple(chunk_id: str, evidence: str) -> Triple:
         relation=GraphRelationType.DEPENDS_ON.value,
         target=build_entity("target-plugin"),
         evidence=build_evidence(chunk_id, evidence),
-        confidence=0.9,
     )
 
 
