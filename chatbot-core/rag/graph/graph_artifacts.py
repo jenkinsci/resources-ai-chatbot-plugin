@@ -14,6 +14,8 @@ from rag.graph.models import Triple
 
 DEFAULT_TRIPLES_PATH = GRAPH_STORE_DIR / "triples.jsonl"
 DEFAULT_EXTRACTION_REPORT_PATH = GRAPH_STORE_DIR / "extraction_report.json"
+GRAPH_SOURCE = "plugin_documentation"
+DEPENDENCY_METADATA_SOURCE = "not_used"
 
 
 @dataclass(frozen=True)
@@ -112,6 +114,8 @@ def build_extraction_report(
     relation_counts = Counter(triple.relation for triple in triples)
 
     return {
+        "graph_source": GRAPH_SOURCE,
+        "dependency_metadata": DEPENDENCY_METADATA_SOURCE,
         "chunk_count": len(chunks),
         "triple_count": len(triples),
         "node_count": graph.number_of_nodes(),

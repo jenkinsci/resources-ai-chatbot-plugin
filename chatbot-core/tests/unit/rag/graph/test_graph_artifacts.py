@@ -67,6 +67,8 @@ def test_build_extraction_report_counts_graph_and_relations():
     report = build_extraction_report(chunks, triples, graph)
 
     assert report == {
+        "graph_source": "plugin_documentation",
+        "dependency_metadata": "not_used",
         "chunk_count": 1,
         "triple_count": 1,
         "node_count": 2,

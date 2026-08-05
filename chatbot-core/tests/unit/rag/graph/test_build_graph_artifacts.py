@@ -105,6 +105,8 @@ def test_run_graph_build_writes_artifacts_from_fake_inputs(tmp_path):
     graph = load_graph(str(paths.graph_path), mock_logger)
 
     assert report["chunk_count"] == 1
+    assert report["graph_source"] == "plugin_documentation"
+    assert report["dependency_metadata"] == "not_used"
     assert report["triple_count"] == 1
     assert report["node_count"] == 2
     assert report["edge_count"] == 1
