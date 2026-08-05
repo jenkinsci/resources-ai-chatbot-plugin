@@ -1,7 +1,7 @@
 """Deterministic triple extraction for plugin graph chunks."""
 
 import re
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 
 from rag.graph.models import GraphEntity, GraphEvidence, Triple
 from rag.graph.schema import GraphEntityType, GraphRelationType
@@ -66,6 +66,7 @@ RELATION_PATTERNS = (
         re.compile(r"\b(?:conflicts? with|incompatible with)\b", re.IGNORECASE),
     ),
 )
+PluginLookup = Mapping[str, tuple[str, ...]]
 
 
 def make_plugin_entity(plugin_id: str) -> GraphEntity:
@@ -208,9 +209,40 @@ def build_candidate_variants(candidate: str) -> list[str]:
     return list(dict.fromkeys(variant for variant in variants if variant))
 
 
+def build_plugin_lookup(plugin_ids: Collection[str]) -> dict[str, tuple[str, ...]]:
+    """
+    Build a reusable lookup from readable plugin forms to canonical IDs.
+
+    Args:
+        plugin_ids (Collection[str]): Canonical IDs from plugin_names.json.
+
+    Returns:
+        dict[str, tuple[str, ...]]: Deterministic readable-form lookup.
+    """
+    lookup: dict[str, list[str]] = {}
+    for plugin_id in plugin_ids:
+        plugin_forms = {
+            plugin_id.lower(),
+            re.sub(r"[-_]+", " ", plugin_id.lower()),
+        }
+        if plugin_id.endswith("-plugin"):
+            base_name = plugin_id[:-7].lower()
+            plugin_forms.update(
+                {
+                    base_name,
+                    re.sub(r"[-_]+", " ", base_name),
+                }
+            )
+        for plugin_form in plugin_forms:
+            if plugin_id not in lookup.setdefault(plugin_form, []):
+                lookup[plugin_form].append(plugin_id)
+
+    return {plugin_form: tuple(ids) for plugin_form, ids in lookup.items()}
+
+
 def resolve_plugin_id(
     candidate: str,
-    plugin_ids: Collection[str],
+    plugin_lookup: PluginLookup,
     require_explicit_plugin_word: bool = False,
 ) -> str | None:
     """
@@ -222,7 +254,7 @@ def resolve_plugin_id(
 
     Args:
         candidate (str): Candidate plugin phrase from documentation.
-        plugin_ids (Collection[str]): Canonical IDs from plugin_names.json.
+        plugin_lookup (PluginLookup): Readable forms mapped to canonical IDs.
         require_explicit_plugin_word (bool): Require the word Plugin for
             single-word target IDs.
 
@@ -233,32 +265,19 @@ def resolve_plugin_id(
     if not candidate_key:
         return None
 
-    candidate_forms = {candidate_key}
+    candidate_forms = [candidate_key]
     if candidate_key.startswith("jenkins "):
-        candidate_forms.add(candidate_key[8:].strip())
-    candidate_forms.update(
+        candidate_forms.append(candidate_key[8:].strip())
+    candidate_forms.extend(
         form[:-7].strip()
         for form in tuple(candidate_forms)
         if form.endswith(" plugin")
     )
 
-    for plugin_id in plugin_ids:
-        readable_plugin_id = re.sub(r"[-_]+", " ", plugin_id.lower())
-        plugin_forms = {
-            plugin_id.lower(),
-            readable_plugin_id,
-        }
-        if plugin_id.endswith("-plugin"):
-            base_name = plugin_id[:-7].lower()
-            plugin_forms.update(
-                {
-                    base_name,
-                    re.sub(r"[-_]+", " ", base_name),
-                }
-            )
-        if require_explicit_plugin_word and "plugin" not in candidate_key.split():
-            continue
-        if candidate_forms.intersection(plugin_forms):
+    for candidate_form in candidate_forms:
+        for plugin_id in plugin_lookup.get(candidate_form, ()):
+            if require_explicit_plugin_word and "plugin" not in candidate_key.split():
+                continue
             return plugin_id
 
     return None
@@ -266,7 +285,7 @@ def resolve_plugin_id(
 
 def resolve_target_entities(
     text: str,
-    plugin_ids: Collection[str],
+    plugin_lookup: PluginLookup,
     scan_from_end: bool = False,
 ) -> list[GraphEntity]:
     """
@@ -274,7 +293,7 @@ def resolve_target_entities(
 
     Args:
         text (str): Sentence text after a relation trigger.
-        plugin_ids (Collection[str]): Canonical IDs from plugin_names.json.
+        plugin_lookup (PluginLookup): Readable forms mapped to canonical IDs.
         scan_from_end (bool): Search from the end when resolving target-before
             relation wording while preserving all non-overlapping targets.
 
@@ -304,7 +323,7 @@ def resolve_target_entities(
             for variant in build_candidate_variants(candidate):
                 plugin_id = resolve_plugin_id(
                     variant,
-                    plugin_ids,
+                    plugin_lookup,
                     require_explicit_plugin_word=True,
                 )
                 if not plugin_id or plugin_id in SKIPPED_TARGET_PLUGIN_IDS:
@@ -386,7 +405,7 @@ def extract_triples_from_sentence(
     source_entity: GraphEntity,
     sentence: str,
     chunk: dict,
-    plugin_ids: Collection[str],
+    plugin_lookup: PluginLookup,
     preceding_text: str = "",
 ) -> list[Triple]:
     """
@@ -396,7 +415,7 @@ def extract_triples_from_sentence(
         source_entity (GraphEntity): Canonical source plugin entity.
         sentence (str): Sentence to inspect.
         chunk (dict): Source chunk payload.
-        plugin_ids (Collection[str]): Canonical IDs from plugin_names.json.
+        plugin_lookup (PluginLookup): Readable forms mapped to canonical IDs.
         preceding_text (str): Previous sentence used for optional dependency
             target resolution when the current sentence omits the target.
 
@@ -416,18 +435,18 @@ def extract_triples_from_sentence(
             evidence_text = sentence
             target_entities = resolve_target_entities(
                 sentence[match.end():],
-                plugin_ids,
+                plugin_lookup,
             )
             if not target_entities and relation == GraphRelationType.OPTIONAL_DEPENDS_ON.value:
                 target_entities = resolve_target_entities(
                     sentence[:match.start()],
-                    plugin_ids,
+                    plugin_lookup,
                     scan_from_end=True,
                 )
                 if not target_entities and preceding_text:
                     target_entities = resolve_target_entities(
                         preceding_text,
-                        plugin_ids,
+                        plugin_lookup,
                         scan_from_end=True,
                     )
                     if target_entities:
@@ -450,23 +469,23 @@ def extract_triples_from_sentence(
     return extracted_triples
 
 
-def extract_triples_from_chunk(
+def _extract_triples_from_chunk(
     chunk: dict,
-    plugin_ids: Collection[str],
+    plugin_lookup: PluginLookup,
 ) -> list[Triple]:
     """
     Extract graph triples from one plugin chunk.
 
     Args:
         chunk (dict): Chunk payload from chunks_plugin_docs.json.
-        plugin_ids (Collection[str]): Canonical IDs from plugin_names.json.
+        plugin_lookup (PluginLookup): Readable forms mapped to canonical IDs.
 
     Returns:
         list[Triple]: Validated triples found in the chunk.
     """
     metadata = chunk.get("metadata", {})
     source_title = metadata.get("title", "")
-    source_plugin_id = resolve_plugin_id(source_title, plugin_ids)
+    source_plugin_id = resolve_plugin_id(source_title, plugin_lookup)
     if not source_plugin_id:
         return []
 
@@ -481,7 +500,7 @@ def extract_triples_from_chunk(
             source_entity,
             sentence,
             chunk,
-            plugin_ids,
+            plugin_lookup,
             previous_sentence,
         ):
             triple_key = (
@@ -499,6 +518,23 @@ def extract_triples_from_chunk(
     return extracted_triples
 
 
+def extract_triples_from_chunk(
+    chunk: dict,
+    plugin_ids: Collection[str],
+) -> list[Triple]:
+    """
+    Extract triples from one chunk using canonical plugin IDs.
+
+    Args:
+        chunk (dict): Chunk payload from chunks_plugin_docs.json.
+        plugin_ids (Collection[str]): Canonical IDs from plugin_names.json.
+
+    Returns:
+        list[Triple]: Validated triples found in the chunk.
+    """
+    return _extract_triples_from_chunk(chunk, build_plugin_lookup(plugin_ids))
+
+
 def extract_triples(
     chunks: list[dict],
     plugin_ids: Collection[str],
@@ -513,9 +549,43 @@ def extract_triples(
     Returns:
         list[Triple]: All validated triples found across chunks.
     """
-    triples: list[Triple] = []
+    plugin_lookup = build_plugin_lookup(plugin_ids)
+    best_triples: dict[tuple[str, str, str], Triple] = {}
 
     for chunk in chunks:
-        triples.extend(extract_triples_from_chunk(chunk, plugin_ids))
+        for triple in _extract_triples_from_chunk(chunk, plugin_lookup):
+            triple_key = (
+                triple.source.entity_id,
+                triple.relation,
+                triple.target.entity_id,
+            )
+            current_triple = best_triples.get(triple_key)
+            if current_triple is None or _is_preferred_triple(triple, current_triple):
+                best_triples[triple_key] = triple
 
-    return triples
+    return list(best_triples.values())
+
+
+def _is_preferred_triple(candidate: Triple, current: Triple) -> bool:
+    """
+    Compare duplicate relationships using deterministic evidence preferences.
+
+    Args:
+        candidate (Triple): New candidate relationship.
+        current (Triple): Relationship currently selected for the key.
+
+    Returns:
+        bool: True when the candidate should replace the current triple.
+    """
+    if candidate.confidence != current.confidence:
+        return candidate.confidence > current.confidence
+
+    candidate_has_plugin_word = "plugin" in candidate.evidence.evidence.lower()
+    current_has_plugin_word = "plugin" in current.evidence.evidence.lower()
+    if candidate_has_plugin_word != current_has_plugin_word:
+        return candidate_has_plugin_word
+
+    if len(candidate.evidence.evidence) != len(current.evidence.evidence):
+        return len(candidate.evidence.evidence) < len(current.evidence.evidence)
+
+    return candidate.evidence.source_chunk_id < current.evidence.source_chunk_id

@@ -3,7 +3,9 @@
 from rag.graph.schema import GraphRelationType
 from rag.graph.triple_extractor import (
     build_candidate_variants,
+    build_plugin_lookup,
     extract_triples_from_chunk,
+    extract_triples,
     is_changelog_span,
     resolve_plugin_id,
     resolve_target_entities,
@@ -63,11 +65,12 @@ def test_resolve_plugin_id_matches_canonical_documentation_forms():
     Verify matching is derived from canonical IDs rather than alias metadata.
     """
     plugin_ids = build_plugin_ids()
+    plugin_lookup = build_plugin_lookup(plugin_ids)
 
-    assert resolve_plugin_id("target-plugin", plugin_ids) == "target-plugin"
-    assert resolve_plugin_id("Target Plugin", plugin_ids) == "target-plugin"
-    assert resolve_plugin_id("Jenkins Credentials Plugin", plugin_ids) == "credentials"
-    assert resolve_plugin_id("not-a-plugin", plugin_ids) is None
+    assert resolve_plugin_id("target-plugin", plugin_lookup) == "target-plugin"
+    assert resolve_plugin_id("Target Plugin", plugin_lookup) == "target-plugin"
+    assert resolve_plugin_id("Jenkins Credentials Plugin", plugin_lookup) == "credentials"
+    assert resolve_plugin_id("not-a-plugin", plugin_lookup) is None
 
 
 def test_bare_single_word_target_requires_plugin_wording():
@@ -75,11 +78,12 @@ def test_bare_single_word_target_requires_plugin_wording():
     Verify ambiguous single-word plugin names are not inferred as targets.
     """
     plugin_ids = build_plugin_ids()
+    plugin_lookup = build_plugin_lookup(plugin_ids)
 
-    assert not resolve_target_entities("Git", plugin_ids)
+    assert not resolve_target_entities("Git", plugin_lookup)
     assert [
         target.entity_id
-        for target in resolve_target_entities("Git Plugin", plugin_ids)
+        for target in resolve_target_entities("Git Plugin", plugin_lookup)
     ] == ["git"]
 
 
@@ -88,11 +92,12 @@ def test_all_dependency_targets_require_plugin_wording():
     Verify every dependency target uses explicit plugin wording.
     """
     plugin_ids = build_plugin_ids()
+    plugin_lookup = build_plugin_lookup(plugin_ids)
 
-    assert not resolve_target_entities("Job DSL", plugin_ids)
+    assert not resolve_target_entities("Job DSL", plugin_lookup)
     assert [
         target.entity_id
-        for target in resolve_target_entities("Job DSL Plugin", plugin_ids)
+        for target in resolve_target_entities("Job DSL Plugin", plugin_lookup)
     ] == ["job-dsl"]
 
 
@@ -101,10 +106,15 @@ def test_hyphenated_plugin_names_accept_hyphen_and_space_forms():
     Verify separator variants resolve to the same canonical plugin ID.
     """
     plugin_ids = build_plugin_ids()
+    plugin_lookup = build_plugin_lookup(plugin_ids)
 
     assert [
         target.entity_id
-        for target in resolve_target_entities("git-client plugin", plugin_ids)
+        for target in resolve_target_entities("git-client plugin", plugin_lookup)
+    ] == ["git-client"]
+    assert [
+        target.entity_id
+        for target in resolve_target_entities("git client plugin", plugin_lookup)
     ] == ["git-client"]
 
 
@@ -113,12 +123,13 @@ def test_target_lookup_is_bounded_to_relation_local_context():
     Verify target lookup does not scan an entire unrelated text span.
     """
     plugin_ids = build_plugin_ids()
+    plugin_lookup = build_plugin_lookup(plugin_ids)
     distant_target = "noise " * 20 + "Git Client Plugin"
 
-    assert not resolve_target_entities(distant_target, plugin_ids)
+    assert not resolve_target_entities(distant_target, plugin_lookup)
     assert not resolve_target_entities(
         "Git Client Plugin " + "noise " * 20,
-        plugin_ids,
+        plugin_lookup,
         scan_from_end=True,
     )
 
@@ -127,13 +138,12 @@ def test_underscore_plugin_names_accept_space_forms():
     """
     Verify underscore-separated IDs use the same readable-name matching.
     """
-    targets = resolve_target_entities("http request plugin", build_plugin_ids())
+    targets = resolve_target_entities(
+        "http request plugin",
+        build_plugin_lookup(build_plugin_ids()),
+    )
 
     assert [target.entity_id for target in targets] == ["http_request"]
-    assert [
-        target.entity_id
-        for target in resolve_target_entities("git client plugin", plugin_ids)
-    ] == ["git-client"]
 
 
 def test_sentence_split_drops_empty_sentences():
@@ -191,7 +201,7 @@ def test_reverse_target_scan_returns_targets_in_text_order():
     """
     targets = resolve_target_entities(
         "Git Plugin and Credentials Plugin",
-        build_plugin_ids(),
+        build_plugin_lookup(build_plugin_ids()),
         scan_from_end=True,
     )
 
@@ -204,7 +214,7 @@ def test_target_scan_keeps_targets_after_boundary_words():
     """
     targets = resolve_target_entities(
         "support for the Kubernetes Plugin",
-        build_plugin_ids(),
+        build_plugin_lookup(build_plugin_ids()),
     )
 
     assert [target.entity_id for target in targets] == ["kubernetes"]
@@ -291,6 +301,29 @@ def test_filters_spans_with_multiple_jenkins_issues():
     text = "JENKINS-123 JENKINS-456 depends on the Git Plugin."
 
     assert is_changelog_span(text)
+
+
+def test_deduplicates_relationships_across_chunks():
+    """
+    Verify one preferred triple is emitted for repeated chunk relationships.
+    """
+    chunks = [
+        build_chunk(
+            "source-plugin",
+            "This plugin depends on the Git Plugin.",
+            chunk_id="chunk-long",
+        ),
+        build_chunk(
+            "source-plugin",
+            "Depends on Git Plugin.",
+            chunk_id="chunk-short",
+        ),
+    ]
+
+    triples = extract_triples(chunks, build_plugin_ids())
+
+    assert len(triples) == 1
+    assert triples[0].evidence.source_chunk_id == "chunk-short"
 
 
 def test_extracts_requires_triple_with_lower_confidence():
