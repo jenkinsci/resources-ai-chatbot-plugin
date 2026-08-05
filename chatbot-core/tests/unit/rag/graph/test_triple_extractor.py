@@ -4,6 +4,7 @@ from rag.graph.schema import GraphRelationType
 from rag.graph.triple_extractor import (
     build_candidate_variants,
     extract_triples_from_chunk,
+    is_changelog_span,
     resolve_plugin_id,
     resolve_target_entities,
     sentence_split,
@@ -253,6 +254,43 @@ def test_accepts_explicit_plugin_relation_subject():
 
     assert len(triples) == 1
     assert triples[0].target.entity_id == "git"
+
+
+def test_filters_historical_changelog_dependency_spans():
+    """
+    Verify release-note dependency mentions are not extracted.
+    """
+    chunk = build_chunk(
+        "source-plugin",
+        "Fix: depends on the Git Plugin.",
+    )
+
+    assert is_changelog_span("Fix: depends on the Git Plugin.")
+    assert not extract_triples_from_chunk(chunk, build_plugin_ids())
+
+
+def test_preserves_direct_dependency_and_conflict_statements():
+    """
+    Verify current relationship statements remain extractable.
+    """
+    dependency = build_chunk("source-plugin", "Depends on the Job DSL Plugin.")
+    conflict = build_chunk(
+        "source-plugin",
+        "This plugin is incompatible with the Git Plugin.",
+    )
+
+    assert not is_changelog_span("Depends on the Job DSL Plugin.")
+    assert len(extract_triples_from_chunk(dependency, build_plugin_ids())) == 1
+    assert len(extract_triples_from_chunk(conflict, build_plugin_ids())) == 1
+
+
+def test_filters_spans_with_multiple_jenkins_issues():
+    """
+    Verify multiple issue references are treated as changelog noise.
+    """
+    text = "JENKINS-123 JENKINS-456 depends on the Git Plugin."
+
+    assert is_changelog_span(text)
 
 
 def test_extracts_requires_triple_with_lower_confidence():

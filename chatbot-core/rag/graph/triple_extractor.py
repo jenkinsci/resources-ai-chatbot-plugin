@@ -25,6 +25,20 @@ KNOWN_HEADING_PATTERN = re.compile(
     re.IGNORECASE,
 )
 UNRESOLVED_SUBJECT_PATTERN = re.compile(r"^(?:it|they)\b", re.IGNORECASE)
+CHANGELOG_HEADING_PATTERN = re.compile(
+    r"^(?:changelog|release notes?|version history)\b",
+    re.IGNORECASE,
+)
+VERSION_ENTRY_PATTERN = re.compile(
+    r"^(?:version\s+)?v?\d+\.\d+(?:\.\d+)*(?:\s|$)",
+    re.IGNORECASE,
+)
+RELEASE_ENTRY_PATTERN = re.compile(
+    r"^(?:fix(?:ed)?|add(?:ed)?|remov(?:e|ed)|chang(?:e|ed)|"
+    r"updat(?:e|ed)|correct(?:ed)?|improv(?:e|ed))\s*[:\-]",
+    re.IGNORECASE,
+)
+JENKINS_ISSUE_PATTERN = re.compile(r"\bJENKINS-\d+\b", re.IGNORECASE)
 SKIPPED_TARGET_PLUGIN_IDS = {"jenkins"}
 RELATION_PATTERNS = (
     (
@@ -348,6 +362,26 @@ def has_valid_relation_subject(sentence: str, relation_start: int) -> bool:
     return not UNRESOLVED_SUBJECT_PATTERN.match(subject)
 
 
+def is_changelog_span(text: str) -> bool:
+    """
+    Identify spans that describe historical release changes.
+
+    Args:
+        text (str): Documentation span containing a possible relation.
+
+    Returns:
+        bool: True when strong changelog signals are present.
+    """
+    normalized_text = text.strip()
+    issue_count = len(JENKINS_ISSUE_PATTERN.findall(normalized_text))
+    return bool(
+        CHANGELOG_HEADING_PATTERN.match(normalized_text)
+        or VERSION_ENTRY_PATTERN.match(normalized_text)
+        or RELEASE_ENTRY_PATTERN.match(normalized_text)
+        or issue_count >= 2
+    )
+
+
 def extract_triples_from_sentence(
     source_entity: GraphEntity,
     sentence: str,
@@ -370,6 +404,9 @@ def extract_triples_from_sentence(
         list[Triple]: Extracted triples for the sentence.
     """
     extracted_triples: list[Triple] = []
+
+    if is_changelog_span(sentence):
+        return extracted_triples
 
     for relation, confidence, pattern in RELATION_PATTERNS:
         for match in pattern.finditer(sentence):
