@@ -56,7 +56,6 @@ def build_test_graph() -> nx.MultiDiGraph:
             source_title=source,
             source_data_source="jenkins_plugins_documentation",
             evidence=evidence,
-            confidence=0.9,
     )
     return graph
 

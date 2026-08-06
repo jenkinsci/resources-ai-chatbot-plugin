@@ -93,7 +93,6 @@ def build_graph_relation(
             source_data_source=edge_data["source_data_source"],
             evidence=edge_data["evidence"],
         ),
-        confidence=edge_data["confidence"],
     )
 
 
