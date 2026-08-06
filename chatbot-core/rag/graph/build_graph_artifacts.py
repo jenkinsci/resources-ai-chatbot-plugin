@@ -1,0 +1,185 @@
+"""Build GraphRAG plugin graph artifacts from plugin chunks."""
+
+import argparse
+from pathlib import Path
+from typing import Any
+
+from rag.graph.graph_artifacts import GraphArtifactPaths, write_graph_artifacts
+from rag.graph.graph_builder import build_graph_from_chunks
+from rag.graph.json_loader import load_json_list
+from utils import LoggerFactory
+
+
+GRAPH_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_PLUGIN_NAMES_PATH = GRAPH_ROOT / "data" / "raw" / "plugin_names.json"
+DEFAULT_PLUGIN_CHUNKS_PATH = GRAPH_ROOT / "data" / "processed" / "chunks_plugin_docs.json"
+
+
+def load_plugin_ids(path: Path) -> list[str]:
+    """
+    Load canonical plugin IDs from plugin_names.json.
+
+    Args:
+        path (Path): Path to the JSON array of plugin IDs.
+
+    Returns:
+        list[str]: Canonical plugin IDs in file order.
+
+    Raises:
+        ValueError: If the JSON root or an ID is invalid.
+    """
+    records = load_json_list(path)
+    if any(not isinstance(record, str) or not record.strip() for record in records):
+        raise ValueError(f"Plugin names JSON contains an invalid plugin ID: {path}")
+    return [record for record in records if isinstance(record, str)]
+
+
+def is_valid_plugin_chunk(chunk: object) -> bool:
+    """
+    Check the required shape of one plugin documentation chunk.
+
+    Args:
+        chunk (object): JSON value to validate.
+
+    Returns:
+        bool: True when the chunk contains required string fields.
+    """
+    if not isinstance(chunk, dict):
+        return False
+
+    metadata = chunk.get("metadata")
+    return (
+        isinstance(chunk.get("id"), str)
+        and bool(chunk["id"].strip())
+        and isinstance(chunk.get("chunk_text"), str)
+        and bool(chunk["chunk_text"].strip())
+        and isinstance(metadata, dict)
+        and isinstance(metadata.get("title"), str)
+        and bool(metadata["title"].strip())
+        and isinstance(metadata.get("data_source"), str)
+        and bool(metadata["data_source"].strip())
+    )
+
+
+def load_plugin_chunks(path: Path) -> list[dict]:
+    """
+    Load plugin chunks from a JSON artifact file.
+
+    Args:
+        path (Path): Path to chunks_plugin_docs.json.
+
+    Returns:
+        list[dict]: Plugin chunk records.
+    """
+    chunks = load_json_list(path)
+    return [chunk for chunk in chunks if is_valid_plugin_chunk(chunk)]
+
+
+def run_graph_build(
+    plugin_names_path: Path,
+    chunks_path: Path,
+    artifact_paths: GraphArtifactPaths,
+    logger,
+) -> dict[str, Any]:
+    """
+    Build graph artifacts from plugin chunks.
+
+    Args:
+        plugin_names_path (Path): Path to plugin_names.json.
+        chunks_path (Path): Path to chunks_plugin_docs.json.
+        artifact_paths (GraphArtifactPaths): Output artifact paths.
+        logger (logging.Logger): Logger for build progress and errors.
+
+    Returns:
+        dict[str, Any]: Extraction report payload.
+    """
+    plugin_ids = load_plugin_ids(plugin_names_path)
+    chunks = load_plugin_chunks(chunks_path)
+
+    logger.info("Loaded %d plugin IDs from %s.", len(plugin_ids), plugin_names_path)
+    logger.info("Loaded %d plugin chunks from %s.", len(chunks), chunks_path)
+
+    graph, triples = build_graph_from_chunks(chunks, plugin_ids)
+    report = write_graph_artifacts(
+        graph,
+        triples,
+        chunks,
+        logger,
+        paths=artifact_paths,
+    )
+
+    logger.info(
+        "Built graph artifacts with %d triples, %d nodes, and %d edges.",
+        report["triple_count"],
+        report["node_count"],
+        report["edge_count"],
+    )
+    return report
+
+
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command-line arguments for graph artifact generation.
+
+    Returns:
+        argparse.Namespace: Parsed graph build arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description="Build GraphRAG plugin graph artifacts from plugin chunks."
+    )
+    parser.add_argument(
+        "--plugin-names-path",
+        type=Path,
+        default=DEFAULT_PLUGIN_NAMES_PATH,
+        help="Path to plugin_names.json.",
+    )
+    parser.add_argument(
+        "--chunks-path",
+        type=Path,
+        default=DEFAULT_PLUGIN_CHUNKS_PATH,
+        help="Path to chunks_plugin_docs.json.",
+    )
+    parser.add_argument(
+        "--graph-path",
+        type=Path,
+        default=GraphArtifactPaths().graph_path,
+        help="Destination path for plugin_graph.json.",
+    )
+    parser.add_argument(
+        "--triples-path",
+        type=Path,
+        default=GraphArtifactPaths().triples_path,
+        help="Destination path for triples.jsonl.",
+    )
+    parser.add_argument(
+        "--report-path",
+        type=Path,
+        default=GraphArtifactPaths().report_path,
+        help="Destination path for extraction_report.json.",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    """
+    Run the graph artifact build entrypoint.
+    """
+    args = parse_args()
+    logger = LoggerFactory.instance().get_logger("graph-artifacts")
+
+    artifact_paths = GraphArtifactPaths(
+        graph_path=args.graph_path,
+        triples_path=args.triples_path,
+        report_path=args.report_path,
+    )
+
+    run_graph_build(
+        plugin_names_path=args.plugin_names_path,
+        chunks_path=args.chunks_path,
+        artifact_paths=artifact_paths,
+        logger=logger,
+    )
+
+
+if __name__ == "__main__":
+    main()

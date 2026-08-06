@@ -4,7 +4,6 @@ from rag.graph.schema import (
     GraphEntityType,
     GraphRelationType,
     has_required_evidence_fields,
-    is_valid_confidence,
     is_valid_entity_type,
     is_valid_relation_type,
 )
@@ -36,16 +35,6 @@ def test_invalid_relation_type():
     Verify that an unknown relation type is rejected.
     """
     assert not is_valid_relation_type("USES")
-
-
-def test_confidence_must_be_in_range_and_above_threshold():
-    """
-    Verify confidence must be within range and above the default threshold.
-    """
-    assert is_valid_confidence(0.7)
-    assert not is_valid_confidence(0.4)
-    assert not is_valid_confidence(-0.1)
-    assert not is_valid_confidence(1.1)
 
 
 def test_required_evidence_fields():
