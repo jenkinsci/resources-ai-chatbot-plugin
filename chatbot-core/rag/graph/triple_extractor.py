@@ -229,6 +229,10 @@ def build_plugin_lookup(plugin_ids: Collection[str]) -> dict[str, tuple[str, ...
                     re.sub(r"[-_]+", " ", base_name),
                 }
             )
+        plugin_forms.update(
+            re.sub(r"[-_\s]+", "", plugin_form)
+            for plugin_form in tuple(plugin_forms)
+        )
         for plugin_form in plugin_forms:
             if plugin_id not in lookup.setdefault(plugin_form, []):
                 lookup[plugin_form].append(plugin_id)
@@ -268,6 +272,10 @@ def resolve_plugin_id(
         form[:-7].strip()
         for form in tuple(candidate_forms)
         if form.endswith(" plugin")
+    )
+    candidate_forms.extend(
+        re.sub(r"[-_\s]+", "", form)
+        for form in tuple(candidate_forms)
     )
 
     for candidate_form in candidate_forms:

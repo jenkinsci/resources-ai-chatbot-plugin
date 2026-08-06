@@ -2,15 +2,15 @@
 
 import networkx as nx
 
-from rag.graph.entity_normalizer import build_plugin_aliases
 from rag.graph.graph_retriever import retrieve_graph_relations
 from rag.graph.hybrid_context import build_chunk_lookup, format_graph_retrieval_result
 from rag.graph.query_parser import detect_graph_query_intent, parse_graph_query
 from rag.graph.schema import GraphEntityType, GraphRelationType
+from rag.graph.triple_extractor import build_plugin_lookup
 
 
 PLUGIN_IDS = ("blueocean", "git", "workflow", "legacy-plugin")
-PLUGIN_ALIASES = build_plugin_aliases(PLUGIN_IDS)
+PLUGIN_LOOKUP = build_plugin_lookup(PLUGIN_IDS)
 TEST_EDGES = (
     (
         "blueocean",
@@ -77,7 +77,7 @@ def test_parse_graph_query_resolves_alias_entity():
     """Verify human plugin names resolve to canonical graph node IDs."""
     query_match = parse_graph_query(
         "What does Blue Ocean depend on?",
-        PLUGIN_ALIASES,
+        PLUGIN_LOOKUP,
     )
     assert query_match.query_entity == "Blue Ocean"
     assert query_match.matched_entity.entity_id == "blueocean"
@@ -89,12 +89,12 @@ def test_retrieve_graph_relations_handles_dependency_directions():
     graph = build_test_graph()
     outgoing = retrieve_graph_relations(
         "What does Blue Ocean depend on?",
-        PLUGIN_ALIASES,
+        PLUGIN_LOOKUP,
         graph,
     )
     incoming = retrieve_graph_relations(
         "Which plugins depend on Git Plugin?",
-        PLUGIN_ALIASES,
+        PLUGIN_LOOKUP,
         graph,
     )
     assert [relation.target.entity_id for relation in outgoing.relations] == ["git"]
@@ -109,14 +109,14 @@ def test_retrieve_graph_relations_handles_conflicts_and_fallback():
     graph = build_test_graph()
     conflict = retrieve_graph_relations(
         "Which plugins conflict with Legacy Plugin?",
-        PLUGIN_ALIASES,
+        PLUGIN_LOOKUP,
         graph,
     )
     assert conflict.relations[0].source.entity_id == "blueocean"
     assert conflict.relations[0].target.entity_id == "legacy-plugin"
     assert retrieve_graph_relations(
         "How do I configure Blue Ocean?",
-        PLUGIN_ALIASES,
+        PLUGIN_LOOKUP,
         graph,
     ) is None
 
@@ -125,7 +125,7 @@ def test_format_graph_retrieval_result_includes_source_chunk_context():
     """Verify graph context includes relation evidence and source chunk text."""
     result = retrieve_graph_relations(
         "What does Blue Ocean depend on?",
-        PLUGIN_ALIASES,
+        PLUGIN_LOOKUP,
         build_test_graph(),
     )
     chunk_lookup = build_chunk_lookup(

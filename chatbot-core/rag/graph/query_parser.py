@@ -3,10 +3,13 @@
 from dataclasses import dataclass
 import re
 
-from rag.graph.entity_normalizer import resolve_plugin_name
 from rag.graph.models import GraphEntity
 from rag.graph.schema import GraphEntityType, GraphRelationType
-from rag.graph.triple_extractor import build_candidate_variants
+from rag.graph.triple_extractor import (
+    PluginLookup,
+    build_candidate_variants,
+    resolve_plugin_id,
+)
 
 
 QUERY_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._-]*")
@@ -140,14 +143,14 @@ def detect_graph_query_intent(query: str) -> GraphQueryIntent | None:
 
 def resolve_query_entity_text(
     text: str,
-    plugin_aliases: dict[str, str],
+    plugin_lookup: PluginLookup,
 ) -> tuple[str, GraphEntity] | None:
     """
     Resolve a plugin entity from one text span.
 
     Args:
         text (str): Candidate query text span.
-        plugin_aliases (dict[str, str]): Alias map built from canonical plugin IDs.
+        plugin_lookup (PluginLookup): Canonical plugin lookup built from IDs.
 
     Returns:
         tuple[str, GraphEntity] | None: Matched text and canonical plugin entity.
@@ -159,7 +162,7 @@ def resolve_query_entity_text(
         for start_index in range(len(tokens) - token_count + 1):
             lookup_phrase = " ".join(tokens[start_index : start_index + token_count])
             for variant in build_candidate_variants(lookup_phrase):
-                target_id = resolve_plugin_name(variant, plugin_aliases)
+                target_id = resolve_plugin_id(variant, plugin_lookup)
                 if target_id:
                     return lookup_phrase, build_query_entity(target_id)
 
@@ -168,14 +171,14 @@ def resolve_query_entity_text(
 
 def parse_graph_query(
     query: str,
-    plugin_aliases: dict[str, str],
+    plugin_lookup: PluginLookup,
 ) -> GraphQueryMatch | None:
     """
     Parse a user query into graph intent and a canonical entity.
 
     Args:
         query (str): User query text.
-        plugin_aliases (dict[str, str]): Alias map built from canonical plugin IDs.
+        plugin_lookup (PluginLookup): Canonical plugin lookup built from IDs.
 
     Returns:
         GraphQueryMatch | None: Parsed graph query state when graph retrieval applies.
@@ -184,7 +187,7 @@ def parse_graph_query(
     if not intent:
         return None
 
-    entity_match = resolve_query_entity_text(query, plugin_aliases)
+    entity_match = resolve_query_entity_text(query, plugin_lookup)
     if not entity_match:
         return None
 

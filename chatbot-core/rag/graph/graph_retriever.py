@@ -4,10 +4,9 @@ from pathlib import Path
 
 import networkx as nx
 
-from rag.graph.entity_normalizer import (
+from rag.graph.build_graph_artifacts import (
     DEFAULT_PLUGIN_NAMES_PATH,
-    build_plugin_aliases,
-    load_canonical_plugin_ids,
+    load_plugin_ids,
 )
 from rag.graph.graph_store import DEFAULT_PLUGIN_GRAPH_PATH, load_graph
 from rag.graph.models import GraphEntity, GraphEvidence, GraphRelation, GraphRetrievalResult
@@ -17,6 +16,7 @@ from rag.graph.query_parser import (
     parse_graph_query,
 )
 from rag.graph.schema import GraphEntityType
+from rag.graph.triple_extractor import PluginLookup, build_plugin_lookup
 
 
 def load_plugin_relation_graph(
@@ -38,20 +38,19 @@ def load_plugin_relation_graph(
     return load_graph(str(path), logger)
 
 
-def load_query_plugin_aliases(
+def load_query_plugin_lookup(
     path: Path = DEFAULT_PLUGIN_NAMES_PATH,
-) -> dict[str, str]:
+) -> PluginLookup:
     """
-    Load plugin aliases used for query-time entity matching.
+    Load the canonical plugin lookup used for query-time entity matching.
 
     Args:
         path (Path): Path to the canonical plugin names JSON file.
 
     Returns:
-        dict[str, str]: Alias map for query entity resolution.
+        PluginLookup: Canonical forms mapped to plugin IDs.
     """
-    plugin_ids = load_canonical_plugin_ids(path)
-    return build_plugin_aliases(plugin_ids)
+    return build_plugin_lookup(load_plugin_ids(path))
 
 
 def build_graph_relation(
@@ -202,7 +201,7 @@ def collect_graph_relations(
 
 def retrieve_graph_relations(
     query: str,
-    plugin_aliases: dict[str, str],
+    plugin_lookup: PluginLookup,
     graph: nx.MultiDiGraph,
 ) -> GraphRetrievalResult | None:
     """
@@ -210,13 +209,13 @@ def retrieve_graph_relations(
 
     Args:
         query (str): User query text.
-        plugin_aliases (dict[str, str]): Alias map built from canonical plugin IDs.
+        plugin_lookup (PluginLookup): Canonical plugin lookup built from IDs.
         graph (nx.MultiDiGraph): Loaded plugin relation graph.
 
     Returns:
         GraphRetrievalResult | None: Structured graph retrieval output when matched.
     """
-    query_match = parse_graph_query(query, plugin_aliases)
+    query_match = parse_graph_query(query, plugin_lookup)
     if not query_match:
         return None
 
