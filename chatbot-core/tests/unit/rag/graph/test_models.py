@@ -54,7 +54,6 @@ def test_triple_accepts_valid_payload():
         relation=GraphRelationType.DEPENDS_ON.value,
         target=build_entity("Git plugin", ""),
         evidence=build_evidence(),
-        confidence=0.9,
     )
 
     assert triple.relation == GraphRelationType.DEPENDS_ON.value
@@ -70,7 +69,6 @@ def test_triple_rejects_invalid_relation():
             relation="USES",
             target=build_entity("Git plugin", ""),
             evidence=build_evidence(),
-            confidence=0.9,
         )
 
 
@@ -105,7 +103,6 @@ def test_graph_relation_requires_node_ids():
             relation=GraphRelationType.DEPENDS_ON.value,
             target=build_entity("Git plugin", "git"),
             evidence=build_evidence(),
-            confidence=0.9,
         )
 
 
@@ -118,7 +115,6 @@ def test_retrieval_result_converts_relations_to_tuple():
         relation=GraphRelationType.DEPENDS_ON.value,
         target=build_entity("Git plugin", "git"),
         evidence=build_evidence(),
-        confidence=0.9,
     )
 
     result = GraphRetrievalResult(

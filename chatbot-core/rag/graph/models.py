@@ -3,8 +3,6 @@
 from dataclasses import dataclass, field
 
 from rag.graph.schema import (
-    DEFAULT_MIN_CONFIDENCE,
-    is_valid_confidence,
     is_valid_entity_type,
     is_valid_relation_type,
 )
@@ -25,21 +23,18 @@ def _require_non_empty(value: str, field_name: str) -> None:
         raise ValueError(f"{field_name} must not be empty")
 
 
-def _validate_relation_payload(relation: str, confidence: float) -> None:
+def _validate_relation_payload(relation: str) -> None:
     """
-    Validate relation type and confidence fields shared by graph models.
+    Validate relation type shared by graph models.
 
     Args:
         relation (str): Relation type value.
-        confidence (float): Relation confidence score.
 
     Raises:
-        ValueError: If relation or confidence is invalid.
+        ValueError: If relation is invalid.
     """
     if not is_valid_relation_type(relation):
         raise ValueError(f"invalid relation: {relation}")
-    if not is_valid_confidence(confidence, DEFAULT_MIN_CONFIDENCE):
-        raise ValueError(f"invalid confidence: {confidence}")
 
 
 @dataclass(frozen=True)
@@ -111,23 +106,21 @@ class Triple:
         relation (str): Relation type from the graph schema.
         target (GraphEntity): Target entity in the directed relation.
         evidence (GraphEvidence): Source chunk evidence for the relation.
-        confidence (float): Confidence score for the relation.
     """
 
     source: GraphEntity
     relation: str
     target: GraphEntity
     evidence: GraphEvidence
-    confidence: float
 
     def __post_init__(self) -> None:
         """
         Validate relation fields after dataclass construction.
 
         Raises:
-            ValueError: If relation or confidence is invalid.
+            ValueError: If relation is invalid.
         """
-        _validate_relation_payload(self.relation, self.confidence)
+        _validate_relation_payload(self.relation)
 
 
 @dataclass(frozen=True)
@@ -140,31 +133,29 @@ class GraphRelation:
         relation (str): Relation type from the graph schema.
         target (GraphEntity): Target graph node with a canonical entity ID.
         evidence (GraphEvidence): Source chunk evidence for the relation.
-        confidence (float): Confidence score for the relation.
     """
 
     source: GraphEntity
     relation: str
     target: GraphEntity
     evidence: GraphEvidence
-    confidence: float
 
     def __post_init__(self) -> None:
         """
         Validate graph relation fields after dataclass construction.
 
         Raises:
-            ValueError: If node IDs, relation, or confidence are invalid.
+            ValueError: If node IDs or relation are invalid.
         """
         _require_non_empty(self.source.entity_id, "source.entity_id")
         _require_non_empty(self.target.entity_id, "target.entity_id")
-        _validate_relation_payload(self.relation, self.confidence)
+        _validate_relation_payload(self.relation)
 
 
 @dataclass(frozen=True)
 class GraphRetrievalResult:
     """
-    Result object returned by future graph retrieval code.
+    Result object returned by graph retrieval code.
 
     Args:
         query_entity (str): Entity text detected in the user query.

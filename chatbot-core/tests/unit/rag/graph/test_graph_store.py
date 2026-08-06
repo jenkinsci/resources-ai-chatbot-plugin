@@ -26,7 +26,6 @@ def build_test_graph():
         source_title="Blue Ocean",
         source_data_source="plugins",
         evidence="Blue Ocean depends on Git.",
-        confidence=0.9,
     )
     graph.add_edge(
         "blueocean",
@@ -36,7 +35,6 @@ def build_test_graph():
         source_title="Blue Ocean",
         source_data_source="plugins",
         evidence="Git is optional in this setup.",
-        confidence=0.7,
     )
     return graph
 
