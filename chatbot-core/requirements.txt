@@ -160,7 +160,7 @@ isort==6.0.1
 oneliner_utils==0.1.2
 indxr==0.1.6
 multipipe==0.1.0
-nltk==3.9.2
+nltk==3.10.0
 optuna==4.6.0
 ranx==0.3.21
 Unidecode==1.4.0
