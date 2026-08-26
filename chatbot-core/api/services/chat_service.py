@@ -83,17 +83,21 @@ def get_chatbot_reply(
         raise RuntimeError(
             f"Session '{session_id}' not found in the memory store.")
 
-    context = retrieve_context(user_input)
-    logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
+    query_type = _get_query_type(user_input)
+    if query_type == QueryType.LOG_ANALYSIS:
+        reply = _handle_log_analysis(user_input, memory, files)
+    else:
+        context = retrieve_context(user_input)
+        logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
 
-    # Process file context if files are provided
-    context = _process_file_context(context, files)
+        # Process file context if files are provided
+        context = _process_file_context(context, files)
 
-    prompt = build_prompt(user_input, context, memory)
+        prompt = build_prompt(user_input, context, memory)
 
-    logger.debug("Generating answer with prompt: %s",
-                 _sanitize_log_payload(prompt))
-    reply = generate_answer(prompt)
+        logger.debug("Generating answer with prompt: %s",
+                     _sanitize_log_payload(prompt))
+        reply = generate_answer(prompt)
 
     # Format user message with file info for memory
     user_message = _format_user_message_for_memory(user_input, files)
@@ -553,19 +557,24 @@ async def get_chatbot_reply_stream(
         raise RuntimeError(
             f"Session '{session_id}' not found in memory store.")
 
-    context = retrieve_context(user_input)
-    logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
+    query_type = _get_query_type(user_input)
+    if query_type == QueryType.LOG_ANALYSIS:
+        full_reply = _handle_log_analysis(user_input, memory)
+        yield full_reply
+    else:
+        context = retrieve_context(user_input)
+        logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
 
-    prompt = build_prompt(user_input, context, memory)
-    logger.debug(
-        "Generating streaming answer with prompt: %s",
-        _sanitize_log_payload(prompt)
-    )
+        prompt = build_prompt(user_input, context, memory)
+        logger.debug(
+            "Generating streaming answer with prompt: %s",
+            _sanitize_log_payload(prompt)
+        )
 
-    full_reply = ""
-    async for token in generate_answer_stream(prompt):
-        full_reply += token
-        yield token
+        full_reply = ""
+        async for token in generate_answer_stream(prompt):
+            full_reply += token
+            yield token
 
     memory.chat_memory.add_user_message(user_input)
     memory.chat_memory.add_ai_message(full_reply)
@@ -576,7 +585,7 @@ def _extract_query_type(response: str) -> str:
     Extracts 'SIMPLE' or 'MULTI' from the response if present, else returns an empty string.
     The search is case-insensitive, and the result is returned in uppercase.
     """
-    match = re.search(r"\b(SIMPLE|MULTI)\b", response, re.IGNORECASE)
+    match = re.search(r"\b(SIMPLE|MULTI|LOG_ANALYSIS)\b", response, re.IGNORECASE)
     if match:
         return match.group(1).upper()
 
@@ -605,10 +614,54 @@ def _generate_search_query_from_logs(log_text: str) -> str:
     Uses the LLM to extract a concise error signature from the logs
     to use as a search query for the vector database.
     """
-    # Use .format() directly since we are using generate_answer
     prompt = LOG_SUMMARY_PROMPT.format(log_data=log_text)
-
-    # Generate response using the existing function in this file
     search_query = generate_answer(prompt)
-
     return search_query.strip()
+
+
+def _handle_log_analysis(user_input: str, memory, files: Optional[List[FileAttachment]] = None) -> str:
+    """
+    Handles LOG_ANALYSIS queries.
+    """
+    from api.services.jenkins_service import fetch_build_log
+    from api.prompts.prompts import LOG_ANALYSIS_INSTRUCTION
+
+    # Check for build number
+    build_match = re.search(r'#(\d+)', user_input)
+    log_text = ""
+    
+    if build_match:
+        build_num = build_match.group(1)
+        logger.info("Detected build number %s, fetching from Jenkins...", build_num)
+        fetched_log = fetch_build_log(build_num)
+        if fetched_log:
+            log_text = fetched_log
+            logger.info("Successfully fetched log for build %s", build_num)
+        else:
+            log_text = user_input
+            logger.warning("Could not fetch log for build %s, using user input.", build_num)
+    else:
+        log_text = user_input
+
+    # Append file contents if available
+    if files:
+        file_dicts = [file.model_dump() for file in files]
+        file_context = format_file_context(file_dicts)
+        if file_context:
+            log_text += f"\n\n[Attached Logs]\n{file_context}"
+
+    # Generate search signature
+    search_query = _generate_search_query_from_logs(log_text[:5000]) # Avoid token limit for summary
+    logger.debug("Generated search query for logs: %s", search_query)
+
+    # Retrieve context
+    context = retrieve_context(search_query)
+
+    # Build prompt
+    prompt = f"{LOG_ANALYSIS_INSTRUCTION}\n\n"
+    if context:
+        prompt += f"Context:\n{context}\n\n"
+    prompt += f"User-Provided Log Data:\n{log_text[-10000:]}" # Send last 10k chars
+
+    reply = generate_answer(prompt)
+    return reply

@@ -163,10 +163,12 @@ class QueryType(Enum):
     """
     Enum that represents the possible query types:
         - MULTI  -> Represents a multi-question query.
-        - SIMPLE -> Represents a single scope query.
+        - SIMPLE -> Represents a single question query.
+        - LOG_ANALYSIS -> Represents a query that involves analyzing a build log.
     """
-    MULTI = 'MULTI'
-    SIMPLE = 'SIMPLE'
+    MULTI = "MULTI"
+    SIMPLE = "SIMPLE"
+    LOG_ANALYSIS = "LOG_ANALYSIS"
 
 def is_valid_query_type(input_str: str) -> bool:
     """

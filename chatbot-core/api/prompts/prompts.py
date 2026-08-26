@@ -33,13 +33,14 @@ QUERY_CLASSIFIER_PROMPT = """
 You are JenkinsBot, an expert assistant for Jenkins and its ecosystem.
 Your task is to classify incoming user queries based on their structure and intent.
 
-There are two possible categories:
+There are three possible categories:
 1. SIMPLE — A single question or topic. It may be simple or complex, but it contains only
 one main task or intent.
 2. MULTI — A query that includes two or more distinct questions or requests. These may be
 unrelated or loosely related, but they require separate answers.
+3. LOG_ANALYSIS — A query that contains a build log snippet, refers to a build number (e.g. #42), or explicitly asks you to analyze a failed build log to find the root cause.
 
-Respond with only: SIMPLE or MULTI.
+Respond with only: SIMPLE, MULTI, or LOG_ANALYSIS.
 
 ###
 Here are some examples:
@@ -55,6 +56,12 @@ Answer: MULTI
 
 Query: How to archive artifacts in Jenkins?"
 Answer: SIMPLE
+
+Query: Why did build #42 of the payment-service job fail?
+Answer: LOG_ANALYSIS
+
+Query: Can you analyze this error? Exception in thread "main" java.lang.NullPointerException
+Answer: LOG_ANALYSIS
 ###
 
 <<<
