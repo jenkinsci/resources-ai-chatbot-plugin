@@ -23,13 +23,13 @@ describe("storageUtils", () => {
   ];
 
   beforeEach(() => {
-    sessionStorage.clear();
+    localStorage.clear();
     jest.clearAllMocks();
   });
 
   describe("loadChatbotSessions", () => {
     it("returns parsed sessions when data exists and is valid", () => {
-      sessionStorage.setItem("chatbot-sessions", JSON.stringify(mockSessions));
+      localStorage.setItem("chatbot-sessions", JSON.stringify(mockSessions));
       const result = loadChatbotSessions();
       expect(result).toEqual(mockSessions);
     });
@@ -40,7 +40,7 @@ describe("storageUtils", () => {
     });
 
     it("returns empty array when data is invalid JSON", () => {
-      sessionStorage.setItem("chatbot-sessions", "not-json");
+      localStorage.setItem("chatbot-sessions", "not-json");
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
       const result = loadChatbotSessions();
       expect(result).toEqual([]);
@@ -60,7 +60,7 @@ describe("storageUtils", () => {
         },
       ]);
 
-      sessionStorage.setItem("chatbot-sessions", invalidSessions);
+      localStorage.setItem("chatbot-sessions", invalidSessions);
 
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
       const result = loadChatbotSessions();
@@ -75,13 +75,13 @@ describe("storageUtils", () => {
     });
 
     it("returns empty array when saved data is an empty string", () => {
-      sessionStorage.setItem("chatbot-sessions", "");
+      localStorage.setItem("chatbot-sessions", "");
       const result = loadChatbotSessions();
       expect(result).toEqual([]);
     });
 
     it("returns empty array when saved data is an empty array", () => {
-      sessionStorage.setItem("chatbot-sessions", "[]");
+      localStorage.setItem("chatbot-sessions", "[]");
       const result = loadChatbotSessions();
       expect(result).toEqual([]);
     });
@@ -89,16 +89,16 @@ describe("storageUtils", () => {
 
   describe("loadChatbotLastSessionId", () => {
     it("returns the last session ID if it exists and matches a session", () => {
-      sessionStorage.setItem("chatbot-sessions", JSON.stringify(mockSessions));
-      sessionStorage.setItem("chatbot-last-session-id", "session-2");
+      localStorage.setItem("chatbot-sessions", JSON.stringify(mockSessions));
+      localStorage.setItem("chatbot-last-session-id", "session-2");
       const result = loadChatbotLastSessionId();
       expect(result).toBe("session-2");
     });
 
     it("returns the first session ID if the last session ID does not match", () => {
       const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
-      sessionStorage.setItem("chatbot-sessions", JSON.stringify(mockSessions));
-      sessionStorage.setItem("chatbot-last-session-id", "non-existent-id");
+      localStorage.setItem("chatbot-sessions", JSON.stringify(mockSessions));
+      localStorage.setItem("chatbot-last-session-id", "non-existent-id");
       const result = loadChatbotLastSessionId();
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         "No last session id found: setting the current session to the first item.",
@@ -108,7 +108,7 @@ describe("storageUtils", () => {
 
     it("returns the first session ID if no last session ID is stored", () => {
       const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
-      sessionStorage.setItem("chatbot-sessions", JSON.stringify(mockSessions));
+      localStorage.setItem("chatbot-sessions", JSON.stringify(mockSessions));
       const result = loadChatbotLastSessionId();
       expect(consoleWarnSpy).toHaveBeenCalled();
       expect(result).toBe("session-1");

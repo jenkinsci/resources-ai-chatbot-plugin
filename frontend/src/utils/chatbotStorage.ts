@@ -1,16 +1,16 @@
 import { type ChatSession, isChatSession } from "../model/ChatSession";
 
 /**
- * Loads the saved chatbot sessions from sessionStorage.
+ * Loads the saved chatbot sessions from localStorage.
  *
  * This function attempts to retrieve and parse the serialized chat sessions
- * stored under the 'chatbot-sessions' key in sessionStorage.
+ * stored under the 'chatbot-sessions' key in localStorage.
  * If the data is invalid, not present, or contains invalid session objects, it returns an empty array.
  *
  * @returns {ChatSession[]} An array of chat sessions, or an empty array if none are found or parsing fails.
  */
 export const loadChatbotSessions = (): ChatSession[] => {
-  const saved = sessionStorage.getItem("chatbot-sessions");
+  const saved = localStorage.getItem("chatbot-sessions");
   if (saved && saved.length > 0) {
     try {
       const parsed = JSON.parse(saved);
@@ -28,7 +28,7 @@ export const loadChatbotSessions = (): ChatSession[] => {
 };
 
 /**
- * Retrieves the ID of the last active chatbot session from sessionStorage.
+ * Retrieves the ID of the last active chatbot session from localStorage.
  *
  * This function reads the 'chatbot-last-session-id' value and validates that it
  * corresponds to an existing session. If it's valid, the ID is returned.
@@ -40,7 +40,7 @@ export const loadChatbotSessions = (): ChatSession[] => {
 export const loadChatbotLastSessionId = (): string | null => {
   const sessions: ChatSession[] = loadChatbotSessions();
   if (sessions && sessions.length > 0) {
-    const lastSessionId = sessionStorage.getItem("chatbot-last-session-id");
+    const lastSessionId = localStorage.getItem("chatbot-last-session-id");
 
     if (
       lastSessionId &&
