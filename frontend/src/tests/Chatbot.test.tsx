@@ -1,7 +1,14 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import { Chatbot } from "../components/Chatbot";
 import * as chatbotApi from "../api/chatbot";
 import { getChatbotText } from "../data/chatbotTexts";
+import * as contextObserver from "../utils/useContextObserver";
 import type { SidebarProps } from "../components/Sidebar";
 import type { HeaderProps } from "../components/Header";
 import type { InputProps } from "../components/Input";
@@ -18,6 +25,7 @@ jest.mock("../api/chatbot", () => ({
     sender: "jenkins-bot",
     text: "Bot reply with files",
   }),
+  fetchLogPreview: jest.fn().mockResolvedValue("sanitized build log"),
   createChatSession: jest.fn().mockResolvedValue("new-session-id"),
   deleteChatSession: jest.fn().mockResolvedValue(undefined),
   fetchSupportedExtensions: jest.fn().mockResolvedValue(null),
@@ -28,6 +36,10 @@ jest.mock("../api/chatbot", () => ({
     size: 100,
     mimeType: "text/plain",
   }),
+}));
+
+jest.mock("../utils/useContextObserver", () => ({
+  useContextObserver: jest.fn(),
 }));
 
 jest.mock("uuid", () => ({
@@ -62,8 +74,22 @@ jest.mock("../components/Header", () => ({
 }));
 
 jest.mock("../components/Input", () => ({
-  Input: ({ setInput, onSend }: InputProps) => (
+  Input: ({
+    input,
+    setInput,
+    onSend,
+    showBuildFailureAction,
+    onAnalyzeBuild,
+  }: InputProps) => (
     <div data-testid="input">
+      {showBuildFailureAction && onAnalyzeBuild && (
+        <button onClick={onAnalyzeBuild}>Analyze build failure</button>
+      )}
+      <textarea
+        aria-label="chat-input"
+        value={input}
+        onChange={(event) => setInput(event.target.value)}
+      />
       <button onClick={() => setInput("Hello bot")}>Set Input</button>
       <button onClick={onSend}>Send Message</button>
     </div>
@@ -82,6 +108,12 @@ describe("Chatbot component", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
+    (contextObserver.useContextObserver as jest.Mock).mockReturnValue({
+      buildFailed: false,
+      buildContext: null,
+      showToast: false,
+      setShowToast: jest.fn(),
+    });
   });
 
   it("renders toggle button", () => {
@@ -188,6 +220,71 @@ describe("Chatbot component", () => {
         expect.anything(),
       );
     });
+  });
+
+  it("does not send deleted build logs from pending context", async () => {
+    jest.useFakeTimers();
+    sessionStorage.setItem(
+      "chatbot-sessions",
+      JSON.stringify([
+        {
+          id: "session-1",
+          messages: [],
+          createdAt: "2024-01-01",
+          isLoading: false,
+          loadingStatus: null,
+        },
+      ]),
+    );
+    sessionStorage.setItem("chatbot-last-session-id", "session-1");
+    (contextObserver.useContextObserver as jest.Mock).mockReturnValue({
+      buildFailed: true,
+      buildContext: {
+        buildNumber: 42,
+        displayName: "example #42",
+      },
+      showToast: false,
+      setShowToast: jest.fn(),
+    });
+    const consoleOutput = document.createElement("pre");
+    consoleOutput.className = "console-output";
+    consoleOutput.textContent = "raw Jenkins failure log";
+    document.body.appendChild(consoleOutput);
+
+    render(<Chatbot />);
+    fireEvent.click(
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+    );
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+    jest.useRealTimers();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: getChatbotText("analyzeCurrentBuild"),
+      }),
+    );
+
+    const input = await screen.findByRole("textbox", { name: "chat-input" });
+    await waitFor(() =>
+      expect(input).toHaveValue(
+        "Analyze this Jenkins Build Failure.\n\nsanitized build log",
+      ),
+    );
+
+    fireEvent.change(input, {
+      target: { value: "Analyze this Jenkins Build Failure." },
+    });
+    fireEvent.click(screen.getByText("Send Message"));
+
+    await waitFor(() =>
+      expect(chatbotApi.fetchChatbotReply).toHaveBeenCalledWith(
+        "session-1",
+        "Analyze this Jenkins Build Failure.\nBuild #42 (example #42)",
+        expect.anything(),
+      ),
+    );
+    expect(chatbotApi.fetchChatbotReplyWithFiles).not.toHaveBeenCalled();
   });
 
   it("persists sessions on unmount", () => {

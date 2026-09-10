@@ -46,7 +46,6 @@ def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chat
     assert args[2][0].filename == "script.py"
     assert "print('Hello, World!')" in args[2][0].content
 
-
 def test_chatbot_reply_with_files_persists_session(
     client, mock_session_exists, mock_get_chatbot_reply
 ):

@@ -106,10 +106,14 @@ def mock_embed_documents(mocker):
 
 @pytest.fixture
 def patched_chunk_files(mocker):
-    """Fixture to patch CHUNK_FILES."""
+    """Patch source chunk file mappings."""
     return mocker.patch(
-        "rag.embedding.embed_chunks.CHUNK_FILES",
-        ["file1.json", "file2.json", "file3.json"]
+        "rag.embedding.embed_chunks.SOURCE_CHUNK_FILES",
+        {
+            "source1": "file1.json",
+            "source2": "file2.json",
+            "source3": "file3.json",
+        }
     )
 
 @pytest.fixture

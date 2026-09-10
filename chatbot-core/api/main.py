@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from api.routes import chatbot
 from api.config.loader import CONFIG
 from api.services.memory import cleanup_expired_sessions, reload_persisted_sessions
+from rag.graph.build_graph_artifacts import refresh_graph_if_stale
 from utils import LoggerFactory
 
 logger = LoggerFactory.get_logger(__name__)
@@ -43,6 +44,8 @@ async def lifespan(app_instance: FastAPI):  # pylint: disable=unused-argument
     """
     loaded = reload_persisted_sessions()
     logger.info("Restored %s persisted session(s) from disk", loaded)
+
+    refresh_graph_if_stale(logger)
 
     # Startup: Create the cleanup task
     cleanup_task = asyncio.create_task(periodic_session_cleanup())

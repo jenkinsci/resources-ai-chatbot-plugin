@@ -1,4 +1,6 @@
-.PHONY: all api setup-backend build-frontend test run-data-pipeline clean
+.PHONY: all api setup-backend build-frontend test run-data-pipeline clean \
+	run-data-storage run-data-storage-plugins run-data-storage-docs run-data-storage-discourse \
+	run-data-graph run-data-graph-plugins
 
 BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate && export PYTHONPATH=$$(pwd)
 
@@ -126,15 +128,39 @@ run-data-chunking-stack: setup-backend
 
 run-data-chunking: run-data-chunking-docs run-data-chunking-plugins run-data-chunking-discourse run-data-chunking-stack
 
-## EMBEDDING & STORAGE
+## GRAPH ARTIFACTS
 
-run-data-storage: setup-backend
+run-data-graph-plugins: setup-backend
 	@$(BACKEND_SHELL) && \
-	echo "### EMBEDDING AND STORING THE CHUNKS ###" && \
-	python3 rag/vectorstore/store_embeddings.py
+	echo "### BUILDING GRAPHRAG PLUGIN GRAPH ARTIFACTS ###" && \
+	python3 rag/graph/build_graph_artifacts.py
+
+run-data-graph: run-data-graph-plugins
+
+## EMBEDDING & STORAGE
+# One FAISS index per source — file naming ({source}_index.idx / {source}_metadata.pkl)
+# matches what rag/retriever/retriever_utils.load_vector_index expects and the
+# tool_names values in api/config/config.yml.
+
+run-data-storage-plugins: setup-backend
+	@$(BACKEND_SHELL) && \
+	echo "### EMBEDDING AND STORING PLUGIN CHUNKS ###" && \
+	python3 rag/vectorstore/store_embeddings.py --source plugins
+
+run-data-storage-docs: setup-backend
+	@$(BACKEND_SHELL) && \
+	echo "### EMBEDDING AND STORING JENKINS DOCS CHUNKS ###" && \
+	python3 rag/vectorstore/store_embeddings.py --source docs
+
+run-data-storage-discourse: setup-backend
+	@$(BACKEND_SHELL) && \
+	echo "### EMBEDDING AND STORING DISCOURSE CHUNKS ###" && \
+	python3 rag/vectorstore/store_embeddings.py --source discourse
+
+run-data-storage: run-data-storage-plugins run-data-storage-docs run-data-storage-discourse
 
 
-run-pipeline-core: run-data-collection run-data-preprocessing run-data-chunking run-data-storage
+run-pipeline-core: run-data-collection run-data-preprocessing run-data-chunking run-data-graph run-data-storage
 
 run-data-pipeline:
 	@echo "Logging data pipeline to logs/data-pipeline.log"

@@ -23,6 +23,19 @@ def test_chatbot_reply_success(client, mock_session_exists, mock_get_chatbot_rep
     assert response.json() == {"reply": "This is a valid response"}
 
 
+def test_log_preview_extracts_and_sanitizes_console_output(client):
+    """Preview endpoint returns relevant output with secrets redacted."""
+    response = client.post(
+        "/log-preview",
+        json={
+            "log_text": "PASSWORD=raw-secret\n[ERROR] deployment failed",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "PASSWORD=[REDACTED]" in response.json()["preview"]
+    assert "[ERROR] deployment failed" in response.json()["preview"]
+
 def test_chatbot_reply_invalid_session(client, mock_session_exists):
     """Testing that sending a message to an invalid session returns 404."""
     mock_session_exists.return_value = False

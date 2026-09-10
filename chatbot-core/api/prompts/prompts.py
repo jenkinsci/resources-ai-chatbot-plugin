@@ -29,6 +29,12 @@ Be accurate, helpful, and concise.
 """
 
 
+GRAPH_QUERY_INSTRUCTION = """
+
+Answer the relationship question directly from the graph facts. Keep the answer concise, preserve required versus optional dependencies, and do not repeat evidence, source IDs, or unsupported details.
+"""
+
+
 QUERY_CLASSIFIER_PROMPT = """
 You are JenkinsBot, an expert assistant for Jenkins and its ecosystem.
 Your task is to classify incoming user queries based on their structure and intent.

@@ -21,6 +21,7 @@ from api.prompts.prompts import (
 
 from api.services.memory import get_session, get_session_async
 from api.services.file_service import format_file_context
+from api.tools.log_parser import extract_relevant_log_lines
 from api.tools.sanitizer import sanitize_logs
 from api.tools.tools import TOOL_REGISTRY
 from api.tools.utils import (
@@ -28,6 +29,11 @@ from api.tools.utils import (
     make_placeholder_replacer,
     validate_tool_calls,
 )
+try:
+    from rag.graph.runtime_context import build_graph_runtime_context
+except ImportError:
+    build_graph_runtime_context = None
+
 from rag.retriever.retrieve import get_relevant_documents
 from utils import LoggerFactory
 
@@ -35,12 +41,11 @@ logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
 retrieval_config = CONFIG["retrieval"]
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
-
-LOG_ANALYSIS_PATTERN = re.compile(
-    r"Here are the last \d+ characters of the log:\s*```\s*(.*?)\s*```\s*(.*)",
-    re.DOTALL
-)
-
+SOURCE_TOP_K_CONFIG_KEYS = {
+    "plugins": "top_k_plugins",
+    "docs": "top_k_docs",
+    "discourse": "top_k_discourse",
+}
 
 def _sanitize_log_payload(payload: object) -> str:
     """
@@ -84,7 +89,11 @@ def get_chatbot_reply(
     # Process file context if files are provided
     context = _process_file_context(context, files)
 
-    prompt = build_prompt(user_input, context, memory)
+    prompt = build_prompt(
+        user_input,
+        context,
+        memory,
+    )
 
     logger.debug("Generating answer with prompt: %s",
                  _sanitize_log_payload(prompt))
@@ -97,6 +106,29 @@ def get_chatbot_reply(
     memory.chat_memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)
+
+
+def prepare_log_context(log_text: str) -> str:
+    """
+    Extract and sanitize relevant build-log lines for display and diagnosis.
+
+    Args:
+        log_text (str): Raw Jenkins build log text.
+
+    Returns:
+        str: Sanitized relevant log excerpt, or an empty string.
+    """
+    if not log_text or not log_text.strip():
+        return ""
+
+    relevant_log = extract_relevant_log_lines(log_text)
+    sanitized_log = sanitize_logs(relevant_log)
+    logger.info(
+        "Prepared build log context: raw=%d chars, sanitized excerpt=%d chars",
+        len(log_text),
+        len(sanitized_log),
+    )
+    return sanitized_log
 
 
 def _process_file_context(context: str, files: Optional[List[FileAttachment]]) -> str:
@@ -392,8 +424,9 @@ def _get_query_context_relevance(query: str, context: str) -> int:
 # pylint: disable=duplicate-code
 def retrieve_context(user_input: str) -> str:
     """
-    Retrieves the most relevant document chunks for a user query
-    and reconstructs them by replacing placeholder tokens with actual code blocks.
+    Retrieves the most relevant document chunks for a user query across every
+    configured source (plugins, jenkins docs, community threads, ...) and
+    reconstructs them by replacing placeholder tokens with actual code blocks.
 
     Args:
         user_input (str): The input query string.
@@ -408,38 +441,62 @@ def retrieve_context(user_input: str) -> str:
             "Dev mode enabled - skipping RAG retrieval. Build indices to enable full RAG.")
         return "Dev mode: RAG indices not built. This is a placeholder context for testing."
 
-    data_retrieved, _ = get_relevant_documents(
-        user_input,
-        EMBEDDING_MODEL,
-        logger=logger,
-        source_name="plugins",
-        top_k=retrieval_config["top_k"]
-    )
-    if not data_retrieved:
-        logger.warning(retrieval_config["empty_context_message"])
-        return "No context available."
+    # Pull the same set of sources the new-architecture tools use.
+    tool_names = CONFIG.get("tool_names")
+    if not isinstance(tool_names, dict) or not tool_names:
+        raise ValueError("tool_names missing from config")
+
+    source_names = list(tool_names.values())
 
     context_texts = []
-    for item in data_retrieved:
-        item_id = item.get("id", "")
-        text = item.get("chunk_text", "")
-        if not item_id:
-            logger.warning(
-                "Id of retrieved context not found. Skipping element.")
+    for source_name in source_names:
+        top_k_config_key = SOURCE_TOP_K_CONFIG_KEYS.get(
+            source_name, "top_k")
+        top_k = retrieval_config[top_k_config_key]
+        data_retrieved, _ = get_relevant_documents(
+            user_input,
+            EMBEDDING_MODEL,
+            logger=logger,
+            source_name=source_name,
+            top_k=top_k,
+        )
+        if not data_retrieved:
+            logger.info("No relevant chunks from source '%s'.", source_name)
             continue
-        if text:
+
+        for item in data_retrieved:
+            item_id = item.get("id", "")
+            if not item_id:
+                logger.warning(
+                    "Id of retrieved context not found in source '%s'. Skipping element.",
+                    source_name,
+                )
+                continue
+            text = item.get("chunk_text", "")
+            if not text:
+                logger.warning(
+                    "Text of chunk with ID %s (source '%s') is missing",
+                    item_id, source_name,
+                )
+                continue
+
             code_iter = iter(item.get("code_blocks", []))
             replace = make_placeholder_replacer(code_iter, item_id, logger)
             text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
+            context_texts.append(f"[Source: {source_name}]\n{text}")
 
-            context_texts.append(text)
-        else:
-            logger.warning("Text of chunk with ID %s is missing", item_id)
-    return (
-        "\n\n".join(context_texts)
-        if context_texts
-        else retrieval_config["empty_context_message"]
-    )
+    if build_graph_runtime_context is None:
+        logger.warning("GraphRAG is unavailable; using semantic retrieval only.")
+    else:
+        graph_context = build_graph_runtime_context(user_input, logger)
+        if graph_context:
+            context_texts.append(graph_context)
+
+    if not context_texts:
+        logger.warning(retrieval_config["empty_context_message"])
+        return retrieval_config["empty_context_message"]
+
+    return "\n\n".join(context_texts)
 
 
 def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
@@ -457,8 +514,9 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
             "LLM provider not available - returning fallback response")
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     try:
+        sanitized_prompt = sanitize_logs(prompt)
         return llm_provider.generate(
-            prompt=prompt,
+            prompt=sanitized_prompt,
             max_tokens=max_tokens or llm_config["max_tokens"])
     except (ImportError, AttributeError) as e:
         logger.error("LLM provider unavailable: %s", e)
@@ -495,8 +553,9 @@ async def generate_answer_stream(
         yield "LLM is not available. Please install llama-cpp-python and configure a model."
         return
     try:
+        sanitized_prompt = sanitize_logs(prompt)
         async for token in llm_provider.generate_stream(
-            prompt=prompt,
+            prompt=sanitized_prompt,
             max_tokens=max_tokens or llm_config["max_tokens"]
         ):
             yield token

@@ -12,6 +12,10 @@ from api.tools.utils import (
     extract_top_chunks
 )
 from api.config.loader import CONFIG
+try:
+    from rag.graph.runtime_context import build_graph_runtime_context
+except ImportError:
+    build_graph_runtime_context = None
 
 retrieval_config = CONFIG["retrieval"]
 
@@ -28,6 +32,13 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
     Returns:
         str: The result of the research of the plugin search tool.
     """
+    if build_graph_runtime_context is None:
+        logger.warning("GraphRAG is unavailable; using semantic retrieval only.")
+    else:
+        graph_context = build_graph_runtime_context(query, logger)
+        if graph_context:
+            return graph_context
+
     source_name = CONFIG["tool_names"]["plugins"]
     data_retrieved_semantic, scores_semantic, data_retrieved_keyword, scores_keyword = (
         retrieve_documents(
@@ -46,7 +57,7 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
             plugin_name
         )
 
-    return extract_top_chunks(
+    plugin_context = extract_top_chunks(
         data_retrieved_semantic,
         scores_semantic,
         data_retrieved_keyword,
@@ -54,6 +65,7 @@ def search_plugin_docs(query: str, keywords: str, logger, plugin_name: Optional[
         top_k=retrieval_config["top_k_plugins"],
         logger=logger
     )
+    return plugin_context or retrieval_config["empty_context_message"]
 
 def search_jenkins_docs(query: str, keywords: str, logger) -> str:
     """

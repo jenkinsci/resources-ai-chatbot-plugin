@@ -7,6 +7,7 @@ import {
   File,
   Send,
   CircleStop,
+  Wrench,
 } from "lucide-react";
 
 /**
@@ -30,6 +31,10 @@ export interface InputProps {
   isLoading?: boolean;
   /** Optional: cancel the in-flight message */
   onCancel?: () => void;
+  /** Optional: show the build-failure analysis action above the composer */
+  showBuildFailureAction?: boolean;
+  /** Optional: start analysis for the current Jenkins build */
+  onAnalyzeBuild?: () => void;
 }
 
 /**
@@ -48,6 +53,8 @@ export const Input = ({
   validateFile,
   isLoading = false,
   onCancel,
+  showBuildFailureAction = false,
+  onAnalyzeBuild,
 }: InputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -115,6 +122,40 @@ export const Input = ({
 
   return (
     <div style={chatbotStyles.inputWrapper}>
+      {showBuildFailureAction && onAnalyzeBuild && (
+        <div style={chatbotStyles.buildFailureActionBar}>
+          <button
+            type="button"
+            style={chatbotStyles.analyzeBuildButton}
+            onClick={onAnalyzeBuild}
+            onFocus={(event) => {
+              event.currentTarget.style.outline =
+                "2px solid rgba(11, 102, 212, 0.3)";
+              event.currentTarget.style.outlineOffset = "2px";
+            }}
+            onBlur={(event) => {
+              event.currentTarget.style.outline = "none";
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.backgroundColor = "#e2edf9";
+            }}
+            onMouseDown={(event) => {
+              event.currentTarget.style.transform = "translateY(1px)";
+            }}
+            onMouseUp={(event) => {
+              event.currentTarget.style.transform = "translateY(0)";
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = "#eef4fb";
+              event.currentTarget.style.transform = "translateY(0)";
+            }}
+            title={getChatbotText("analyzeCurrentBuild")}
+          >
+            <Wrench size={15} strokeWidth={2} aria-hidden="true" />
+            <span>{getChatbotText("analyzeCurrentBuild")}</span>
+          </button>
+        </div>
+      )}
       {/* Attached files preview */}
       {attachedFiles.length > 0 && (
         <div style={chatbotStyles.attachedFilesContainer}>

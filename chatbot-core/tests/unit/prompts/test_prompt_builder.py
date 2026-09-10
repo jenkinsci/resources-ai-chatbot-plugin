@@ -2,7 +2,7 @@
 
 from langchain.memory import ConversationBufferMemory
 from api.prompts.prompt_builder import build_prompt, SYSTEM_INSTRUCTION
-from api.prompts.prompts import LOG_ANALYSIS_INSTRUCTION
+from api.prompts.prompts import GRAPH_QUERY_INSTRUCTION, LOG_ANALYSIS_INSTRUCTION
 
 
 def test_build_prompt_with_full_history_and_context():
@@ -43,6 +43,30 @@ def test_build_prompt_with_empty_history():
     assert history_section.strip() == ""
     assert user_query in question_section
     assert context in context_section
+
+
+def test_build_prompt_adds_graph_instruction_for_graph_context():
+    """Test that graph context enables graph-specific response guidance."""
+    context = "[Source: plugin_relation_graph]\ngit DEPENDS_ON credentials."
+
+    prompt = build_prompt("What does git depend on?", context, memory=None)
+
+    assert GRAPH_QUERY_INSTRUCTION.strip() in prompt
+
+
+def test_build_prompt_keeps_graph_instruction_out_of_log_analysis():
+    """Test that log analysis remains the only specialized prompt mode."""
+    context = "[Source: plugin_relation_graph]\ngit DEPENDS_ON credentials."
+
+    prompt = build_prompt(
+        "Why did my build fail?",
+        context,
+        memory=None,
+        log_context="ERROR: build failed",
+    )
+
+    assert LOG_ANALYSIS_INSTRUCTION.strip() in prompt
+    assert GRAPH_QUERY_INSTRUCTION.strip() not in prompt
 
 
 def test_build_prompt_with_no_context_and_whitespace_query():

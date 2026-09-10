@@ -36,6 +36,8 @@ from fastapi import (
 from api.models.schemas import (
     ChatRequest,
     ChatResponse,
+    LogPreviewRequest,
+    LogPreviewResponse,
     DeleteResponse,
     MessageHistoryResponse,
     SessionResponse,
@@ -45,6 +47,7 @@ from api.models.schemas import (
 from api.services.chat_service import (
     get_chatbot_reply,
     get_chatbot_reply_stream,
+    prepare_log_context,
 )
 from api.services.memory import (
     delete_session,
@@ -61,6 +64,7 @@ from api.services.file_service import (
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+DEFAULT_LOG_ANALYSIS_MESSAGE = "Analyze the provided failed Jenkins build logs."
 
 # --- Optional dependency checks (feature flags) ---
 LLM_AVAILABLE = False  # pylint: disable=invalid-name
@@ -78,6 +82,12 @@ except ImportError:
     logger.warning("Retrieval not available - limited functionality")
 
 router = APIRouter()
+
+
+@router.post("/log-preview", response_model=LogPreviewResponse)
+def log_preview(request: LogPreviewRequest) -> LogPreviewResponse:
+    """Extract and sanitize Jenkins output without invoking the LLM."""
+    return LogPreviewResponse(preview=prepare_log_context(request.log_text))
 
 
 # =========================
@@ -273,7 +283,8 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
             status_code=404,
             detail="Session not found.",
         )
-    reply =  get_chatbot_reply(session_id, request.message)
+    message = request.message.strip() or DEFAULT_LOG_ANALYSIS_MESSAGE
+    reply = get_chatbot_reply(session_id, message)
     _background_tasks.add_task(
         persist_session,
         session_id,

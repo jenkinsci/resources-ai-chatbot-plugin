@@ -65,13 +65,12 @@ def test_embed_chunks_skips_invalid_chunks(mocker):
 
 def test_collect_all_chunks_with_custom_files(mocker):
     """Testing that collect_all_chunks aggregates chunks and logs warnings for empty files."""
-    patched_chunk_files = mocker.patch(
-        "rag.embedding.embed_chunks.CHUNK_FILES",
-        ["file1.json", "file2.json", "file3.json"]
-    )
-    mock_load_chunks_from_file = mocker.patch("rag.embedding.embed_chunks.load_chunks_from_file")
+    chunk_files = ["file1.json", "file2.json", "file3.json"]
 
-    _ = patched_chunk_files
+    mock_load_chunks_from_file = mocker.patch(
+        "rag.embedding.embed_chunks.load_chunks_from_file"
+    )
+
     mock_load_chunks_from_file.side_effect = [
         get_mock_chunks("valid"),
         get_mock_chunks("invalid"),
@@ -80,9 +79,12 @@ def test_collect_all_chunks_with_custom_files(mocker):
 
     mock_logger = mocker.Mock()
 
-    chunks = collect_all_chunks(mock_logger)
+    chunks = collect_all_chunks(mock_logger, chunk_files)
 
-    assert len(chunks) == (len(get_mock_chunks("valid")) + len(get_mock_chunks("invalid")))
+    assert len(chunks) == (
+        len(get_mock_chunks("valid"))
+        + len(get_mock_chunks("invalid"))
+    )
     assert mock_load_chunks_from_file.call_count == 3
     mock_logger.warning.assert_called_once_with(
         "No chunks available from %s.", "file3.json"

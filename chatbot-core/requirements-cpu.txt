@@ -1,6 +1,6 @@
 # Core API Dependencies
 fastapi==0.115.12
-pydantic==2.12.5
+pydantic==2.13.5
 uvicorn[standard]==0.34.3
 starlette==0.46.2
 
@@ -66,7 +66,7 @@ jsonpointer==3.0.0
 kiwisolver==1.4.8
 orjson==3.10.18
 packaging==24.2
-pillow==11.2.1
+pillow==12.3.0
 platformdirs==4.3.8
 pyparsing==3.2.3
 pytz==2025.2
@@ -107,13 +107,13 @@ oneliner_utils==0.1.2
 # Additional retriv dependencies (vendored retriv package)
 indxr==0.1.6
 multipipe==0.1.0
-nltk==3.9.2
+nltk==3.10.0
 optuna==4.6.0
 ranx==0.3.21
 Unidecode==1.4.0
 
 # Web Scraping
-beautifulsoup4==4.13.4
+beautifulsoup4==4.15.0
 lxml==6.0.2
 soupsieve==2.7
 

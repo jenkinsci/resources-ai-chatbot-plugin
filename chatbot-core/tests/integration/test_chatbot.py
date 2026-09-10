@@ -115,11 +115,7 @@ def test_multiple_messages_in_session(client, mock_llm_provider, mock_get_releva
     mock_llm_provider.generate.side_effect = [
         "Reply 1", "Reply 2", "Reply 3"
     ]
-    mock_get_relevant_documents.side_effect = [
-        get_relevant_documents_output(),
-        get_relevant_documents_output(),
-        get_relevant_documents_output()
-    ]
+    mock_get_relevant_documents.return_value = get_relevant_documents_output()
     session_id = client.post("/sessions").json()["session_id"]
     for i in range(3):
         resp = client.post(f"/sessions/{session_id}/message", json={"message": f"Msg {i+1}"})

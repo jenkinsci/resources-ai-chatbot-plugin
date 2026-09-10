@@ -10,12 +10,14 @@ from .embedding_utils import load_embedding_model, embed_documents
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROCESSED_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "processed")
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-CHUNK_FILES = [
-    #"chunks_docs.json",
-    "chunks_plugin_docs.json",
-    #"chunks_discourse_docs.json",
-    #"chunks_stackoverflow_threads.json"
-]
+
+# Maps a source_name (matching CONFIG["tool_names"] values and the
+# {source_name}_index.idx files the retriever expects) to its chunk JSON file.
+SOURCE_CHUNK_FILES = {
+    "plugins": "chunks_plugin_docs.json",
+    "docs": "chunks_docs.json",
+    "discourse": "chunks_discourse_docs.json",
+}
 
 def load_chunks_from_file(path, logger):
     """Load JSON file and return data, with proper error handling."""
@@ -28,18 +30,19 @@ def load_chunks_from_file(path, logger):
         logger.error("JSON decode error in %s: %s", path, e)
     return []
 
-def collect_all_chunks(logger):
+def collect_all_chunks(logger, chunk_files):
     """
-    Load and aggregate chunks from all selected JSON files.
+    Load and aggregate chunks from the given JSON files.
 
     Args:
         logger (logging.Logger): Logger for warnings and file-level updates.
+        chunk_files (list[str]): Chunk JSON filenames inside PROCESSED_DIR.
 
     Returns:
         list[dict]: A combined list of all loaded chunks.
     """
     all_chunks = []
-    for file_name in CHUNK_FILES:
+    for file_name in chunk_files:
         path = os.path.join(PROCESSED_DIR, file_name)
         chunks = load_chunks_from_file(path, logger)
         if not chunks:
@@ -48,17 +51,21 @@ def collect_all_chunks(logger):
         all_chunks.extend(chunks)
     return all_chunks
 
-def embed_chunks(logger):
+def embed_chunks(logger, chunk_files=None):
     """
     Embed all loaded text chunks and return vectors and associated metadata.
 
     Args:
         logger (logging.Logger): Logger for progress updates.
+        chunk_files (list[str] | None): Chunk JSON filenames to embed. Defaults to
+            every file in SOURCE_CHUNK_FILES when not provided.
 
     Returns:
         tuple: (list[np.ndarray], list[dict]) - embeddings and structured metadata.
     """
-    chunks = collect_all_chunks(logger)
+    if chunk_files is None:
+        chunk_files = list(SOURCE_CHUNK_FILES.values())
+    chunks = collect_all_chunks(logger, chunk_files)
     logger.info("Collected %d chunks.", len(chunks))
     metadata = []
     for chunk in chunks:
