@@ -8,17 +8,19 @@ import { Document, Packer, Paragraph } from "docx";
 import jsPDF from "jspdf";
 import type { Message } from "../model/Message";
 
-const textMock = jest.fn();
-const addPageMock = jest.fn();
-const saveMock = jest.fn();
-const splitTextToSizeMock = jest.fn();
+// babel-plugin-jest-hoist only allows a jest.mock factory to reference
+// out-of-scope variables whose names begin with "mock".
+const mockText = jest.fn();
+const mockAddPage = jest.fn();
+const mockSave = jest.fn();
+const mockSplitTextToSize = jest.fn();
 
 jest.mock("jspdf", () =>
   jest.fn().mockImplementation(() => ({
-    text: textMock,
-    addPage: addPageMock,
-    save: saveMock,
-    splitTextToSize: splitTextToSizeMock,
+    text: mockText,
+    addPage: mockAddPage,
+    save: mockSave,
+    splitTextToSize: mockSplitTextToSize,
     internal: {
       pageSize: {
         getWidth: () => 200,
@@ -64,7 +66,7 @@ describe("exportchat", () => {
     jest.clearAllMocks();
     blobCalls = [];
     createObjectURLMock.mockReturnValue("blob:mockurl");
-    splitTextToSizeMock.mockImplementation((t: string) => [t]);
+    mockSplitTextToSize.mockImplementation((t: string) => [t]);
 
     anchor = document.createElement("a");
     clickSpy = jest.spyOn(anchor, "click").mockImplementation(() => {});
@@ -141,10 +143,10 @@ describe("exportchat", () => {
       exportAsPdf(messages);
 
       expect(jsPDF).toHaveBeenCalledTimes(1);
-      expect(textMock).toHaveBeenCalledTimes(2);
-      expect(textMock).toHaveBeenCalledWith("user: hello", 10, 10);
-      expect(textMock).toHaveBeenCalledWith("jenkins-bot: hi there", 10, 20);
-      expect(saveMock).toHaveBeenCalledWith("chat.pdf");
+      expect(mockText).toHaveBeenCalledTimes(2);
+      expect(mockText).toHaveBeenCalledWith("user: hello", 10, 10);
+      expect(mockText).toHaveBeenCalledWith("jenkins-bot: hi there", 10, 20);
+      expect(mockSave).toHaveBeenCalledWith("chat.pdf");
     });
 
     it("paginates when content overflows page height", () => {
@@ -154,12 +156,12 @@ describe("exportchat", () => {
         { id: "3", sender: "user", text: "c" },
       ]);
 
-      expect(textMock).toHaveBeenCalledTimes(3);
-      expect(addPageMock).toHaveBeenCalledTimes(1);
+      expect(mockText).toHaveBeenCalledTimes(3);
+      expect(mockAddPage).toHaveBeenCalledTimes(1);
     });
 
     it("paginates wrapped lines from a single message", () => {
-      splitTextToSizeMock.mockImplementationOnce(() => [
+      mockSplitTextToSize.mockImplementationOnce(() => [
         "line1",
         "line2",
         "line3",
@@ -167,15 +169,15 @@ describe("exportchat", () => {
 
       exportAsPdf([{ id: "1", sender: "user", text: "long" }]);
 
-      expect(textMock).toHaveBeenCalledTimes(3);
-      expect(addPageMock).toHaveBeenCalledTimes(1);
+      expect(mockText).toHaveBeenCalledTimes(3);
+      expect(mockAddPage).toHaveBeenCalledTimes(1);
     });
 
     it("handles empty messages", () => {
       exportAsPdf([]);
 
-      expect(textMock).not.toHaveBeenCalled();
-      expect(saveMock).toHaveBeenCalledWith("chat.pdf");
+      expect(mockText).not.toHaveBeenCalled();
+      expect(mockSave).toHaveBeenCalledWith("chat.pdf");
     });
   });
 });
