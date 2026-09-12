@@ -7,6 +7,7 @@ from litellm import acompletion, completion
 
 from api.models.llm_provider import LLMProvider
 
+
 class LiteLLMProvider(LLMProvider):
     """Generate responses through LiteLLM's unified completion interface."""
 
@@ -39,8 +40,6 @@ class LiteLLMProvider(LLMProvider):
             request_kwargs["api_key"] = self.api_key
         if self.api_base is not None:
             request_kwargs["api_base"] = self.api_base
-        if self.model.startswith("groq/qwen/"):
-            request_kwargs["reasoning_effort"] = "none"
         return request_kwargs
 
     def generate(self, prompt: str, max_tokens: int) -> str:
