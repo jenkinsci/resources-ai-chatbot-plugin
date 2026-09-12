@@ -54,21 +54,19 @@ def filter_content(urls, data, is_developer_content):
             )
             continue
 
-        # Remove eventually toc(table of content)
+        # Sequentially clean the extracted HTML
         content_without_toc = remove_container_by_class(content_extracted, "toc")
+        content_without_tags = remove_tags(content_without_toc)
 
-        # Remove eventually img or script tags
-        content_filtered_by_tags = remove_tags(content_without_toc)
+        # For non-developer docs, also remove edge navigation blocks.
+        if not is_developer_content:
+            content_without_navigation = remove_edge_navigation_blocks(content_without_tags)
+        else:
+            content_without_navigation = content_without_tags
 
-        # Remove eventually navigation blocks (for docs under /developer this is not necessary)
-        content_without_navigation_blocks = (
-            content_filtered_by_tags if is_developer_content
-            else remove_edge_navigation_blocks(content_filtered_by_tags)
-        )
-
-        content_without_comments = remove_html_comments(content_without_navigation_blocks)
-
-        filtered_contents[url] = strip_html_body_wrappers(content_without_comments)
+        content_without_comments = remove_html_comments(content_without_navigation)
+        content_without_body_wrappers = strip_html_body_wrappers(content_without_comments)
+        filtered_contents[url] = content_without_body_wrappers
 
     return filtered_contents
 

@@ -17,10 +17,11 @@ OUTPUT_PATH = os.path.join(SCRIPT_DIR, "..", "processed", "filtered_jenkins_docs
 
 MIN_VISIBLE_TEXT_LENGTH = 300
 MAX_LINK_RATIO = 0.1
+AVG_CHARS_PER_WORD_HEURISTIC = 7  # Heuristic for calculating text chunks from character count.
 
 def link_ratio(content):
     """
-    Computes the ratio of <a> tags to visible text chunks (roughly per 7 chars).
+    Computes the ratio of <a> tags to visible text chunks (roughly per word).
 
     Parameters:
     - content (str): Raw HTML content.
@@ -32,7 +33,7 @@ def link_ratio(content):
     links = soup.find_all("a")
     text = soup.get_text(separator=" ", strip=True)
     text_length = max(len(text), 1)
-    chunks = max(text_length / 7, 1)
+    chunks = max(text_length / AVG_CHARS_PER_WORD_HEURISTIC, 1)
 
     return len(links) / chunks
 
@@ -89,17 +90,30 @@ def main():
         logger.error("JSON decode error in %s: %s", INPUT_PATH, e)
         return
 
-    urls_to_remove = set()
+    cleaned_docs = {}
+    urls_removed_count = 0
     for url, content in docs.items():
-        if ('extensions' not in url) and (get_visible_text_length(content) < MIN_VISIBLE_TEXT_LENGTH
-            or link_ratio(content) > MAX_LINK_RATIO):
-            logger.info("Filtering the url: %s.", url)
-            urls_to_remove.add(url)
+        # Special rule: always keep pages from '/extensions/', as they are
+        # considered important index pages that might otherwise be filtered out.
+        if 'extensions' in url:
+            cleaned_docs[url] = content
+            continue
 
-    logger.info('There are %d urls to remove.', len(urls_to_remove))
+        is_too_short = get_visible_text_length(content) < MIN_VISIBLE_TEXT_LENGTH
+        has_high_link_ratio = link_ratio(content) > MAX_LINK_RATIO
 
-    cleaned_docs = {url: content for url, content in docs.items() if url not in urls_to_remove}
+        if is_too_short or has_high_link_ratio:
+            reasons = []
+            if is_too_short:
+                reasons.append(f"text length < {MIN_VISIBLE_TEXT_LENGTH}")
+            if has_high_link_ratio:
+                reasons.append(f"link ratio > {MAX_LINK_RATIO}")
+            logger.info("Filtering url %s (reason: %s).", url, " and ".join(reasons))
+            urls_removed_count += 1
+        else:
+            cleaned_docs[url] = content
 
+    logger.info('Filtered out %d urls.', urls_removed_count)
     logger.info("Cleaned docs contain %d pages after filtering.", len(cleaned_docs))
 
     try:
