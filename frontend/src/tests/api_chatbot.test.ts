@@ -4,13 +4,12 @@ import {
   fetchChatbotReply,
   deleteChatSession,
   fetchChatbotReplyWithFiles,
+  fetchProviders,
 } from "../api/chatbot";
 
 import { callChatbotApi } from "../utils/callChatbotApi";
 import { getChatbotText } from "../data/chatbotTexts";
 import { API_BASE_URL, CHATBOT_API_TIMEOUTS_MS } from "../config";
-
-declare const global: typeof globalThis;
 
 jest.mock("uuid", () => ({
   v4: () => "mock-uuid",
@@ -25,7 +24,7 @@ jest.mock("../data/chatbotTexts", () => ({
 }));
 
 // Mock global fetch for file upload tests
-global.fetch = jest.fn();
+globalThis.fetch = jest.fn();
 
 describe("chatbotApi", () => {
   describe("createBotMessage", () => {
@@ -112,6 +111,23 @@ describe("chatbotApi", () => {
         text: "Fallback error message",
       });
     });
+
+    it("includes the selected hosted provider in the request", async () => {
+      (callChatbotApi as jest.Mock).mockResolvedValueOnce({
+        reply: "Hosted reply",
+      });
+
+      await fetchChatbotReply("session-xyz", "Hi!", undefined, "groq");
+
+      expect(callChatbotApi).toHaveBeenCalledWith(
+        "sessions/session-xyz/message",
+        expect.objectContaining({
+          body: JSON.stringify({ message: "Hi!", provider: "groq" }),
+        }),
+        {},
+        expect.any(Number),
+      );
+    });
   });
 
   describe("deleteChatSession", () => {
@@ -142,10 +158,38 @@ describe("chatbotApi", () => {
     });
   });
 
+  describe("fetchProviders", () => {
+    it("returns provider metadata from the backend", async () => {
+      const providers = [
+        {
+          id: "groq",
+          label: "Groq API",
+          model: "groq/llama-3.1-8b-instant",
+          configured: true,
+        },
+      ];
+      (callChatbotApi as jest.Mock).mockResolvedValueOnce({ providers });
+
+      await expect(fetchProviders()).resolves.toEqual(providers);
+      expect(callChatbotApi).toHaveBeenCalledWith(
+        "providers",
+        { method: "GET" },
+        { providers: [] },
+        expect.any(Number),
+      );
+    });
+
+    it("returns an empty list when the backend request fails", async () => {
+      (callChatbotApi as jest.Mock).mockResolvedValueOnce({ providers: [] });
+
+      await expect(fetchProviders()).resolves.toEqual([]);
+    });
+  });
+
   describe("fetchChatbotReplyWithFiles", () => {
     beforeEach(() => {
       jest.clearAllMocks();
-      (global.fetch as jest.Mock).mockClear();
+      (globalThis.fetch as jest.Mock).mockClear();
       jest.useFakeTimers();
     });
 
@@ -157,7 +201,7 @@ describe("chatbotApi", () => {
       const mockResponse = {
         reply: "File analyzed successfully!",
       };
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -170,6 +214,7 @@ describe("chatbotApi", () => {
         "Analyze this file",
         files,
         controller.signal,
+        "groq",
       );
 
       expect(result).toEqual({
@@ -178,17 +223,19 @@ describe("chatbotApi", () => {
         text: "File analyzed successfully!",
       });
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         `${API_BASE_URL}/api/chatbot/sessions/session-xyz/message/upload`,
         expect.objectContaining({
           method: "POST",
           signal: expect.any(AbortSignal),
         }),
       );
+      const request = (globalThis.fetch as jest.Mock).mock.calls[0][1];
+      expect(request.body.get("provider")).toBe("groq");
     });
 
     it("returns fallback message when API response is not ok", async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({ detail: "Internal server error" }),
@@ -212,7 +259,7 @@ describe("chatbotApi", () => {
 
     it("aborts the request when timeout elapses", async () => {
       // Mock fetch to reject with AbortError when signal is aborted
-      (global.fetch as jest.Mock).mockImplementationOnce(
+      (globalThis.fetch as jest.Mock).mockImplementationOnce(
         (_url: string, options?: RequestInit) =>
           new Promise((_, reject) => {
             // Reject with AbortError when signal is aborted
@@ -251,7 +298,7 @@ describe("chatbotApi", () => {
 
     it("cancels the request when external signal is aborted", async () => {
       // Mock fetch to reject when signal is aborted
-      (global.fetch as jest.Mock).mockImplementationOnce(
+      (globalThis.fetch as jest.Mock).mockImplementationOnce(
         (_url: string, options?: RequestInit) =>
           new Promise((_, reject) => {
             if (options?.signal) {
@@ -305,7 +352,7 @@ describe("chatbotApi", () => {
     });
 
     it("handles network errors gracefully", async () => {
-      (global.fetch as jest.Mock).mockRejectedValueOnce(
+      (globalThis.fetch as jest.Mock).mockRejectedValueOnce(
         new Error("Network error"),
       );
 
@@ -332,7 +379,7 @@ describe("chatbotApi", () => {
       const mockResponse = {
         reply: "Success",
       };
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -350,7 +397,7 @@ describe("chatbotApi", () => {
         controller.signal,
       );
 
-      const fetchCall = (global.fetch as jest.Mock).mock.calls[0];
+      const fetchCall = (globalThis.fetch as jest.Mock).mock.calls[0];
       expect(fetchCall[1]?.body).toBeInstanceOf(FormData);
       expect((fetchCall[1]?.body as FormData).get("log_context")).toBeNull();
       expect((fetchCall[1]?.body as FormData).get("files")).toBe(files[0]);
