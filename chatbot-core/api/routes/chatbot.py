@@ -47,6 +47,7 @@ from api.models.schemas import (
 from api.services.chat_service import (
     get_chatbot_reply,
     get_chatbot_reply_stream,
+    provider_manager,
     prepare_log_context,
 )
 from api.services.memory import (
@@ -82,6 +83,50 @@ except ImportError:
     logger.warning("Retrieval not available - limited functionality")
 
 router = APIRouter()
+
+
+async def _process_uploaded_files(
+    files: Optional[List[UploadFile]],
+) -> List[FileAttachment]:
+    """Process uploaded files and close each upload after reading it.
+
+    Args:
+        files: Uploaded files received from the multipart request.
+
+    Returns:
+        Processed file attachments.
+
+    Raises:
+        HTTPException: If an uploaded file cannot be processed.
+    """
+    processed_files: List[FileAttachment] = []
+
+    if not files:
+        return processed_files
+
+    for upload_file in files:
+        try:
+            content = await upload_file.read()
+            processed = process_uploaded_file(
+                content, upload_file.filename or "unknown"
+            )
+            processed_files.append(FileAttachment(**processed))
+        except FileProcessingError as exc:
+            logger.warning("File processing failed: %s", exc, exc_info=True)
+            raise HTTPException(
+                status_code=400,
+                detail="Unable to process uploaded file.",
+            ) from exc
+        except Exception as exc:
+            logger.error("Unexpected file processing error: %s", exc, exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail="Unable to process uploaded file.",
+            ) from exc
+        finally:
+            await upload_file.close()
+
+    return processed_files
 
 
 @router.post("/log-preview", response_model=LogPreviewResponse)
@@ -141,17 +186,37 @@ async def chatbot_stream(websocket: WebSocket, session_id: str):
                 continue
 
             user_message = message_data.get("message", "")
+            provider_id = message_data.get("provider", "local")
 
             if not user_message:
                 continue
 
-            async for token in get_chatbot_reply_stream(
-                session_id,
-                user_message,
-            ):
+            if not isinstance(provider_id, str):
                 await websocket.send_text(
-                    json.dumps({"token": token})
+                    json.dumps({"error": "Provider ID must be a string."})
                 )
+                continue
+
+            try:
+                with provider_manager.activate(provider_id):
+                    async for token in get_chatbot_reply_stream(
+                        session_id,
+                        user_message,
+                    ):
+                        await websocket.send_text(
+                            json.dumps({"token": token})
+                        )
+            except ValueError as exc:
+                logger.error(
+                    "WebSocket provider error for session %s: %s",
+                    session_id,
+                    exc,
+                    exc_info=True,
+                )
+                await websocket.send_text(
+                    json.dumps({"error": "Unable to generate a response."})
+                )
+                continue
 
             await websocket.send_text(
                 json.dumps({"end": True})
@@ -284,7 +349,14 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
             detail="Session not found.",
         )
     message = request.message.strip() or DEFAULT_LOG_ANALYSIS_MESSAGE
-    reply = get_chatbot_reply(session_id, message)
+
+    try:
+        provider = provider_manager.resolve(request.provider)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    with provider_manager.activate_provider(provider):
+        reply = get_chatbot_reply(session_id, message)
     _background_tasks.add_task(
         persist_session,
         session_id,
@@ -302,6 +374,7 @@ async def chatbot_reply_with_files(
     background_tasks: BackgroundTasks,
     message: str = Form(...),
     files: Optional[List[UploadFile]] = File(None),
+    provider: str = Form("local"),
 ):
     """
     POST endpoint to handle chatbot replies with file uploads.
@@ -329,6 +402,11 @@ async def chatbot_reply_with_files(
     if not session_exists(session_id):
         raise HTTPException(status_code=404, detail="Session not found.")
 
+    try:
+        selected_provider = provider_manager.resolve(provider)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     # Validate that at least message or files are provided
     has_message = message and message.strip()
     has_files = files and len(files) > 0
@@ -339,26 +417,7 @@ async def chatbot_reply_with_files(
             detail="Either message or files must be provided.",
         )
 
-    # Process uploaded files
-    processed_files: List[FileAttachment] = []
-
-    if files:
-        for upload_file in files:
-            try:
-                content = await upload_file.read()
-                processed = process_uploaded_file(
-                    content, upload_file.filename or "unknown"
-                )
-                processed_files.append(FileAttachment(**processed))
-            except FileProcessingError as e:
-                raise HTTPException(status_code=400, detail=str(e)) from e
-            except Exception as e:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to process file: {type(e).__name__}",
-                ) from e
-            finally:
-                await upload_file.close()
+    processed_files = await _process_uploaded_files(files)
 
     # Use default message if only files provided
     final_message = (
@@ -367,12 +426,13 @@ async def chatbot_reply_with_files(
         else "Please analyze the attached file(s)."
     )
 
-    reply = await asyncio.to_thread(
-        get_chatbot_reply,
-        session_id,
-        final_message,
-        processed_files if processed_files else None
-    )
+    with provider_manager.activate_provider(selected_provider):
+        reply = await asyncio.to_thread(
+            get_chatbot_reply,
+            session_id,
+            final_message,
+            processed_files if processed_files else None
+        )
     background_tasks.add_task(
         persist_session,
         session_id,

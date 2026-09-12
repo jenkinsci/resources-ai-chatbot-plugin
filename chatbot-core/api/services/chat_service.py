@@ -9,6 +9,7 @@ from typing import AsyncGenerator, List, Optional
 from api.config.loader import CONFIG
 from api.models.embedding_model import EMBEDDING_MODEL
 from api.models.llama_cpp_provider import llm_provider
+from api.models.provider_manager import ProviderManager, get_current_provider
 from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type, FileAttachment
 from api.prompts.prompt_builder import build_prompt
 from api.prompts.prompts import (
@@ -40,6 +41,7 @@ from utils import LoggerFactory
 logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
 retrieval_config = CONFIG["retrieval"]
+provider_manager = ProviderManager(llm_provider)
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 SOURCE_TOP_K_CONFIG_KEYS = {
     "plugins": "top_k_plugins",
@@ -509,13 +511,14 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
     Returns:
         str: The model's generated text response.
     """
-    if llm_provider is None:
+    provider = get_current_provider() or llm_provider
+    if provider is None:
         logger.warning(
             "LLM provider not available - returning fallback response")
         return "LLM is not available. Please install llama-cpp-python and configure a model."
     try:
         sanitized_prompt = sanitize_logs(prompt)
-        return llm_provider.generate(
+        return provider.generate(
             prompt=sanitized_prompt,
             max_tokens=max_tokens or llm_config["max_tokens"])
     except (ImportError, AttributeError) as e:
@@ -547,14 +550,15 @@ async def generate_answer_stream(
     Yields:
         str: Individual tokens
     """
-    if llm_provider is None:
+    provider = get_current_provider() or llm_provider
+    if provider is None:
         logger.warning(
             "LLM provider not available - returning fallback response")
         yield "LLM is not available. Please install llama-cpp-python and configure a model."
         return
     try:
         sanitized_prompt = sanitize_logs(prompt)
-        async for token in llm_provider.generate_stream(
+        async for token in provider.generate_stream(
             prompt=sanitized_prompt,
             max_tokens=max_tokens or llm_config["max_tokens"]
         ):

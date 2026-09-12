@@ -1,5 +1,7 @@
 """Unit Tests for FastAPI routes."""
 
+from api.services.file_service import FileProcessingError
+
 def test_start_chat(client, mock_init_session):
     """Testing that creating a session returns session ID and location."""
     mock_init_session.return_value = "test-session-id"
@@ -23,6 +25,50 @@ def test_chatbot_reply_success(client, mock_session_exists, mock_get_chatbot_rep
     assert response.json() == {"reply": "This is a valid response"}
 
 
+def test_chatbot_reply_activates_selected_provider(
+    client, mock_session_exists, mock_get_chatbot_reply, mocker
+):
+    """Normal requests activate the provider selected in the JSON payload."""
+    mock_session_exists.return_value = True
+    mock_get_chatbot_reply.return_value = {"reply": "hosted response"}
+    selected_provider = object()
+    resolve = mocker.patch(
+        "api.routes.chatbot.provider_manager.resolve",
+        return_value=selected_provider,
+    )
+    activate = mocker.patch(
+        "api.routes.chatbot.provider_manager.activate_provider"
+    )
+
+    response = client.post(
+        "/sessions/test-session-id/message",
+        json={"message": "Hello", "provider": "groq"},
+    )
+
+    assert response.status_code == 200
+    resolve.assert_called_once_with("groq")
+    activate.assert_called_once_with(selected_provider)
+    activate.return_value.__exit__.assert_called_once()
+
+
+def test_chatbot_reply_rejects_unknown_provider(
+    client, mock_session_exists, mock_get_chatbot_reply
+):
+    """Unknown providers return an error instead of falling back locally."""
+    mock_session_exists.return_value = True
+
+    response = client.post(
+        "/sessions/test-session-id/message",
+        json={"message": "Hello", "provider": "unknown"},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "Unsupported LLM provider: unknown"
+    }
+    mock_get_chatbot_reply.assert_not_called()
+
+
 def test_log_preview_extracts_and_sanitizes_console_output(client):
     """Preview endpoint returns relevant output with secrets redacted."""
     response = client.post(
@@ -35,6 +81,50 @@ def test_log_preview_extracts_and_sanitizes_console_output(client):
     assert response.status_code == 200
     assert "PASSWORD=[REDACTED]" in response.json()["preview"]
     assert "[ERROR] deployment failed" in response.json()["preview"]
+
+
+def test_file_processing_error_hides_internal_details(
+    client, mock_session_exists, mocker
+):
+    """File-processing failures return a safe client-facing message."""
+    mock_session_exists.return_value = True
+    mocker.patch(
+        "api.routes.chatbot.process_uploaded_file",
+        side_effect=FileProcessingError("internal parser detail"),
+    )
+
+    response = client.post(
+        "/sessions/test-session-id/message/upload",
+        data={"message": "Analyze this file"},
+        files={"files": ("build.log", b"build output", "text/plain")},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Unable to process uploaded file."}
+    assert "internal parser detail" not in response.text
+
+
+def test_unexpected_file_error_hides_exception_type(
+    client, mock_session_exists, mocker
+):
+    """Unexpected file failures return a safe client-facing message."""
+    mock_session_exists.return_value = True
+    mocker.patch(
+        "api.routes.chatbot.process_uploaded_file",
+        side_effect=RuntimeError("unexpected parser detail"),
+    )
+
+    response = client.post(
+        "/sessions/test-session-id/message/upload",
+        data={"message": "Analyze this file"},
+        files={"files": ("build.log", b"build output", "text/plain")},
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Unable to process uploaded file."}
+    assert "RuntimeError" not in response.text
+    assert "unexpected parser detail" not in response.text
+
 
 def test_chatbot_reply_invalid_session(client, mock_session_exists):
     """Testing that sending a message to an invalid session returns 404."""
@@ -135,6 +225,43 @@ def test_websocket_valid_json_streams_response(
         assert token2 == {"token": " world"}
         end = ws.receive_json()
         assert end == {"end": True}
+
+
+def test_websocket_provider_error_hides_exception_details(
+    client, mock_session_exists, mock_get_chatbot_reply_stream
+):
+    """Provider failures return a safe error without exception details."""
+    mock_session_exists.return_value = True
+    mock_get_chatbot_reply_stream.side_effect = ValueError(
+        "provider secret or internal detail"
+    )
+
+    with client.websocket_connect("/sessions/test-session-id/stream") as ws:
+        ws.send_json({"message": "Request"})
+        error = ws.receive_json()
+        assert error == {"error": "Unable to generate a response."}
+        assert "provider secret" not in str(error)
+
+
+def test_websocket_activates_selected_provider(
+    client, mock_session_exists, mock_get_chatbot_reply_stream, mocker
+):
+    """WebSocket requests activate the provider selected in the payload."""
+    mock_session_exists.return_value = True
+
+    async def fake_stream(_session_id, _message):
+        yield "response"
+
+    mock_get_chatbot_reply_stream.side_effect = fake_stream
+    activate = mocker.patch("api.routes.chatbot.provider_manager.activate")
+
+    with client.websocket_connect("/sessions/test-session-id/stream") as ws:
+        ws.send_json({"message": "Hello", "provider": "groq"})
+        assert ws.receive_json() == {"token": "response"}
+        assert ws.receive_json() == {"end": True}
+
+    activate.assert_called_once_with("groq")
+    activate.return_value.__exit__.assert_called_once()
 
 
 def test_websocket_empty_message_is_skipped(
