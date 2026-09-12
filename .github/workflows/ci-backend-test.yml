@@ -38,3 +38,12 @@ jobs:
           PYTHONPATH: ${{github.workspace}}/chatbot-core
         run: |
           pytest tests/integration
+      - name: Run E2E tests
+        if: ${{ hashFiles('chatbot-core/tests/e2e/conftest.py') != '' }}
+        working-directory: chatbot-core
+        env:
+          PYTHONPATH: ${{github.workspace}}/chatbot-core
+          E2E_STUB_LLM: "true"
+          E2E_SEED_FAISS: "true"
+        run: |
+          pytest tests/e2e -m e2e -v
