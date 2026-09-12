@@ -133,7 +133,8 @@ run-data-chunking: run-data-chunking-docs run-data-chunking-plugins run-data-chu
 run-data-graph-plugins: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### BUILDING GRAPHRAG PLUGIN GRAPH ARTIFACTS ###" && \
-	python3 rag/graph/build_graph_artifacts.py
+	python3 rag/graph/build_graph_artifacts.py \
+	  --update-center-path data/raw/update-center.actual.json
 
 run-data-graph: run-data-graph-plugins
 
