@@ -575,12 +575,16 @@ async def generate_answer_stream(
 
 
 async def get_chatbot_reply_stream(
-        session_id: str, user_input: str) -> AsyncGenerator[str, None]:
+        session_id: str,
+        user_input: str,
+) -> AsyncGenerator[str, None]:
     """
     Streaming version of get_chatbot_reply for WebSocket clients.
+
     Args:
         session_id: Unique session identifier
         user_input: User's message
+
     Yields:
         str: Individual tokens from LLM response
     """

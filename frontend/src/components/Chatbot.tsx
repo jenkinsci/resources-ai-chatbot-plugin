@@ -26,9 +26,14 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { ProactiveToast } from "./Toast";
 import { useContextObserver } from "../utils/useContextObserver";
+import {
+  ANALYZE_BUILD_INPUT_PREFIX,
+  ANALYZE_BUILD_MESSAGE,
+  buildDisplayedMessage,
+  getConsoleLogContext,
+  removeLogContext,
+} from "../utils/buildFailureAnalysis";
 
-const ANALYZE_BUILD_MESSAGE = "Analyze this Jenkins Build Failure.";
-const ANALYZE_BUILD_INPUT_PREFIX = `${ANALYZE_BUILD_MESSAGE}\n\n`;
 const BUILD_ANALYSIS_ACTION_DELAY_MS = 2000;
 
 /**
@@ -218,9 +223,7 @@ export const Chatbot = () => {
       }
     }
 
-    const messageWithoutLog = logContext
-      ? messageForRequest.replace(logContext, "").trim()
-      : messageForRequest;
+    const messageWithoutLog = removeLogContext(messageForRequest, logContext);
     const isBuildAnalysis = trimmed.startsWith(ANALYZE_BUILD_MESSAGE);
     const buildDescription =
       isBuildAnalysis && buildContext
@@ -233,9 +236,9 @@ export const Chatbot = () => {
     }${buildDescription}`;
 
     const fileAttachments = attachedFiles.map(fileToAttachment);
-    const displayMessage = logContext
-      ? `${messageWithoutLog || ANALYZE_BUILD_MESSAGE}\n\n${logContext}`
-      : messageWithoutLog || (hasFiles ? "📎 Attached file(s)" : "");
+    const displayMessage =
+      buildDisplayedMessage(messageForRequest, logContext) ||
+      (hasFiles ? "📎 Attached file(s)" : "");
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -366,16 +369,6 @@ export const Chatbot = () => {
   const openConfirmDeleteChatPopup = (chatSessionId: string) => {
     setSessionIdToDelete(chatSessionId);
     setIsPopupOpen(true);
-  };
-
-  const getConsoleLogContext = (): string => {
-    const consoleElement = document.querySelector("pre.console-output");
-
-    if (!consoleElement || !consoleElement.textContent) {
-      return "";
-    }
-
-    return consoleElement.textContent;
   };
 
   const prepareBuildFailureAnalysis = async () => {
