@@ -110,16 +110,75 @@ export const chatbotStyles = {
   } as CSSProperties,
 
   boxWelcomePage: {
+    width: "100%",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "30px",
     textAlign: "center",
     color: "#888",
   } as CSSProperties,
 
+  welcomePageIntro: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "11px",
+  } as CSSProperties,
+
   welcomePageH2: {
-    marginBottom: "0.5rem",
+    margin: 0,
+  } as CSSProperties,
+
+  welcomePageBackendMessage: {
+    margin: 0,
+    padding: "0.75rem 1rem",
+    width: "min(28rem, calc(100% - 2rem))",
+    border: "1px solid var(--border-color)",
+    borderRadius: "0.5rem",
+    backgroundColor: "var(--panel-background)",
+    color: "var(--text-color)",
+    textAlign: "center",
+    lineHeight: 1.5,
+  } as CSSProperties,
+
+  welcomePageBackendDetails: {
+    margin: "0.35rem 0 0",
+  } as CSSProperties,
+
+  welcomePageCommand: {
+    display: "inline-block",
+    padding: "0.125rem 0.375rem",
+    border: "1px solid var(--border-color)",
+    borderRadius: "0.25rem",
+    backgroundColor: "var(--input-color)",
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    fontSize: "0.875em",
+  } as CSSProperties,
+
+  welcomePageRepositoryLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "0.25rem",
+    margin: 0,
+    color: "var(--link-color)",
+  } as CSSProperties,
+
+  welcomePageSetupInfo: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "9px",
+    width: "100%",
+    margin: 0,
   } as CSSProperties,
 
   welcomePageNewChatButton: {
     backgroundColor: "#0073e6",
+    display: "block",
+    margin: 0,
     padding: "1rem",
     borderRadius: "1rem",
     color: "#ffffff",
@@ -289,11 +348,11 @@ export const chatbotStyles = {
   //Header
 
   chatbotHeader: {
-    display: "flex",
     alignItems: "center",
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr",
     gap: "8px",
-    flexDirection: "row",
-    justifyContent: "space-between",
+    position: "relative",
     padding: "1rem",
     backgroundColor: "var(--panel-background)",
     borderBottom: "var(--jenkins-border)",
@@ -306,6 +365,52 @@ export const chatbotStyles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
+    justifySelf: "end",
+  } as CSSProperties,
+
+  headerLeading: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    minWidth: 0,
+  } as CSSProperties,
+
+  backendStatusDot: (isConnected: boolean): CSSProperties => ({
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    backgroundColor: isConnected ? "#16a34a" : "#dc2626",
+    boxShadow: "0 0 0 2px var(--panel-background)",
+  }),
+
+  backendStatusContainer: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    cursor: "default",
+    outline: "none",
+  } as CSSProperties,
+
+  backendStatusTooltip: {
+    position: "absolute",
+    bottom: "calc(100% + 8px)",
+    left: "50%",
+    zIndex: 2,
+    minWidth: "max-content",
+    padding: "6px 8px",
+    transform: "translateX(-50%)",
+    border: "1px solid var(--border-color, #d1d5db)",
+    borderRadius: "6px",
+    backgroundColor: "var(--card-background, #ffffff)",
+    boxShadow: "0 4px 12px rgba(15, 23, 42, 0.14)",
+    color: "var(--text-color, #1f2937)",
+    fontSize: "12px",
+    fontWeight: "normal",
+    whiteSpace: "nowrap",
   } as CSSProperties,
 
   clearButton: {

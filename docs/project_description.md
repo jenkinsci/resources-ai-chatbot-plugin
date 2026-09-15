@@ -175,11 +175,14 @@ An ASGI server optimized for:
 - Fast responses
 - Efficient handling of concurrent requests
 
-#### llama.cpp Integration
-For underlying model execution, the API integrates with the llama.cpp library, enabling:
-- Efficient inference of large language models on local hardware
-- Experimentation without relying on external APIs
-- Offline functionality
+#### LLM Provider Integration
+The API supports local and hosted model execution through the `LLMProvider` abstraction:
+
+- **Local inference** uses llama.cpp to run a GGUF model on the host machine.
+- **Hosted inference** uses LiteLLM to route requests to the configured provider API.
+- **Provider configuration** keeps provider IDs, model IDs, and model settings separate from the chat services.
+
+This allows contributors to use local inference when they have the required model and hardware, or use a hosted provider when they do not want to download the local model.
 
 ### Extensible Architecture
 
@@ -199,18 +202,11 @@ The API follows a clean separation of concerns with a modular design:
 
 The API introduces an `LLMProvider` abstraction layer to decouple chatbot logic from the underlying model.
 
-#### Current Implementation
-- **Model**: Mistral 7B Instruct (v0.2, GGUF Q4_K_M)
-- **Runtime**: Local execution via llama.cpp
-- **Benefits**: Good balance between performance and quality for local development
+#### Implementations
+- **Local provider**: Runs the Mistral 7B Instruct model from a GGUF file using llama.cpp.
+- **Hosted provider**: Routes configured model requests through LiteLLM and uses the provider API key supplied through the backend environment.
 
-#### Future Extensibility
-The abstraction allows easy integration of alternative providers:
-- OpenAI models via API
-- Gemini models via API
-- Other hosted LLM services
-
-This design ensures users with limited compute resources can opt for hosted LLMs, while others can run models locally for offline functionality.
+The provider catalog and selection details are documented in the [LiteLLM provider guide](chatbot-core/litellm.md).
 
 ### Available Endpoints
 
@@ -533,6 +529,21 @@ The plugin currently provides the following capabilities:
 7. **Release**
    Completed the release process for community distribution
 
+8. **GraphRAG**
+   Added graph-based retrieval and context generation alongside the existing FAISS retrieval path
+
+9. **Diagnosis Agent**
+   Added sanitized build-log analysis to help identify Jenkins build failures
+
+10. **Provider Integration**
+    Added a provider catalog and LiteLLM routing for hosted model APIs, with provider selection in the chatbot UI
+
+11. **Plugin Distribution**
+    Bundled the frontend into the Jenkins plugin and added runtime backend URL configuration for local or remote FastAPI services
+
+12. **LLM-as-a-Judge Evaluation**
+    Added a label-gated DeepEval pipeline that measures faithfulness, answer relevancy, and contextual recall against a fixed golden dataset. See the [LLM-as-a-Judge evaluation guide](chatbot-core/eval/llm-as-a-judge.md).
+
 ### Recent Community Enhancements
 
 The project has benefited significantly from community contributions that have added substantial new capabilities:
@@ -562,21 +573,18 @@ The plugin is:
 
 Several enhancements are planned or in progress:
 
-1. **Comprehensive Evaluation Framework**
-   Implement an LLM-as-a-judge approach to systematically evaluate chatbot response quality and system behavior
-
-2. **Performance Optimizations**
+1. **Performance Optimizations**
    - Caching strategies for frequently asked questions
    - Improved embedding and retrieval performance
    - Resource usage optimization
 
-3. **Enhanced User Experience**
+2. **Enhanced User Experience**
    - Conversation history search and filtering
    - Improved mobile responsiveness
    - Customizable chatbot themes aligned with Jenkins UI themes
    - Multi-language documentation support
 
-4. **Extended Integration**
+3. **Extended Integration**
    - Integration with additional data sources (GitHub repositories, JIRA, etc.)
    - Enhanced analytics and usage tracking
    - Advanced session management features

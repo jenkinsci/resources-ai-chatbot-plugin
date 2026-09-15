@@ -38,8 +38,17 @@ To quickly start, in the root directory a `Makefile` contains many ready-to-go t
 
 In this doc file we'll use these targets, without going into the details of the scripts and the implementation reasonings. For further information you can visit the package-related doc files.
 
-For the setup you can follow [Setup Guide](setup.md).
-For macOS/Apple Silicon contributors, see the [macOS/Apple Silicon Setup Guide](macos-setup.md).
+For the setup you can follow the [Setup Guides](setup/README.md).
+For macOS/Apple Silicon contributors, see the [macOS/Apple Silicon Setup Guide](setup/macos.md).
+For installing the released plugin and configuring its backend, see the [plugin installation guide](plugin-installation.md).
+
+Documentation for the main chatbot features is available here:
+
+- [LLM-as-a-Judge evaluation pipeline](chatbot-core/eval/llm-as-a-judge.md)
+- [GraphRAG documentation](chatbot-core/rag/graph.md)
+- [Diagnosis Agent documentation](chatbot-core/diagnosis-agent.md)
+- [Third-party provider integration](chatbot-core/litellm.md)
+- [Plugin installation and backend setup](plugin-installation.md)
 
 ## Data Pipeline
 
@@ -77,15 +86,19 @@ make api
 
 ## User Interface
 
-For the UI the project relies on a React application, that is then built and injected into the Jenkins UI. A target in the `Makefile` allows to run the flow that builds the React app.
+The React frontend is bundled into the Jenkins plugin during the Maven build.
+For local plugin development, start the backend and Jenkins in separate
+terminals:
 
-You can do that by running:
-
-```bash
-make build-frontend
+```text
+Terminal 1: make api
+Terminal 2: mvn hpi:run
 ```
 
-After running this command you can run Jenkins (`mvn hpi:run`).
+`mvn hpi:run` builds the frontend and packages it into the plugin
+automatically. Use `make build-frontend` only when you need to rebuild the
+frontend assets independently while investigating a local development issue.
+For frontend-only work, run `npm run dev` from the `frontend/` directory.
 
 > **Note:** for more details on the frontend you can visit the docs under `docs/frontend/`.
 
