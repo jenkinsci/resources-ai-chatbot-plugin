@@ -132,6 +132,7 @@ def _split_structural_section(section: str) -> list[str]:
     current_lines: list[str] = []
 
     def flush_lines() -> None:
+        """Flush the current soft-wrapped lines into structural spans."""
         if not current_lines:
             return
         joined_text = " ".join(current_lines)
@@ -557,20 +558,36 @@ def extract_triples(
         list[Triple]: All validated triples found across chunks.
     """
     plugin_lookup = build_plugin_lookup(plugin_ids)
+    extracted_triples = [
+        triple
+        for chunk in chunks
+        for triple in _extract_triples_from_chunk(chunk, plugin_lookup)
+    ]
+    return deduplicate_triples(extracted_triples)
+
+
+def deduplicate_triples(triples: list[Triple]) -> list[Triple]:
+    """
+    Keep the preferred evidence for each unique graph relationship.
+
+    Args:
+        triples (list[Triple]): Triples from one or more graph sources.
+
+    Returns:
+        list[Triple]: Deduplicated triples in deterministic key order.
+    """
     best_triples: dict[tuple[str, str, str], Triple] = {}
+    for triple in triples:
+        triple_key = (
+            triple.source.entity_id,
+            triple.relation,
+            triple.target.entity_id,
+        )
+        current_triple = best_triples.get(triple_key)
+        if current_triple is None or _is_preferred_triple(triple, current_triple):
+            best_triples[triple_key] = triple
 
-    for chunk in chunks:
-        for triple in _extract_triples_from_chunk(chunk, plugin_lookup):
-            triple_key = (
-                triple.source.entity_id,
-                triple.relation,
-                triple.target.entity_id,
-            )
-            current_triple = best_triples.get(triple_key)
-            if current_triple is None or _is_preferred_triple(triple, current_triple):
-                best_triples[triple_key] = triple
-
-    return list(best_triples.values())
+    return [best_triples[key] for key in sorted(best_triples)]
 
 
 def _is_preferred_triple(candidate: Triple, current: Triple) -> bool:

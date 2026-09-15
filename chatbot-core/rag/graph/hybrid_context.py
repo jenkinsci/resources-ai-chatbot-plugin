@@ -10,6 +10,7 @@ from rag.graph.models import GraphRelation, GraphRetrievalResult
 GRAPH_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PLUGIN_CHUNKS_PATH = GRAPH_ROOT / "data" / "processed" / "chunks_plugin_docs.json"
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
+MAX_GRAPH_CONTEXT_RELATIONS = 10
 
 
 def load_graph_context_chunks(
@@ -115,8 +116,17 @@ def format_graph_retrieval_result(
     if not result.relations:
         return ""
 
+    displayed_relations = result.relations[:MAX_GRAPH_CONTEXT_RELATIONS]
     relation_blocks = [
         format_graph_relation(relation, chunk_lookup=chunk_lookup)
-        for relation in result.relations
+        for relation in displayed_relations
     ]
-    return "\n\n".join(relation_blocks)
+    context = "\n\n".join(relation_blocks)
+    if len(result.relations) <= MAX_GRAPH_CONTEXT_RELATIONS:
+        return context
+
+    return (
+        "Graph results are limited to the first "
+        f"{MAX_GRAPH_CONTEXT_RELATIONS} of {len(result.relations)} relations.\n\n"
+        f"{context}"
+    )

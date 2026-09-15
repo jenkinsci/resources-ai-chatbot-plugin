@@ -11,13 +11,13 @@ from rag.graph.build_graph_artifacts import (
 from rag.graph.graph_store import DEFAULT_PLUGIN_GRAPH_PATH, load_graph
 from rag.graph.models import GraphEntity, GraphEvidence, GraphRelation, GraphRetrievalResult
 from rag.graph.query_parser import (
-    GraphQueryIntent,
-    GraphQueryMatch,
+    GraphQueryPlan,
     parse_graph_query,
 )
 from rag.graph.schema import (
     REQUIRED_EVIDENCE_FIELDS,
     GraphEntityType,
+    GraphRelationType,
     has_required_evidence_fields,
 )
 from rag.graph.triple_extractor import PluginLookup, build_plugin_lookup
@@ -136,15 +136,15 @@ def build_graph_relation(
 def iter_relation_edges(
     graph: nx.MultiDiGraph,
     node_id: str,
-    intent: GraphQueryIntent,
+    plan: GraphQueryPlan,
 ) -> list[tuple[str, str, dict]]:
     """
-    Collect matching graph edges for one node and relation intent.
+    Collect matching graph edges for one node and query plan.
 
     Args:
         graph (nx.MultiDiGraph): Loaded plugin relation graph.
         node_id (str): Canonical plugin node ID.
-        intent (GraphQueryIntent): Parsed relation intent.
+        plan (GraphQueryPlan): Position-based graph query plan.
 
     Returns:
         list[tuple[str, str, dict]]: Matching source, target, and edge payload rows.
@@ -152,18 +152,36 @@ def iter_relation_edges(
     matching_edges = []
     edge_iterators = []
 
-    if intent.direction == "outgoing":
+    if plan.direction == "outgoing":
         edge_iterators.append(graph.out_edges(node_id, keys=True, data=True))
-    elif intent.direction == "incoming":
+    elif plan.direction == "incoming":
+        edge_iterators.append(graph.in_edges(node_id, keys=True, data=True))
+    elif GraphRelationType.CONFLICTS_WITH.value in plan.relation_types:
+        edge_iterators.append(graph.out_edges(node_id, keys=True, data=True))
         edge_iterators.append(graph.in_edges(node_id, keys=True, data=True))
     else:
         edge_iterators.append(graph.out_edges(node_id, keys=True, data=True))
-        edge_iterators.append(graph.in_edges(node_id, keys=True, data=True))
 
     for edge_iterator in edge_iterators:
         for source_id, target_id, _edge_key, edge_data in edge_iterator:
-            if edge_data.get("relation") not in intent.relation_types:
+            if edge_data.get("relation") not in plan.relation_types:
                 continue
+            if plan.direction == "pairwise":
+                if plan.source_entity is None or plan.target_entity is None:
+                    continue
+                source_entity_id = plan.source_entity.entity_id
+                target_entity_id = plan.target_entity.entity_id
+                if GraphRelationType.CONFLICTS_WITH.value in plan.relation_types:
+                    if {source_id, target_id} != {
+                        source_entity_id,
+                        target_entity_id,
+                    }:
+                        continue
+                elif (source_id, target_id) != (
+                    source_entity_id,
+                    target_entity_id,
+                ):
+                    continue
             matching_edges.append((source_id, target_id, edge_data))
 
     return matching_edges
@@ -171,31 +189,34 @@ def iter_relation_edges(
 
 def collect_graph_relations(
     graph: nx.MultiDiGraph,
-    query_match: GraphQueryMatch,
+    plan: GraphQueryPlan,
 ) -> tuple[GraphRelation, ...]:
     """
     Traverse the graph for a parsed query and collect matching relations.
 
     Args:
         graph (nx.MultiDiGraph): Loaded plugin relation graph.
-        query_match (GraphQueryMatch): Parsed graph query state.
+        plan (GraphQueryPlan): Position-based graph query plan.
 
     Returns:
         tuple[GraphRelation, ...]: Matching graph relations with evidence.
     """
-    frontier = {query_match.matched_entity.entity_id}
+    anchor = plan.source_entity or plan.target_entity
+    if anchor is None:
+        return ()
+    frontier = {anchor.entity_id}
     visited_nodes = set(frontier)
     relation_keys = set()
     relations = []
 
-    for _depth in range(query_match.intent.traversal_depth):
+    for _depth in range(plan.traversal_depth):
         next_frontier = set()
 
         for node_id in frontier:
             for source_id, target_id, edge_data in iter_relation_edges(
                 graph,
                 node_id,
-                query_match.intent,
+                plan,
             ):
                 relation_key = (
                     source_id,
@@ -217,14 +238,7 @@ def collect_graph_relations(
                     )
                 )
 
-                if query_match.intent.direction == "incoming":
-                    neighbor_id = source_id
-                elif query_match.intent.direction == "outgoing":
-                    neighbor_id = target_id
-                else:
-                    neighbor_id = (
-                        target_id if source_id == node_id else source_id
-                    )
+                neighbor_id = source_id if plan.direction == "incoming" else target_id
 
                 if neighbor_id not in visited_nodes:
                     visited_nodes.add(neighbor_id)
@@ -241,6 +255,7 @@ def retrieve_graph_relations(
     query: str,
     plugin_lookup: PluginLookup,
     graph: nx.MultiDiGraph,
+    logger=None,
 ) -> GraphRetrievalResult | None:
     """
     Retrieve graph relations for a relational plugin query.
@@ -249,20 +264,43 @@ def retrieve_graph_relations(
         query (str): User query text.
         plugin_lookup (PluginLookup): Canonical plugin lookup built from IDs.
         graph (nx.MultiDiGraph): Loaded plugin relation graph.
+        logger (logging.Logger | None): Optional logger for retrieval decisions.
 
     Returns:
         GraphRetrievalResult | None: Structured graph retrieval output when matched.
     """
-    query_match = parse_graph_query(query, plugin_lookup)
-    if not query_match:
+    plan = parse_graph_query(query, plugin_lookup)
+    if not plan:
+        if logger:
+            logger.debug("Graph query not recognized; using semantic retrieval fallback.")
         return None
 
-    if query_match.matched_entity.entity_id not in graph:
+    plan_entities = (plan.source_entity, plan.target_entity)
+    if any(entity is not None and entity.entity_id not in graph for entity in plan_entities):
+        if logger:
+            logger.debug("Graph query entity not found; using semantic retrieval fallback.")
         return None
+
+    anchor = plan.source_entity or plan.target_entity
+    if anchor is None:
+        if logger:
+            logger.debug("Graph query has no anchor entity; using semantic retrieval fallback.")
+        return None
+
+    relations = collect_graph_relations(graph, plan)
+    if logger:
+        logger.info(
+            "Graph query matched: direction=%s source=%s target=%s depth=%d relations=%d",
+            plan.direction,
+            plan.source_entity.entity_id if plan.source_entity else "unknown",
+            plan.target_entity.entity_id if plan.target_entity else "unknown",
+            plan.traversal_depth,
+            len(relations),
+        )
 
     return GraphRetrievalResult(
-        query_entity=query_match.query_entity,
-        matched_entity_id=query_match.matched_entity.entity_id,
-        relations=collect_graph_relations(graph, query_match),
-        traversal_depth=query_match.intent.traversal_depth,
+        query_entity=anchor.name,
+        matched_entity_id=anchor.entity_id,
+        relations=relations,
+        traversal_depth=plan.traversal_depth,
     )

@@ -1,4 +1,4 @@
-"""GraphRAG query intent and entity parsing helpers."""
+"""Parse obvious GraphRAG questions from entity and relation positions."""
 
 from dataclasses import dataclass
 import re
@@ -13,79 +13,143 @@ from rag.graph.triple_extractor import (
 
 
 QUERY_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._-]*")
+QUERY_WHITESPACE_PATTERN = re.compile(r"\s+")
+QUERY_PUNCTUATION_PATTERN = re.compile(r"[?!,:;]+")
 MAX_QUERY_ENTITY_TOKENS = 8
-
-DEPENDENCY_QUERY_PATTERNS = (
-    re.compile(r"\bwhat does .+ depend on\b", re.IGNORECASE),
-    re.compile(r"\bdoes .+ depend on\b", re.IGNORECASE),
-    re.compile(r"\bdepends on\b", re.IGNORECASE),
-    re.compile(r"\bdependencies of\b", re.IGNORECASE),
-    re.compile(r"\brequires?\b", re.IGNORECASE),
-)
-REVERSE_DEPENDENCY_QUERY_PATTERNS = (
-    re.compile(r"\bwhat depends on\b", re.IGNORECASE),
-    re.compile(r"\bwhich plugins depend on\b", re.IGNORECASE),
-    re.compile(r"\bdepended on by\b", re.IGNORECASE),
-    re.compile(r"\brequired by\b", re.IGNORECASE),
-    re.compile(r"\bdepending on\b", re.IGNORECASE),
-)
-CONFLICT_QUERY_PATTERNS = (
-    re.compile(r"\bconflicts? with\b", re.IGNORECASE),
-    re.compile(r"\bincompatible with\b", re.IGNORECASE),
-    re.compile(r"\bconflicts?\b", re.IGNORECASE),
-    re.compile(r"\bincompatible\b", re.IGNORECASE),
-)
 MULTI_HOP_QUERY_PATTERNS = (
     re.compile(r"\bindirect(?:ly)?\b", re.IGNORECASE),
     re.compile(r"\btransitive(?:ly)?\b", re.IGNORECASE),
-    re.compile(r"\bthrough\b", re.IGNORECASE),
-    re.compile(r"\bchain\b", re.IGNORECASE),
 )
+
+DEPENDENCY_RELATIONS = (
+    ("depend on", "dependency"),
+    ("depends on", "dependency"),
+    ("require", "dependency"),
+    ("requires", "dependency"),
+    ("need", "dependency"),
+    ("needs", "dependency"),
+    ("rely on", "dependency"),
+    ("relies on", "dependency"),
+)
+CONFLICT_RELATIONS = (
+    ("conflict with", "conflict"),
+    ("conflicts with", "conflict"),
+    ("incompatible with", "conflict"),
+)
+NEGATION_WORDS = frozenset({"not", "never"})
 
 
 @dataclass(frozen=True)
-class GraphQueryIntent:
+class QueryToken:
     """
-    Parsed graph intent from a user query.
+    A lower-cased query token with offsets into the raw query.
 
-    Args:
-        relation_types (tuple[str, ...]): Relation types requested by the query.
-        direction (str): Traversal direction needed for the relation query.
-        traversal_depth (int): Traversal depth requested by the query.
+    Attributes:
+        text: Token text used for matching.
+        start: Inclusive raw-query offset.
+        end: Exclusive raw-query offset.
+    """
+
+    text: str
+    start: int
+    end: int
+
+
+@dataclass(frozen=True)
+class RelationMention:
+    """
+    A supported relation phrase and its raw-query span.
+
+    Attributes:
+        phrase: Matched relation phrase.
+        family: ``dependency`` or ``conflict``.
+        start: Inclusive raw-query offset.
+        end: Exclusive raw-query offset.
+    """
+
+    phrase: str
+    family: str
+    start: int
+    end: int
+
+
+@dataclass(frozen=True)
+class ResolvedQueryEntity:
+    """
+    A canonical Jenkins plugin and its raw-query span.
+
+    Attributes:
+        text: Original entity spelling.
+        entity: Canonical graph entity.
+        start: Inclusive raw-query offset.
+        end: Exclusive raw-query offset.
+    """
+
+    text: str
+    entity: GraphEntity
+    start: int
+    end: int
+
+
+@dataclass(frozen=True)
+class GraphQueryPlan:
+    """
+    The graph operation inferred from one supported query shape.
+
+    Attributes:
+        relation_types: Graph edge types to traverse.
+        direction: ``outgoing``, ``incoming``, or ``pairwise``.
+        source_entity: Known source entity, if any.
+        target_entity: Known target entity, if any.
+        traversal_depth: Number of graph hops.
+        matched_rule: Diagnostic position-based rule label.
     """
 
     relation_types: tuple[str, ...]
     direction: str
-    traversal_depth: int = 1
+    source_entity: GraphEntity | None
+    target_entity: GraphEntity | None
+    traversal_depth: int
+    matched_rule: str
 
 
-@dataclass(frozen=True)
-class GraphQueryMatch:
+def normalize_graph_query(query: str) -> str:
     """
-    Parsed graph query state used by graph traversal.
+    Normalize formatting without interpreting relation or entity meaning.
 
     Args:
-        query (str): Original user query.
-        query_entity (str): Raw entity text found in the query.
-        matched_entity (GraphEntity): Canonical plugin entity matched from the query.
-        intent (GraphQueryIntent): Parsed relation intent.
-    """
+        query: Raw user query.
 
-    query: str
-    query_entity: str
-    matched_entity: GraphEntity
-    intent: GraphQueryIntent
+    Returns:
+        Normalized text for simple keyword matching.
+    """
+    normalized = query.translate(
+        str.maketrans(
+            {
+                "\u2018": "'",
+                "\u2019": "'",
+                "\u2010": "-",
+                "\u2011": "-",
+                "\u2013": "-",
+                "\u2014": "-",
+            }
+        )
+    ).lower()
+    normalized = re.sub(r"\bplug[\s-]?ins\b", "plugins", normalized)
+    normalized = re.sub(r"\bplug[\s-]?in\b", "plugin", normalized)
+    normalized = QUERY_PUNCTUATION_PATTERN.sub(" ", normalized)
+    return QUERY_WHITESPACE_PATTERN.sub(" ", normalized).strip()
 
 
 def build_query_entity(plugin_id: str) -> GraphEntity:
     """
-    Build a plugin graph entity from a canonical plugin ID.
+    Create a plugin graph entity from a canonical plugin ID.
 
     Args:
-        plugin_id (str): Canonical plugin ID.
+        plugin_id: Canonical Jenkins plugin ID.
 
     Returns:
-        GraphEntity: Plugin entity used by query parsing.
+        Plugin graph entity.
     """
     return GraphEntity(
         name=plugin_id,
@@ -94,107 +158,226 @@ def build_query_entity(plugin_id: str) -> GraphEntity:
     )
 
 
-def detect_graph_query_intent(query: str) -> GraphQueryIntent | None:
+def _tokens(query: str) -> tuple[QueryToken, ...]:
     """
-    Detect relation intent from a user query.
+    Tokenize raw text while preserving positions for role matching.
 
     Args:
-        query (str): User query text.
+        query: Raw user query.
 
     Returns:
-        GraphQueryIntent | None: Parsed graph intent, if the query is relational.
+        Ordered query tokens with raw-query spans.
     """
-    query_lower = query.lower()
-    traversal_depth = (
-        2
-        if any(pattern.search(query_lower) for pattern in MULTI_HOP_QUERY_PATTERNS)
-        else 1
+    return tuple(
+        QueryToken(
+            text=match.group().lower().rstrip(".?!,:;"),
+            start=match.start(),
+            end=match.end(),
+        )
+        for match in QUERY_TOKEN_PATTERN.finditer(query)
     )
 
-    if any(pattern.search(query_lower) for pattern in CONFLICT_QUERY_PATTERNS):
-        return GraphQueryIntent(
-            relation_types=(GraphRelationType.CONFLICTS_WITH.value,),
-            direction="both",
-            traversal_depth=traversal_depth,
-        )
 
-    if any(pattern.search(query_lower) for pattern in REVERSE_DEPENDENCY_QUERY_PATTERNS):
-        return GraphQueryIntent(
-            relation_types=(
-                GraphRelationType.DEPENDS_ON.value,
-                GraphRelationType.OPTIONAL_DEPENDS_ON.value,
-            ),
-            direction="incoming",
-            traversal_depth=traversal_depth,
-        )
-
-    if any(pattern.search(query_lower) for pattern in DEPENDENCY_QUERY_PATTERNS):
-        return GraphQueryIntent(
-            relation_types=(
-                GraphRelationType.DEPENDS_ON.value,
-                GraphRelationType.OPTIONAL_DEPENDS_ON.value,
-            ),
-            direction="outgoing",
-            traversal_depth=traversal_depth,
-        )
-
-    return None
-
-
-def resolve_query_entity_text(
-    text: str,
-    plugin_lookup: PluginLookup,
-) -> tuple[str, GraphEntity] | None:
+def _find_relation(query: str) -> RelationMention | None:
     """
-    Resolve a plugin entity from one text span.
+    Find a supported relation phrase without assigning direction.
 
     Args:
-        text (str): Candidate query text span.
-        plugin_lookup (PluginLookup): Canonical plugin lookup built from IDs.
+        query: Raw user query.
 
     Returns:
-        tuple[str, GraphEntity] | None: Matched text and canonical plugin entity.
+        Relation mention, or ``None`` when no supported phrase is found.
     """
-    tokens = QUERY_TOKEN_PATTERN.findall(text)
-    max_length = min(len(tokens), MAX_QUERY_ENTITY_TOKENS)
-
-    for token_count in range(max_length, 0, -1):
-        for start_index in range(len(tokens) - token_count + 1):
-            lookup_phrase = " ".join(tokens[start_index : start_index + token_count])
-            for variant in build_candidate_variants(lookup_phrase):
-                target_id = resolve_plugin_id(variant, plugin_lookup)
-                if target_id:
-                    return lookup_phrase, build_query_entity(target_id)
-
+    tokens = _tokens(query)
+    for index, token in enumerate(tokens):
+        for phrase, family in (*DEPENDENCY_RELATIONS, *CONFLICT_RELATIONS):
+            words = phrase.split()
+            if [token.text for token in tokens[index : index + len(words)]] != words:
+                continue
+            end_token = tokens[index + len(words) - 1]
+            return RelationMention(
+                phrase=phrase,
+                family=family,
+                start=token.start,
+                end=end_token.end,
+            )
     return None
+
+
+def _relation_types(query: str, relation: RelationMention) -> tuple[str, ...]:
+    """
+    Map a relation mention and modifiers to graph edge types.
+
+    Args:
+        query: Raw user query containing modifiers.
+        relation: Detected relation mention.
+
+    Returns:
+        Graph relation types requested by the query.
+    """
+    if relation.family == "conflict":
+        return (GraphRelationType.CONFLICTS_WITH.value,)
+    words = {token.text for token in _tokens(query)}
+    if words & {"optional", "optionally"}:
+        return (GraphRelationType.OPTIONAL_DEPENDS_ON.value,)
+    if relation.phrase in {"require", "requires"} or "required" in words:
+        return (GraphRelationType.DEPENDS_ON.value,)
+    return (
+        GraphRelationType.DEPENDS_ON.value,
+        GraphRelationType.OPTIONAL_DEPENDS_ON.value,
+    )
+
+
+def detect_graph_relation_types(query: str) -> tuple[str, ...] | None:
+    """
+    Detect a relation family without assigning entity roles.
+
+    Args:
+        query: Raw user query.
+
+    Returns:
+        Relation types, or ``None`` when no phrase is recognized.
+    """
+    relation = _find_relation(query)
+    return _relation_types(query, relation) if relation else None
+
+
+def _build_plan(
+    query: str,
+    relation: RelationMention,
+    entities: tuple[ResolvedQueryEntity, ...],
+) -> GraphQueryPlan | None:
+    """
+    Build a plan from entity positions or abstain.
+
+    Args:
+        query: Raw user query.
+        relation: Detected relation mention.
+        entities: Resolved plugin entities in query order.
+
+    Returns:
+        Position-based graph plan, or ``None`` for an unsupported layout.
+    """
+    if len(entities) not in {1, 2}:
+        return None
+    before = [entity for entity in entities if entity.end <= relation.start]
+    after = [entity for entity in entities if entity.start >= relation.end]
+    if len(entities) == 2:
+        if len(before) != 1 or len(after) != 1:
+            return None
+        direction = "pairwise"
+        source, target = before[0].entity, after[0].entity
+    elif before:
+        if relation.family == "conflict":
+            return None
+        direction = "outgoing"
+        source, target = before[0].entity, None
+    elif after:
+        if relation.family == "conflict":
+            return None
+        direction = "incoming"
+        source, target = (None, after[0].entity)
+    else:
+        return None
+
+    normalized = normalize_graph_query(query)
+    depth = 2 if any(pattern.search(normalized) for pattern in MULTI_HOP_QUERY_PATTERNS) else 1
+    return GraphQueryPlan(
+        relation_types=_relation_types(query, relation),
+        direction=direction,
+        source_entity=source,
+        target_entity=target,
+        traversal_depth=depth,
+        matched_rule=f"{relation.family}_by_position",
+    )
+
+
+def build_graph_query_plan(
+    query: str,
+    entities: tuple[ResolvedQueryEntity, ...],
+) -> GraphQueryPlan | None:
+    """
+    Resolve the relation and build a position-based graph plan.
+
+    Args:
+        query: Raw user query.
+        entities: Resolved plugin entities in query order.
+
+    Returns:
+        Graph query plan, or ``None`` when parsing abstains.
+    """
+    relation = _find_relation(query)
+    return _build_plan(query, relation, entities) if relation else None
+
+
+def resolve_query_entities(
+    text: str,
+    plugin_lookup: PluginLookup,
+) -> tuple[ResolvedQueryEntity, ...]:
+    """
+    Resolve all non-overlapping Jenkins plugin mentions with raw spans.
+
+    Args:
+        text: Raw query text.
+        plugin_lookup: Existing Jenkins plugin lookup.
+
+    Returns:
+        Ordered resolved entities, possibly empty.
+    """
+    tokens = list(QUERY_TOKEN_PATTERN.finditer(text))
+    resolved: list[ResolvedQueryEntity] = []
+    occupied: set[int] = set()
+    for start_index, token in enumerate(tokens):
+        if start_index in occupied:
+            continue
+        for token_count in range(
+            min(MAX_QUERY_ENTITY_TOKENS, len(tokens) - start_index), 0, -1
+        ):
+            indexes = range(start_index, start_index + token_count)
+            if any(index in occupied for index in indexes):
+                continue
+            phrase = " ".join(tokens[index].group() for index in indexes)
+            plugin_id = next(
+                (
+                    resolved_id
+                    for variant in build_candidate_variants(phrase)
+                    if (resolved_id := resolve_plugin_id(variant, plugin_lookup))
+                ),
+                None,
+            )
+            if not plugin_id:
+                continue
+            end_token = tokens[start_index + token_count - 1]
+            resolved.append(
+                ResolvedQueryEntity(
+                    text=text[token.start() : end_token.end()],
+                    entity=build_query_entity(plugin_id),
+                    start=token.start(),
+                    end=end_token.end(),
+                )
+            )
+            occupied.update(indexes)
+            break
+    return tuple(resolved)
 
 
 def parse_graph_query(
     query: str,
     plugin_lookup: PluginLookup,
-) -> GraphQueryMatch | None:
+) -> GraphQueryPlan | None:
     """
-    Parse a user query into graph intent and a canonical entity.
+    Parse an obvious graph-shaped query or abstain.
 
     Args:
-        query (str): User query text.
-        plugin_lookup (PluginLookup): Canonical plugin lookup built from IDs.
+        query: Raw user query.
+        plugin_lookup: Existing Jenkins plugin lookup.
 
     Returns:
-        GraphQueryMatch | None: Parsed graph query state when graph retrieval applies.
+        Position-based graph plan, or ``None`` for negated or unsupported
+        wording.
     """
-    intent = detect_graph_query_intent(query)
-    if not intent:
+    if any(token.text in NEGATION_WORDS for token in _tokens(query)):
         return None
-
-    entity_match = resolve_query_entity_text(query, plugin_lookup)
-    if not entity_match:
-        return None
-
-    query_entity, matched_entity = entity_match
-    return GraphQueryMatch(
-        query=query,
-        query_entity=query_entity,
-        matched_entity=matched_entity,
-        intent=intent,
-    )
+    entities = resolve_query_entities(query, plugin_lookup)
+    plan = build_graph_query_plan(query, entities)
+    return plan

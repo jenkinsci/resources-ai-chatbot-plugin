@@ -14,6 +14,7 @@ from rag.graph.graph_retriever import (
 from rag.graph.graph_store import DEFAULT_PLUGIN_GRAPH_PATH
 from rag.graph.hybrid_context import (
     DEFAULT_PLUGIN_CHUNKS_PATH,
+    MAX_GRAPH_CONTEXT_RELATIONS,
     build_chunk_lookup,
     format_graph_retrieval_result,
     load_graph_context_chunks,
@@ -132,9 +133,17 @@ def build_graph_runtime_context(
         query,
         graph_context.plugin_lookup,
         graph_context.graph,
+        logger=logger,
     )
     if result is None:
         return ""
+
+    if len(result.relations) > MAX_GRAPH_CONTEXT_RELATIONS:
+        logger.info(
+            "Graph context truncated: included=%d retrieved=%d",
+            MAX_GRAPH_CONTEXT_RELATIONS,
+            len(result.relations),
+        )
 
     return format_graph_retrieval_result(
         result,

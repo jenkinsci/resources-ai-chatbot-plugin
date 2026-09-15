@@ -21,14 +21,14 @@ def build_node_records(triples: list[Triple]) -> list[tuple[str, dict[str, str]]
     node_records: dict[str, dict[str, str]] = {}
 
     for triple in triples:
-        node_records[triple.source.entity_id] = {
+        node_records.setdefault(triple.source.entity_id, {
             "name": triple.source.name,
             "entity_type": triple.source.entity_type,
-        }
-        node_records[triple.target.entity_id] = {
+        })
+        node_records.setdefault(triple.target.entity_id, {
             "name": triple.target.name,
             "entity_type": triple.target.entity_type,
-        }
+        })
 
     return list(node_records.items())
 
