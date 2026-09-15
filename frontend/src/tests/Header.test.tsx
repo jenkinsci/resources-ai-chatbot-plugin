@@ -18,6 +18,7 @@ describe("Header Component", () => {
     render(
       <Header
         currentSessionId={null}
+        isBackendConnected={false}
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
@@ -34,6 +35,7 @@ describe("Header Component", () => {
     render(
       <Header
         currentSessionId={null}
+        isBackendConnected={false}
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
@@ -50,6 +52,7 @@ describe("Header Component", () => {
     render(
       <Header
         currentSessionId="session-1"
+        isBackendConnected={false}
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
@@ -66,6 +69,7 @@ describe("Header Component", () => {
     render(
       <Header
         currentSessionId={null}
+        isBackendConnected={false}
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
@@ -84,6 +88,7 @@ describe("Header Component", () => {
     render(
       <Header
         currentSessionId="session-1"
+        isBackendConnected={false}
         openSideBar={mockOpenSideBar}
         clearMessages={mockClearMessages}
         messages={mockMessages}
