@@ -37,8 +37,6 @@ const BUILD_ANALYSIS_ACTION_DELAY_MS = 2000;
  * Chatbot is the core component responsible for managing the chatbot display.
  */
 
-const LOG_PATTERN =
-  /(Started by user|Running as SYSTEM|Building in workspace|FATAL:|ERROR:|Exception:|Stack trace|Build step .*? marked build as failure)/i;
 const BACKEND_HEALTH_POLL_INTERVAL_MS = 5 * 60 * 1000;
 
 export const Chatbot = () => {
