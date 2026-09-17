@@ -12,6 +12,7 @@ to the chat service logic.
 import json
 import logging
 import asyncio
+import os
 
 # =========================
 # Third-party imports
@@ -43,7 +44,10 @@ from api.models.schemas import (
     SessionResponse,
     FileAttachment,
     SupportedExtensionsResponse,
+    ProviderMetadata,
+    ProvidersResponse,
 )
+from api.config.providers import load_provider_catalog
 from api.services.chat_service import (
     get_chatbot_reply,
     get_chatbot_reply_stream,
@@ -133,6 +137,30 @@ async def _process_uploaded_files(
 def log_preview(request: LogPreviewRequest) -> LogPreviewResponse:
     """Extract and sanitize Jenkins output without invoking the LLM."""
     return LogPreviewResponse(preview=prepare_log_context(request.log_text))
+
+
+@router.get("/providers", response_model=ProvidersResponse)
+def get_providers() -> ProvidersResponse:
+    """Return safe metadata for configured providers.
+
+    Returns:
+        ProvidersResponse: Provider metadata and configuration status.
+    """
+    providers = load_provider_catalog()
+    return ProvidersResponse(
+        providers=[
+            ProviderMetadata(
+                id=provider.id,
+                label=provider.label,
+                model=provider.model,
+                configured=(
+                    provider.id == "local"
+                    or bool(os.getenv(provider.api_key_env))
+                ),
+            )
+            for provider in providers
+        ]
+    )
 
 
 # =========================
@@ -349,7 +377,6 @@ def chatbot_reply(session_id: str, request: ChatRequest, _background_tasks: Back
             detail="Session not found.",
         )
     message = request.message.strip() or DEFAULT_LOG_ANALYSIS_MESSAGE
-
     try:
         provider = provider_manager.resolve(request.provider)
     except ValueError as exc:
