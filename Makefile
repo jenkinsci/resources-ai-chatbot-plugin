@@ -1,6 +1,6 @@
 .PHONY: all api setup-backend build-frontend test run-data-pipeline clean \
 	run-data-storage run-data-storage-plugins run-data-storage-docs run-data-storage-discourse \
-	run-data-graph run-data-graph-plugins
+	run-data-graph run-data-graph-plugins sync-provider-env
 
 BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate && export PYTHONPATH=$$(pwd)
 
@@ -33,6 +33,9 @@ run-api:
 	@$(BACKEND_SHELL) && uvicorn api.main:app --reload
 
 api: setup-backend run-api
+
+sync-provider-env: setup-backend
+	@$(BACKEND_SHELL) && python3 -m api.config.env_sync
 
 dev-lite: setup-backend
 	@echo "Starting API in lite mode..."

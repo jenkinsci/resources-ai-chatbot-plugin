@@ -2,16 +2,39 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { getChatbotText } from "../data/chatbotTexts";
 import { Header } from "../components/Header";
 import type { Message } from "../model/Message";
+import type { ProviderMetadata } from "../api/chatbot";
 
 const mockMessages: Message[] = [];
+const mockProviders: ProviderMetadata[] = [
+  {
+    id: "local",
+    label: "Local Mistral Model",
+    model: "llama.cpp",
+    configured: true,
+  },
+  {
+    id: "groq",
+    label: "Groq API",
+    model: "groq/llama-3.1-8b-instant",
+    configured: true,
+  },
+  {
+    id: "gemini",
+    label: "Gemini API",
+    model: "gemini/gemini-3.5-flash-lite",
+    configured: false,
+  },
+];
 
 describe("Header Component", () => {
   const mockOpenSideBar = jest.fn();
   const mockClearMessages = jest.fn();
+  const mockProviderChange = jest.fn();
 
   beforeEach(() => {
     mockOpenSideBar.mockReset();
     mockClearMessages.mockReset();
+    mockProviderChange.mockReset();
   });
 
   it("always renders the sidebar toggle button", () => {
@@ -96,5 +119,51 @@ describe("Header Component", () => {
     fireEvent.click(clearButton);
 
     expect(mockClearMessages).toHaveBeenCalledWith("session-1");
+  });
+
+  it("selects a configured provider", () => {
+    render(
+      <Header
+        currentSessionId={null}
+        openSideBar={mockOpenSideBar}
+        clearMessages={mockClearMessages}
+        messages={mockMessages}
+        providers={mockProviders}
+        selectedProviderId="local"
+        onProviderChange={mockProviderChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Select model provider" }),
+    );
+    fireEvent.click(screen.getByRole("option", { name: "Groq API" }));
+
+    expect(mockProviderChange).toHaveBeenCalledWith("groq");
+  });
+
+  it("does not select an unconfigured provider", () => {
+    render(
+      <Header
+        currentSessionId={null}
+        openSideBar={mockOpenSideBar}
+        clearMessages={mockClearMessages}
+        messages={mockMessages}
+        providers={mockProviders}
+        selectedProviderId="local"
+        onProviderChange={mockProviderChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Select model provider" }),
+    );
+
+    fireEvent.click(
+      screen.getByRole("option", {
+        name: "Gemini API, API key not configured",
+      }),
+    );
+    expect(mockProviderChange).not.toHaveBeenCalled();
   });
 });

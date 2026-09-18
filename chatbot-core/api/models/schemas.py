@@ -38,11 +38,13 @@ class ChatRequest(BaseModel):
 
     Fields:
         message (str): The user's input message.
+        provider (str): The provider ID to use for this request.
 
     Validation:
         - Rejects messages that are empty.
     """
     message: str
+    provider: str = "local"
 
     @field_validator("message")
     def message_must_not_be_empty(cls, v): # pylint: disable=no-self-argument
@@ -100,6 +102,21 @@ class ChatResponse(BaseModel):
     Represents the chatbot's reply.
     """
     reply: str
+
+
+class ProviderMetadata(BaseModel):
+    """Safe provider metadata exposed to clients."""
+
+    id: str
+    label: str
+    model: str
+    configured: bool
+
+
+class ProvidersResponse(BaseModel):
+    """Response containing the available provider metadata."""
+
+    providers: List[ProviderMetadata]
 
 
 class ChatResponseWithFiles(BaseModel):
