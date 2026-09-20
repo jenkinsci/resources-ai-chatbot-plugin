@@ -15,7 +15,7 @@
   "popupMessage": "This action cannot be undone. Are you sure you want to delete this conversation?",
   "popupDeleteButton": "Delete",
   "popupCancelButton": "Cancel",
-  "errorMessage": "Sorry, I had trouble responding.",
+  "errorMessage": "The chatbot backend is unavailable. Check the configured backend URL and make sure the FastAPI service is running.",
   "noResponseMessage": "No response",
   "sendMessage": "Send",
   "welcomeMessage": "Welcome to Jenkins AI Assistant",
