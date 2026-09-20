@@ -20,12 +20,12 @@
             </a>
           </li>
           <li>
-            <a href="https://github.com/jenkinsci/resources-ai-chatbot-plugin/blob/main/docs/setup.md">
+            <a href="https://github.com/jenkinsci/resources-ai-chatbot-plugin/blob/main/docs/setup/README.md">
               Setup guide
             </a>
           </li>
           <li>
-            <a href="https://github.com/jenkinsci/resources-ai-chatbot-plugin/blob/main/docs/windows-setup.md">
+            <a href="https://github.com/jenkinsci/resources-ai-chatbot-plugin/blob/main/docs/setup/windows.md">
               Windows/WSL2 setup
             </a>
           </li>

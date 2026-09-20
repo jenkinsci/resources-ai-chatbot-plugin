@@ -29,6 +29,7 @@ jest.mock("../api/chatbot", () => ({
   createChatSession: jest.fn().mockResolvedValue("new-session-id"),
   deleteChatSession: jest.fn().mockResolvedValue(undefined),
   fetchSupportedExtensions: jest.fn().mockResolvedValue(null),
+  checkBackendHealth: jest.fn().mockResolvedValue(false),
   fetchProviders: jest.fn().mockResolvedValue([]),
   validateFile: jest.fn().mockReturnValue({ isValid: true }),
   fileToAttachment: jest.fn().mockReturnValue({
