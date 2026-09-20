@@ -1,6 +1,10 @@
 import fetchMock from "jest-fetch-mock";
 import "@testing-library/jest-dom";
 
+jest.mock("uuid", () => ({
+  v4: () => "test-uuid",
+}));
+
 jest.mock("jspdf", () => {
   return jest.fn().mockImplementation(() => ({
     text: jest.fn(),
