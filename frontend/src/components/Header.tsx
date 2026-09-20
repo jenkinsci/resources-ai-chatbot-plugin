@@ -6,8 +6,8 @@ import {
   exportAsDocx,
   exportAsPdf,
 } from "../utils/exportchat";
-import { type Message } from "../model/Message";
-import { type ProviderMetadata } from "../api/chatbot";
+import type { Message } from "../model/Message";
+import type { ProviderMetadata } from "../api/chatbot";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   useEffect,
