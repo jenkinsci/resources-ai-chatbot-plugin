@@ -46,7 +46,6 @@ def test_chatbot_reply_with_text_file(client, mock_session_exists, mock_get_chat
     assert args[2][0].filename == "script.py"
     assert "print('Hello, World!')" in args[2][0].content
 
-
 def test_chatbot_reply_with_files_persists_session(
     client, mock_session_exists, mock_get_chatbot_reply
 ):
@@ -150,7 +149,7 @@ def test_chatbot_reply_upload_unsupported_file_type(client, mock_session_exists)
     )
 
     assert response.status_code == 400
-    assert "Unsupported file type" in response.json()["detail"]
+    assert response.json() == {"detail": "Unable to process uploaded file."}
 
 
 def test_chatbot_reply_upload_empty_message_with_files(
@@ -223,7 +222,7 @@ def test_chatbot_reply_upload_file_too_large(client, mock_session_exists):
     )
 
     assert response.status_code == 400
-    assert "exceeds maximum size" in response.json()["detail"]
+    assert response.json() == {"detail": "Unable to process uploaded file."}
 
 
 def test_chatbot_reply_text_truncation(

@@ -4,6 +4,7 @@ import json
 from unittest.mock import Mock
 
 from rag.graph.graph_artifacts import (
+    GraphArtifactConfig,
     GraphArtifactPaths,
     build_extraction_report,
     triple_to_record,
@@ -97,7 +98,7 @@ def test_write_graph_artifacts_writes_loadable_outputs(tmp_path):
         triples,
         chunks,
         mock_logger,
-        paths=paths,
+        config=GraphArtifactConfig(paths=paths),
     )
     loaded_graph = load_graph(str(paths.graph_path), mock_logger)
     triple_lines = paths.triples_path.read_text(encoding="utf-8").splitlines()
