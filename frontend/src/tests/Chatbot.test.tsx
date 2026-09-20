@@ -30,6 +30,7 @@ jest.mock("../api/chatbot", () => ({
   deleteChatSession: jest.fn().mockResolvedValue(undefined),
   fetchSupportedExtensions: jest.fn().mockResolvedValue(null),
   checkBackendHealth: jest.fn().mockResolvedValue(false),
+  fetchProviders: jest.fn().mockResolvedValue([]),
   validateFile: jest.fn().mockReturnValue({ isValid: true }),
   fileToAttachment: jest.fn().mockReturnValue({
     filename: "test.txt",
@@ -66,10 +67,13 @@ jest.mock("../components/Sidebar", () => ({
 }));
 
 jest.mock("../components/Header", () => ({
-  Header: ({ openSideBar, clearMessages }: HeaderProps) => (
+  Header: ({ openSideBar, clearMessages, providers = [] }: HeaderProps) => (
     <div data-testid="header">
       <button onClick={openSideBar}>Open Sidebar</button>
       <button onClick={() => clearMessages("session-1")}>Clear Chat</button>
+      {providers.map((provider) => (
+        <span key={provider.id}>{provider.label}</span>
+      ))}
     </div>
   ),
 }));
@@ -132,6 +136,32 @@ describe("Chatbot component", () => {
     expect(
       screen.getByText(getChatbotText("welcomeMessage")),
     ).toBeInTheDocument();
+  });
+
+  it("loads providers into the header", async () => {
+    (chatbotApi.fetchProviders as jest.Mock).mockResolvedValueOnce([
+      {
+        id: "local",
+        label: "Local Mistral Model",
+        model: "llama.cpp",
+        configured: true,
+      },
+      {
+        id: "groq",
+        label: "Groq API",
+        model: "groq/llama-3.1-8b-instant",
+        configured: true,
+      },
+    ]);
+
+    render(<Chatbot />);
+    fireEvent.click(
+      screen.getByRole("button", { name: getChatbotText("toggleButtonLabel") }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Groq API")).toBeInTheDocument();
+    });
   });
 
   it("creates a new chat when clicking create button", async () => {

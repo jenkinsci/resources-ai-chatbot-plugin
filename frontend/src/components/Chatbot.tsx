@@ -10,9 +10,11 @@ import {
   deleteChatSession,
   fetchSupportedExtensions,
   checkBackendHealth,
+  fetchProviders,
   validateFile,
   fileToAttachment,
   type SupportedExtensions,
+  type ProviderMetadata,
 } from "../api/chatbot";
 import { Header } from "./Header";
 import { Messages } from "./Messages";
@@ -64,6 +66,8 @@ export const Chatbot = () => {
   const [showBuildAnalysisAction, setShowBuildAnalysisAction] = useState(false);
   const [analysisActionSuppressed, setAnalysisActionSuppressed] =
     useState(false);
+  const [providers, setProviders] = useState<ProviderMetadata[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState("local");
 
   const { buildFailed, buildContext, showToast, setShowToast } =
     useContextObserver(isOpen);
@@ -122,6 +126,23 @@ export const Chatbot = () => {
       window.clearInterval(intervalId);
     };
   }, [isOpen]);
+
+  /**
+   * Fetch the configured providers on component mount.
+   */
+  useEffect(() => {
+    const loadProviders = async () => {
+      const configuredProviders = await fetchProviders();
+      if (configuredProviders.length === 0) {
+        return;
+      }
+      setProviders(configuredProviders);
+      if (!configuredProviders.some((provider) => provider.id === "local")) {
+        setSelectedProviderId(configuredProviders[0].id);
+      }
+    };
+    loadProviders();
+  }, []);
 
   /**
    * Saving the chat sessions in the session storage only
@@ -316,12 +337,20 @@ export const Chatbot = () => {
               requestMessage || "Please analyze the attached file(s).",
               filesToSend,
               controller.signal,
+              ...(selectedProviderId === "local" ? [] : [selectedProviderId]),
             )
-          : await fetchChatbotReply(
-              currentSessionId,
-              requestMessage,
-              controller.signal,
-            );
+          : selectedProviderId === "local"
+            ? await fetchChatbotReply(
+                currentSessionId,
+                requestMessage,
+                controller.signal,
+              )
+            : await fetchChatbotReply(
+                currentSessionId,
+                requestMessage,
+                controller.signal,
+                selectedProviderId,
+              );
       appendMessageToCurrentSession(botReply);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -575,6 +604,9 @@ export const Chatbot = () => {
             openSideBar={openSideBar}
             clearMessages={openConfirmDeleteChatPopup}
             messages={getSessionMessages(currentSessionId)}
+            providers={providers}
+            selectedProviderId={selectedProviderId}
+            onProviderChange={setSelectedProviderId}
           />
           {currentSessionId !== null ? (
             <>
