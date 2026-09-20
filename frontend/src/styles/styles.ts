@@ -308,6 +308,172 @@ export const chatbotStyles = {
     gap: "8px",
   } as CSSProperties,
 
+  providerSelector: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    minWidth: 0,
+    position: "relative",
+    color: "var(--text-color)",
+    fontSize: "12px",
+    fontWeight: 500,
+    flex: "0 1 auto",
+  } as CSSProperties,
+
+  providerControl: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    height: "42px",
+    minWidth: "220px",
+    maxWidth: "260px",
+    padding: "0 14px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    backgroundColor: "#ffffff",
+    boxShadow:
+      "0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04)",
+    color: "var(--text-color)",
+    font: "inherit",
+    cursor: "pointer",
+    textAlign: "left",
+    flex: "1 1 auto",
+  } as CSSProperties,
+
+  providerControlText: {
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+    alignItems: "flex-start",
+    textAlign: "left",
+  } as CSSProperties,
+
+  providerControlLabel: {
+    maxWidth: "204px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: "13px",
+    fontWeight: 600,
+  } as CSSProperties,
+
+  providerControlModel: {
+    display: "none",
+  } as CSSProperties,
+
+  providerMenu: {
+    position: "absolute",
+    top: "calc(100% + 8px)",
+    left: "50%",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    width: "320px",
+    maxWidth: "calc(100vw - 32px)",
+    maxHeight: "min(380px, calc(100vh - 120px))",
+    overflowY: "auto",
+    padding: "10px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    boxShadow:
+      "0 2px 6px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.10)",
+    boxSizing: "border-box",
+    zIndex: 10000,
+    transform: "translateX(-50%)",
+  } as CSSProperties,
+
+  providerOption: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    width: "100%",
+    minHeight: "58px",
+    padding: "9px 12px",
+    border: "1px solid transparent",
+    borderRadius: "10px",
+    backgroundColor: "transparent",
+    color: "var(--text-color)",
+    font: "inherit",
+    textAlign: "left",
+    cursor: "pointer",
+    boxSizing: "border-box",
+  } as CSSProperties,
+
+  providerOptionSelected: {
+    backgroundColor: "#eff6ff",
+    borderColor: "#dbeafe",
+    color: "var(--text-color)",
+    boxShadow: "none",
+  } as CSSProperties,
+
+  providerOptionDisabled: {
+    cursor: "not-allowed",
+    color: "color-mix(in srgb, var(--text-color) 76%, transparent)",
+  } as CSSProperties,
+
+  providerOptionIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "32px",
+    minWidth: "32px",
+    height: "32px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
+  } as CSSProperties,
+
+  providerOptionLogo: {
+    display: "block",
+    width: "18px",
+    height: "18px",
+    objectFit: "contain",
+  } as CSSProperties,
+
+  providerOptionInitial: {
+    fontSize: "15px",
+    fontWeight: 600,
+    lineHeight: 1,
+  } as CSSProperties,
+
+  providerOptionText: {
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+    flex: 1,
+    gap: "2px",
+  } as CSSProperties,
+
+  providerOptionLabel: {
+    fontSize: "14px",
+    fontWeight: 600,
+    lineHeight: "18px",
+  } as CSSProperties,
+
+  providerOptionModel: {
+    overflow: "hidden",
+    color: "var(--text-color)",
+    opacity: 0.56,
+    fontSize: "11px",
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    lineHeight: "16px",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  } as CSSProperties,
+
+  providerOptionStatus: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "24px",
+    minWidth: "24px",
+  } as CSSProperties,
+
   clearButton: {
     backgroundColor: "transparent",
     border: "none",

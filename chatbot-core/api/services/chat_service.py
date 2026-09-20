@@ -9,7 +9,7 @@ from typing import AsyncGenerator, List, Optional
 from api.config.loader import CONFIG
 from api.models.embedding_model import EMBEDDING_MODEL
 from api.models.llama_cpp_provider import llm_provider
-from api.models.provider_manager import ProviderManager, get_current_provider
+from api.models.provider_manager import build_provider_manager, get_current_provider
 from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type, FileAttachment
 from api.prompts.prompt_builder import build_prompt
 from api.prompts.prompts import (
@@ -41,7 +41,7 @@ from utils import LoggerFactory
 logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
 retrieval_config = CONFIG["retrieval"]
-provider_manager = ProviderManager(llm_provider)
+provider_manager = build_provider_manager(llm_provider)
 CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 SOURCE_TOP_K_CONFIG_KEYS = {
     "plugins": "top_k_plugins",
@@ -57,6 +57,29 @@ def _sanitize_log_payload(payload: object) -> str:
         return ""
 
     return sanitize_logs(str(payload))
+
+
+def prepare_log_context(log_text: str) -> str:
+    """
+    Extract and sanitize relevant build-log lines for display and diagnosis.
+
+    Args:
+        log_text (str): Raw Jenkins build log text.
+
+    Returns:
+        str: Sanitized relevant log excerpt, or an empty string.
+    """
+    if not log_text or not log_text.strip():
+        return ""
+
+    relevant_log = extract_relevant_log_lines(log_text)
+    sanitized_log = sanitize_logs(relevant_log)
+    logger.info(
+        "Prepared build log context: raw=%d chars, sanitized excerpt=%d chars",
+        len(log_text),
+        len(sanitized_log),
+    )
+    return sanitized_log
 
 
 def get_chatbot_reply(
@@ -91,11 +114,7 @@ def get_chatbot_reply(
     # Process file context if files are provided
     context = _process_file_context(context, files)
 
-    prompt = build_prompt(
-        user_input,
-        context,
-        memory,
-    )
+    prompt = build_prompt(user_input, context, memory)
 
     logger.debug("Generating answer with prompt: %s",
                  _sanitize_log_payload(prompt))
@@ -108,29 +127,6 @@ def get_chatbot_reply(
     memory.chat_memory.add_ai_message(reply)
 
     return ChatResponse(reply=reply)
-
-
-def prepare_log_context(log_text: str) -> str:
-    """
-    Extract and sanitize relevant build-log lines for display and diagnosis.
-
-    Args:
-        log_text (str): Raw Jenkins build log text.
-
-    Returns:
-        str: Sanitized relevant log excerpt, or an empty string.
-    """
-    if not log_text or not log_text.strip():
-        return ""
-
-    relevant_log = extract_relevant_log_lines(log_text)
-    sanitized_log = sanitize_logs(relevant_log)
-    logger.info(
-        "Prepared build log context: raw=%d chars, sanitized excerpt=%d chars",
-        len(log_text),
-        len(sanitized_log),
-    )
-    return sanitized_log
 
 
 def _process_file_context(context: str, files: Optional[List[FileAttachment]]) -> str:
