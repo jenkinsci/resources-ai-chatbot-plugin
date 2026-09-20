@@ -11,7 +11,7 @@ work
 
 # Python venv
 chatbot-core/venv/
-chatbot-core/.env/
+chatbot-core/.env
 **/__pycache__/
 **/*.py[cod]
 
