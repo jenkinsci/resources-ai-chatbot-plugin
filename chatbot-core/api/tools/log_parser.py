@@ -23,6 +23,10 @@ WRAPPER_ERROR_PATTERN = re.compile(
     r"\bERROR:\s+script\s+returned\s+exit\s+code\b",
     re.IGNORECASE,
 )
+FAILURE_FOOTER_PATTERN = re.compile(
+    r"^\s*Finished:\s+FAILURE\s*$",
+    re.IGNORECASE,
+)
 
 
 def extract_relevant_log_lines(
@@ -64,6 +68,10 @@ def extract_relevant_log_lines(
         start = max(0, index - before)
         end = min(len(lines), index + after + 1)
         selected_indexes.update(range(start, end))
+
+    footer_indexes = _find_failure_footer_indexes(lines)
+    if footer_indexes and footer_indexes[-1] >= max(error_indexes):
+        selected_indexes.update(footer_indexes)
 
     return _render_selected_lines(lines, sorted(selected_indexes))
 
@@ -115,6 +123,37 @@ def _find_error_indexes(lines: list[str]) -> list[int]:
         for index, line in enumerate(lines)
         if WRAPPER_ERROR_PATTERN.search(line)
     ]
+
+
+def _find_failure_footer_indexes(lines: list[str]) -> list[int]:
+    """
+    Select the Jenkins wrapper footer section after a failure.
+
+    Args:
+        lines (list[str]): Jenkins console log lines.
+
+    Returns:
+        list[int]: Indexes from the nearest wrapper error through the footer.
+    """
+    footer_indexes = [
+        index
+        for index, line in enumerate(lines)
+        if FAILURE_FOOTER_PATTERN.search(line)
+    ]
+    if not footer_indexes:
+        return []
+
+    footer_index = footer_indexes[-1]
+    wrapper_index = next(
+        (
+            index
+            for index in range(footer_index, -1, -1)
+            if WRAPPER_ERROR_PATTERN.search(lines[index])
+        ),
+        None,
+    )
+    start_index = wrapper_index if wrapper_index is not None else footer_index
+    return list(range(start_index, footer_index + 1))
 
 
 def _render_selected_lines(lines: list[str], selected_indexes: list[int]) -> str:

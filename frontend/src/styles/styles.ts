@@ -132,7 +132,32 @@ export const chatbotStyles = {
   inputWrapper: {
     display: "flex",
     flexDirection: "column",
-    borderTop: "1px solid #eee",
+  } as CSSProperties,
+
+  buildFailureActionBar: {
+    display: "flex",
+    justifyContent: "center",
+    padding: "10px 12px",
+    backgroundColor: "transparent",
+  } as CSSProperties,
+
+  analyzeBuildButton: {
+    width: "fit-content",
+    minHeight: "36px",
+    padding: "8px 14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    border: "1px solid #b8cde5",
+    borderRadius: "6px",
+    backgroundColor: "#eef4fb",
+    color: "#0b66d4",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: 600,
+    lineHeight: 1.2,
+    transition: "background-color 150ms ease, transform 120ms ease",
   } as CSSProperties,
 
   attachedFilesContainer: {
@@ -197,8 +222,8 @@ export const chatbotStyles = {
   inputContainer: {
     padding: "0.75rem",
     backgroundColor: "var(--panel-background)",
-    borderTop: "var(--jenkins-border)",
     border: "1px solid var(--border-color)",
+    borderTop: "var(--jenkins-border)",
     color: "var(--text-color)",
 
     display: "flex",
@@ -281,6 +306,172 @@ export const chatbotStyles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
+  } as CSSProperties,
+
+  providerSelector: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    minWidth: 0,
+    position: "relative",
+    color: "var(--text-color)",
+    fontSize: "12px",
+    fontWeight: 500,
+    flex: "0 1 auto",
+  } as CSSProperties,
+
+  providerControl: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "12px",
+    height: "42px",
+    minWidth: "220px",
+    maxWidth: "260px",
+    padding: "0 14px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    backgroundColor: "#ffffff",
+    boxShadow:
+      "0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04)",
+    color: "var(--text-color)",
+    font: "inherit",
+    cursor: "pointer",
+    textAlign: "left",
+    flex: "1 1 auto",
+  } as CSSProperties,
+
+  providerControlText: {
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+    alignItems: "flex-start",
+    textAlign: "left",
+  } as CSSProperties,
+
+  providerControlLabel: {
+    maxWidth: "204px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: "13px",
+    fontWeight: 600,
+  } as CSSProperties,
+
+  providerControlModel: {
+    display: "none",
+  } as CSSProperties,
+
+  providerMenu: {
+    position: "absolute",
+    top: "calc(100% + 8px)",
+    left: "50%",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    width: "320px",
+    maxWidth: "calc(100vw - 32px)",
+    maxHeight: "min(380px, calc(100vh - 120px))",
+    overflowY: "auto",
+    padding: "10px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    boxShadow:
+      "0 2px 6px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.10)",
+    boxSizing: "border-box",
+    zIndex: 10000,
+    transform: "translateX(-50%)",
+  } as CSSProperties,
+
+  providerOption: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    width: "100%",
+    minHeight: "58px",
+    padding: "9px 12px",
+    border: "1px solid transparent",
+    borderRadius: "10px",
+    backgroundColor: "transparent",
+    color: "var(--text-color)",
+    font: "inherit",
+    textAlign: "left",
+    cursor: "pointer",
+    boxSizing: "border-box",
+  } as CSSProperties,
+
+  providerOptionSelected: {
+    backgroundColor: "#eff6ff",
+    borderColor: "#dbeafe",
+    color: "var(--text-color)",
+    boxShadow: "none",
+  } as CSSProperties,
+
+  providerOptionDisabled: {
+    cursor: "not-allowed",
+    color: "color-mix(in srgb, var(--text-color) 76%, transparent)",
+  } as CSSProperties,
+
+  providerOptionIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "32px",
+    minWidth: "32px",
+    height: "32px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
+  } as CSSProperties,
+
+  providerOptionLogo: {
+    display: "block",
+    width: "18px",
+    height: "18px",
+    objectFit: "contain",
+  } as CSSProperties,
+
+  providerOptionInitial: {
+    fontSize: "15px",
+    fontWeight: 600,
+    lineHeight: 1,
+  } as CSSProperties,
+
+  providerOptionText: {
+    display: "flex",
+    flexDirection: "column",
+    minWidth: 0,
+    flex: 1,
+    gap: "2px",
+  } as CSSProperties,
+
+  providerOptionLabel: {
+    fontSize: "14px",
+    fontWeight: 600,
+    lineHeight: "18px",
+  } as CSSProperties,
+
+  providerOptionModel: {
+    overflow: "hidden",
+    color: "var(--text-color)",
+    opacity: 0.56,
+    fontSize: "11px",
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    lineHeight: "16px",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  } as CSSProperties,
+
+  providerOptionStatus: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "24px",
+    minWidth: "24px",
   } as CSSProperties,
 
   clearButton: {
@@ -514,18 +705,18 @@ export const chatbotStyles = {
   // Toast Notification
   toastContainer: {
     position: "fixed",
-    bottom: "7rem",
+    bottom: "calc(3rem + 60px + 12px)",
     right: "2rem",
-    width: "300px",
+    width: "320px",
     backgroundColor: "var(--card-background)",
     border: "1px solid var(--border-color)",
-    borderRadius: "8px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-    padding: "1rem",
+    borderRadius: "0.75rem",
+    boxShadow: "0 3px 8px rgba(0, 0, 0, 0.12)",
+    padding: "12px",
     zIndex: 1000,
     display: "flex",
     flexDirection: "column",
-    gap: "0.5rem",
+    gap: "10px",
     animation: "fadeIn 0.3s ease-in-out",
   } as CSSProperties,
 
@@ -539,34 +730,49 @@ export const chatbotStyles = {
   } as CSSProperties,
 
   toastContent: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "5px",
     fontSize: "0.85rem",
-    color: "var(--text-color-secondary)",
-    marginBottom: "0.5rem",
+    color: "#344054",
+  } as CSSProperties,
+
+  toastFailureText: {
+    color: "#a4262c",
+    fontSize: "0.9rem",
+    fontWeight: 700,
   } as CSSProperties,
 
   toastActions: {
     display: "flex",
     justifyContent: "flex-end",
-    gap: "0.5rem",
+    alignItems: "center",
+    gap: "8px",
   } as CSSProperties,
 
   toastConfirmButton: {
-    backgroundColor: "#0073e6",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    padding: "4px 12px",
-    fontSize: "0.85rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    minHeight: "36px",
+    padding: "8px 14px",
+    backgroundColor: "#0b66d4",
+    color: "#ffffff",
+    border: "1px solid #0958b6",
+    borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: 600,
     cursor: "pointer",
   } as CSSProperties,
 
   toastCancelButton: {
     backgroundColor: "transparent",
-    color: "var(--text-color)",
-    border: "1px solid var(--border-color)",
-    borderRadius: "4px",
-    padding: "4px 12px",
-    fontSize: "0.85rem",
+    color: "#667085",
+    border: "none",
+    borderRadius: "6px",
+    padding: "8px 10px",
+    fontSize: "13px",
     cursor: "pointer",
   } as CSSProperties,
 

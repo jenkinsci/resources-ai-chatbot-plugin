@@ -40,6 +40,28 @@ def test_redacts_authentication_headers():
     assert sanitize_logs("Cookie: session=fake-cookie") == "Cookie: [REDACTED]"
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (
+            'docker login -u user -p "actual-secret" registry.com',
+            'docker login -u user -p "[REDACTED]" registry.com',
+        ),
+        (
+            "docker login -u user --password 'actual-secret' registry.com",
+            "docker login -u user --password '[REDACTED]' registry.com",
+        ),
+        (
+            "docker login registry.com --password=actual-secret",
+            "docker login registry.com --password=[REDACTED]",
+        ),
+    ],
+)
+def test_redacts_docker_login_passwords(raw, expected):
+    """Redact Docker login passwords while preserving command structure."""
+    assert sanitize_logs(raw) == expected
+
+
 def test_redacts_url_credentials():
     """Redact passwords embedded in HTTP and database URLs."""
     assert sanitize_logs("https://user:password@example.com/repository") == (

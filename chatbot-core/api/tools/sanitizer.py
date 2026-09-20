@@ -20,6 +20,25 @@ PRIVATE_KEY_PATTERN = re.compile(
     re.DOTALL,
 )
 
+DOCKER_PASSWORD_PATTERN = re.compile(
+    r"""
+    (?P<prefix>
+        \bdocker[ \t]+login\b
+        [^\r\n]*?[ \t]
+        (?:-p|--password)
+        (?:[ \t]*=[ \t]*|[ \t]+)
+    )
+    (?P<value>
+        "(?:\\.|[^"\\\r\n])*"
+        |
+        '(?:\\.|[^'\\\r\n])*'
+        |
+        [^\s;&|]+
+    )
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
 # Assignments in shell, Jenkins echo, JSON-like, and config-like output.
 SECRET_ASSIGNMENT_PATTERN = re.compile(
     r"""
@@ -141,6 +160,25 @@ def _redact_assignment(match: re.Match[str]) -> str:
     return f"{prefix}[REDACTED]"
 
 
+def _redact_docker_password(match: re.Match[str]) -> str:
+    """
+    Redact a Docker login password while preserving its quote style.
+
+    Args:
+        match (re.Match[str]): Regex match for a Docker password option.
+
+    Returns:
+        str: Docker login command with its password redacted.
+    """
+    prefix = match.group("prefix")
+    value = match.group("value")
+    if value.startswith('"') and value.endswith('"'):
+        return f'{prefix}"[REDACTED]"'
+    if value.startswith("'") and value.endswith("'"):
+        return f"{prefix}'[REDACTED]'"
+    return f"{prefix}[REDACTED]"
+
+
 def sanitize_logs(log_text: str) -> str:
     """
     Redact common secrets from Jenkins console log text.
@@ -157,6 +195,10 @@ def sanitize_logs(log_text: str) -> str:
     sanitized_text = PRIVATE_KEY_PATTERN.sub("[REDACTED_PRIVATE_KEY]", log_text)
     sanitized_text = SECRET_ASSIGNMENT_PATTERN.sub(
         _redact_assignment,
+        sanitized_text,
+    )
+    sanitized_text = DOCKER_PASSWORD_PATTERN.sub(
+        _redact_docker_password,
         sanitized_text,
     )
 
