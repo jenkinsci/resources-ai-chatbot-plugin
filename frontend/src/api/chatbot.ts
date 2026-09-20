@@ -119,7 +119,6 @@ export const fetchChatbotReply = async (
  * @param userMessage - The message input from the user
  * @param files - Array of File objects to upload
  * @param signal - External abort signal for user-initiated cancellation
- * @param logContext - Sanitized Jenkins log context for diagnosis
  * @returns A Promise resolving to a bot-generated Message
  */
 export const fetchChatbotReplyWithFiles = async (
