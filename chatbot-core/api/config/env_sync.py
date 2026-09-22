@@ -11,7 +11,9 @@ _CONFIG_DIR = Path(__file__).resolve().parent
 DEFAULT_ENV_PATH = _CONFIG_DIR.parent.parent / ".env"
 _MANAGED_START = "# LiteLLM provider keys - managed"
 _MANAGED_END = "# End LiteLLM provider keys"
-_ENV_LINE = re.compile(r"^([A-Z][A-Z0-9_]*)=(.*)$")
+# Accept dotenv's optional export prefix and whitespace before the equals sign.
+# Keep the raw value so quoting, inline comments and interpolation are preserved.
+_ENV_LINE = re.compile(r"^(?:export\s+)?([A-Z][A-Z0-9_]*)\s*=(.*)$")
 
 
 def sync_provider_env(
