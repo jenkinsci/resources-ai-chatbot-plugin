@@ -102,7 +102,7 @@ python-multipart==0.0.31
 # =========================
 # Utilities
 # =========================
-python-dotenv==1.1.0
+python-dotenv==1.2.2
 PyYAML==6.0.2
 tqdm==4.67.1
 click==8.2.1
