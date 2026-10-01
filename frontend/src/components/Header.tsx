@@ -25,6 +25,7 @@ import {
   ChevronDown,
   TriangleAlert,
 } from "lucide-react";
+import { STATIC_BASE_URL } from "../config";
 
 /**
  * Props for the Header component.
@@ -40,39 +41,24 @@ export interface HeaderProps {
 }
 
 const PROVIDER_LOGOS: Record<string, string> = {
-  anthropic: "/icons/providers/anthropic.svg",
-  gemini: "/icons/providers/gemini.svg",
-  groq: "/icons/providers/groq.svg",
-  local: "/icons/providers/mistral.svg",
-  mistral: "/icons/providers/mistral.svg",
-  mistralai: "/icons/providers/mistral.svg",
-  openai: "/icons/providers/chatgpt.svg",
-  openrouter: "/icons/providers/openrouter.svg",
+  anthropic: `${STATIC_BASE_URL}/icons/providers/anthropic.svg`,
+  gemini: `${STATIC_BASE_URL}/icons/providers/gemini.svg`,
+  groq: `${STATIC_BASE_URL}/icons/providers/groq.svg`,
+  local: `${STATIC_BASE_URL}/icons/providers/mistral.svg`,
+  mistral: `${STATIC_BASE_URL}/icons/providers/mistral.svg`,
+  mistralai: `${STATIC_BASE_URL}/icons/providers/mistral.svg`,
+  openai: `${STATIC_BASE_URL}/icons/providers/chatgpt.svg`,
+  openrouter: `${STATIC_BASE_URL}/icons/providers/openrouter.svg`,
 };
+const DEFAULT_PROVIDER_LOGO = `${STATIC_BASE_URL}/icons/providers/default.svg`;
 
-const getProviderInitial = (label: string, providerId: string): string => {
-  const providerName = label.trim() || providerId.trim();
-  return providerName.charAt(0).toUpperCase() || "?";
-};
-
-const ProviderIcon = ({
-  providerId,
-  label,
-}: {
-  providerId: string;
-  label: string;
-}) => {
-  const logoSource = PROVIDER_LOGOS[providerId.toLowerCase()];
+const ProviderIcon = ({ providerId }: { providerId: string }) => {
+  const logoSource =
+    PROVIDER_LOGOS[providerId.toLowerCase()] || DEFAULT_PROVIDER_LOGO;
 
   return (
     <span style={chatbotStyles.providerOptionIcon} aria-hidden="true">
-      {logoSource ? (
-        <img src={logoSource} alt="" style={chatbotStyles.providerOptionLogo} />
-      ) : (
-        <span style={chatbotStyles.providerOptionInitial}>
-          {getProviderInitial(label, providerId)}
-        </span>
-      )}
+      <img src={logoSource} alt="" style={chatbotStyles.providerOptionLogo} />
     </span>
   );
 };
@@ -272,10 +258,7 @@ export const Header = ({
                       }
                     }}
                   >
-                    <ProviderIcon
-                      providerId={provider.id}
-                      label={provider.label}
-                    />
+                    <ProviderIcon providerId={provider.id} />
                     <span style={chatbotStyles.providerOptionText}>
                       <span style={chatbotStyles.providerOptionLabel}>
                         {provider.label}
