@@ -329,11 +329,10 @@ export const chatbotStyles = {
     minWidth: "220px",
     maxWidth: "260px",
     padding: "0 14px",
-    border: "1px solid #e5e7eb",
+    border: "1px solid var(--chatbot-provider-border)",
     borderRadius: "12px",
-    backgroundColor: "#ffffff",
-    boxShadow:
-      "0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04)",
+    backgroundColor: "var(--chatbot-provider-surface)",
+    boxShadow: "var(--chatbot-provider-control-shadow)",
     color: "var(--text-color)",
     font: "inherit",
     cursor: "pointer",
@@ -374,11 +373,10 @@ export const chatbotStyles = {
     maxHeight: "min(380px, calc(100vh - 120px))",
     overflowY: "auto",
     padding: "10px",
-    backgroundColor: "#ffffff",
-    border: "1px solid #e5e7eb",
+    backgroundColor: "var(--chatbot-provider-menu-surface)",
+    border: "1px solid var(--chatbot-provider-border)",
     borderRadius: "14px",
-    boxShadow:
-      "0 2px 6px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.10)",
+    boxShadow: "var(--chatbot-provider-menu-shadow)",
     boxSizing: "border-box",
     zIndex: 10000,
     transform: "translateX(-50%)",
@@ -403,8 +401,8 @@ export const chatbotStyles = {
   } as CSSProperties,
 
   providerOptionSelected: {
-    backgroundColor: "#eff6ff",
-    borderColor: "#dbeafe",
+    backgroundColor: "var(--chatbot-provider-selected-surface)",
+    borderColor: "var(--chatbot-provider-selected-border)",
     color: "var(--text-color)",
     boxShadow: "none",
   } as CSSProperties,
@@ -421,9 +419,9 @@ export const chatbotStyles = {
     width: "32px",
     minWidth: "32px",
     height: "32px",
-    border: "1px solid #e5e7eb",
+    border: "1px solid var(--chatbot-provider-icon-border)",
     borderRadius: "8px",
-    backgroundColor: "#ffffff",
+    backgroundColor: "var(--chatbot-provider-icon-surface)",
     overflow: "hidden",
   } as CSSProperties,
 
@@ -456,7 +454,7 @@ export const chatbotStyles = {
 
   providerOptionModel: {
     overflow: "hidden",
-    color: "var(--text-color)",
+    color: "var(--chatbot-provider-model)",
     opacity: 0.56,
     fontSize: "11px",
     fontFamily:
