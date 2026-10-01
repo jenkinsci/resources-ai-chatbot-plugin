@@ -8,7 +8,7 @@ starlette==0.46.2
 langchain==0.3.30
 langchain-core==0.3.86
 langchain-text-splitters==0.3.11
-langsmith==0.3.45
+langsmith==0.8.18
 litellm==1.94.1
 
 # ML & Transformers
