@@ -122,7 +122,7 @@ joblib==1.5.1
 jsonpatch==1.33
 jsonpointer==3.0.0
 kiwisolver==1.4.8
-orjson==3.10.18
+orjson==3.11.6
 packaging==24.2
 pillow==12.3.0
 platformdirs==4.3.8
