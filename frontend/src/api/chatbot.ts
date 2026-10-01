@@ -40,6 +40,25 @@ export const fetchLogPreview = async (logText: string): Promise<string> => {
 };
 
 /**
+ * Checks whether the chatbot backend is reachable.
+ *
+ * @returns A Promise resolving to true when the backend health endpoint responds successfully
+ */
+export const checkBackendHealth = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: "GET",
+      signal: AbortSignal.timeout(CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION),
+    });
+
+    return response.ok;
+  } catch (error: unknown) {
+    console.error("Failed to check chatbot backend health:", error);
+    return false;
+  }
+};
+
+/**
  * Safe provider metadata returned by the backend.
  */
 export interface ProviderMetadata {
@@ -119,7 +138,6 @@ export const fetchChatbotReply = async (
  * @param userMessage - The message input from the user
  * @param files - Array of File objects to upload
  * @param signal - External abort signal for user-initiated cancellation
- * @param logContext - Sanitized Jenkins log context for diagnosis
  * @returns A Promise resolving to a bot-generated Message
  */
 export const fetchChatbotReplyWithFiles = async (

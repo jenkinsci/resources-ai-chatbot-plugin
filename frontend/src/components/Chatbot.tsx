@@ -9,6 +9,7 @@ import {
   createChatSession,
   deleteChatSession,
   fetchSupportedExtensions,
+  checkBackendHealth,
   fetchProviders,
   validateFile,
   fileToAttachment,
@@ -28,14 +29,22 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { ProactiveToast } from "./Toast";
 import { useContextObserver } from "../utils/useContextObserver";
+import { ArrowUpRight } from "lucide-react";
+import {
+  ANALYZE_BUILD_INPUT_PREFIX,
+  ANALYZE_BUILD_MESSAGE,
+  buildDisplayedMessage,
+  getConsoleLogContext,
+  removeLogContext,
+} from "../utils/buildFailureAnalysis";
 
-const ANALYZE_BUILD_MESSAGE = "Analyze this Jenkins Build Failure.";
-const ANALYZE_BUILD_INPUT_PREFIX = `${ANALYZE_BUILD_MESSAGE}\n\n`;
 const BUILD_ANALYSIS_ACTION_DELAY_MS = 2000;
 
 /**
  * Chatbot is the core component responsible for managing the chatbot display.
  */
+
+const BACKEND_HEALTH_POLL_INTERVAL_MS = 5 * 60 * 1000;
 
 export const Chatbot = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -54,6 +63,8 @@ export const Chatbot = () => {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [supportedExtensions, setSupportedExtensions] =
     useState<SupportedExtensions | null>(null);
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
+  const [lastBackendCheck, setLastBackendCheck] = useState<Date | null>(null);
   const [pendingLogContext, setPendingLogContext] = useState<string | null>(
     null,
   );
@@ -90,6 +101,36 @@ export const Chatbot = () => {
     };
     loadSupportedExtensions();
   }, []);
+
+  /**
+   * Checks the backend connection while the chatbot is open.
+   */
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const updateBackendStatus = async () => {
+      const backendConnected = await checkBackendHealth();
+      if (isMounted) {
+        setIsBackendConnected(backendConnected);
+        setLastBackendCheck(new Date());
+      }
+    };
+
+    updateBackendStatus();
+    const intervalId = window.setInterval(
+      updateBackendStatus,
+      BACKEND_HEALTH_POLL_INTERVAL_MS,
+    );
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [isOpen]);
 
   /**
    * Fetch the configured providers on component mount.
@@ -239,9 +280,7 @@ export const Chatbot = () => {
       }
     }
 
-    const messageWithoutLog = logContext
-      ? messageForRequest.replace(logContext, "").trim()
-      : messageForRequest;
+    const messageWithoutLog = removeLogContext(messageForRequest, logContext);
     const isBuildAnalysis = trimmed.startsWith(ANALYZE_BUILD_MESSAGE);
     const buildDescription =
       isBuildAnalysis && buildContext
@@ -254,9 +293,9 @@ export const Chatbot = () => {
     }${buildDescription}`;
 
     const fileAttachments = attachedFiles.map(fileToAttachment);
-    const displayMessage = logContext
-      ? `${messageWithoutLog || ANALYZE_BUILD_MESSAGE}\n\n${logContext}`
-      : messageWithoutLog || (hasFiles ? "📎 Attached file(s)" : "");
+    const displayMessage =
+      buildDisplayedMessage(messageForRequest, logContext) ||
+      (hasFiles ? "📎 Attached file(s)" : "");
 
     const userMessage: Message = {
       id: uuidv4(),
@@ -397,16 +436,6 @@ export const Chatbot = () => {
     setIsPopupOpen(true);
   };
 
-  const getConsoleLogContext = (): string => {
-    const consoleElement = document.querySelector("pre.console-output");
-
-    if (!consoleElement || !consoleElement.textContent) {
-      return "";
-    }
-
-    return consoleElement.textContent;
-  };
-
   const prepareBuildFailureAnalysis = async () => {
     setShowToast(false);
     setShowBuildAnalysisAction(false);
@@ -457,10 +486,34 @@ export const Chatbot = () => {
     return (
       <div style={chatbotStyles.containerWelcomePage}>
         <div style={chatbotStyles.boxWelcomePage}>
-          <h2 style={chatbotStyles.welcomePageH2}>
-            {getChatbotText("welcomeMessage")}
-          </h2>
-          <p>{getChatbotText("welcomeDescription")}</p>
+          <div style={chatbotStyles.welcomePageIntro}>
+            <h2 style={chatbotStyles.welcomePageH2}>
+              {getChatbotText("welcomeMessage")}
+            </h2>
+            <p>{getChatbotText("welcomeDescription")}</p>
+          </div>
+          {!isBackendConnected && (
+            <div style={chatbotStyles.welcomePageSetupInfo}>
+              <div style={chatbotStyles.welcomePageBackendMessage}>
+                <strong>{getChatbotText("backendNotConnected")}</strong>
+                <p style={chatbotStyles.welcomePageBackendDetails}>
+                  {getChatbotText("backendStartInstruction")}
+                  <code style={chatbotStyles.welcomePageCommand}>
+                    {getChatbotText("backendStartCommand")}
+                  </code>
+                </p>
+              </div>
+              <a
+                href={getChatbotText("repositoryLink")}
+                target="_blank"
+                rel="noreferrer"
+                style={chatbotStyles.welcomePageRepositoryLink}
+              >
+                {getChatbotText("repositoryLinkLabel")}
+                <ArrowUpRight size={15} aria-hidden="true" />
+              </a>
+            </div>
+          )}
           <button
             style={chatbotStyles.welcomePageNewChatButton}
             onClick={handleNewChat}
@@ -539,6 +592,8 @@ export const Chatbot = () => {
           {isPopupOpen && getDeletePopup()}
           <Header
             currentSessionId={currentSessionId}
+            isBackendConnected={isBackendConnected}
+            lastBackendCheck={lastBackendCheck}
             openSideBar={openSideBar}
             clearMessages={openConfirmDeleteChatPopup}
             messages={getSessionMessages(currentSessionId)}
