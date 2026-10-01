@@ -1,4 +1,5 @@
 import fetchMock from "jest-fetch-mock";
+import type { FetchInput } from "jest-fetch-mock";
 import { callChatbotApi } from "../utils/callChatbotApi";
 import { API_BASE_URL } from "../config";
 
@@ -60,7 +61,7 @@ describe("callChatbotApi", () => {
   it("aborts when caller signal is aborted", async () => {
     const controller = new AbortController();
     fetchMock.mockImplementationOnce(
-      (_url: string | Request | undefined, init?: RequestInit) =>
+      (_url: FetchInput, init?: RequestInit) =>
         new Promise((_, reject) => {
           const signal = init?.signal as AbortSignal;
           if (signal) {

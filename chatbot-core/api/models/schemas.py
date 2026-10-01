@@ -38,11 +38,13 @@ class ChatRequest(BaseModel):
 
     Fields:
         message (str): The user's input message.
+        provider (str): The provider ID to use for this request.
 
     Validation:
         - Rejects messages that are empty.
     """
     message: str
+    provider: str = "local"
 
     @field_validator("message")
     def message_must_not_be_empty(cls, v): # pylint: disable=no-self-argument
@@ -50,6 +52,26 @@ class ChatRequest(BaseModel):
         if not v.strip():
             raise ValueError("Message cannot be empty.")
         return v
+
+
+class LogPreviewRequest(BaseModel):
+    """Request containing raw Jenkins console output for preview sanitization."""
+
+    log_text: str
+
+    @field_validator("log_text")
+    @classmethod
+    def log_text_must_not_be_empty(cls, v):
+        """Validate that console output is present."""
+        if not v.strip():
+            raise ValueError("Log text cannot be empty.")
+        return v
+
+
+class LogPreviewResponse(BaseModel):
+    """Sanitized Jenkins log excerpt safe to display and send for analysis."""
+
+    preview: str
 
 
 class ChatRequestWithFiles(BaseModel):
@@ -80,6 +102,21 @@ class ChatResponse(BaseModel):
     Represents the chatbot's reply.
     """
     reply: str
+
+
+class ProviderMetadata(BaseModel):
+    """Safe provider metadata exposed to clients."""
+
+    id: str
+    label: str
+    model: str
+    configured: bool
+
+
+class ProvidersResponse(BaseModel):
+    """Response containing the available provider metadata."""
+
+    providers: List[ProviderMetadata]
 
 
 class ChatResponseWithFiles(BaseModel):

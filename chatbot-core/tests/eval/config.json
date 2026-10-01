@@ -1,0 +1,21 @@
+{
+    "question_count": 50,
+    "shard_size": 10,
+    "max_parallel": 5,
+    "response_model": "qwen3:4b-instruct",
+    "judge_model": "gemma3:4b-it-qat",
+    "response_max_tokens": 256,
+    "response_temperature": 0.1,
+    "response_num_ctx": 16384,
+    "response_request_timeout": 900,
+    "response_prompt_profile": "concise",
+    "response_keep_alive": "60m",
+    "warm_prompt_cache": true,
+    "judge_max_tokens": 4028,
+    "judge_num_ctx": 16384,
+    "metric_threshold": 0.85,
+    "minimum_metric_coverage": 0.9,
+    "missing_metric_retry_attempts": 3,
+    "missing_metric_retry_concurrency": 2,
+    "deepeval_per_task_timeout_seconds": 3600
+}

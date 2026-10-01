@@ -17,6 +17,7 @@ Below is a brief explanation of the key subdirectories:
     - `embedding/`: Scripts to embed the chunks.
     - `vectorstore/`: Scripts to store the embeddings into a vector database.
     - `retriever/`: Scripts to perform the semantic search across the vector database.
+    - `graph/`: GraphRAG dependency graph construction and runtime retrieval.
   - `api/`: FastAPI application that exposes the chatbot via a REST API.
     - `main.py`: Entry point to run the FastAPI app.
     - `routes/`: Defines the HTTP endpoints.
@@ -39,10 +40,12 @@ To quickly start, in the root directory a `Makefile` contains many ready-to-go t
 In this doc file we'll use these targets, without going into the details of the scripts and the implementation reasonings. For further information you can visit the package-related doc files.
 
 For the setup you can follow [Setup Guide](setup.md).
+For macOS/Apple Silicon contributors, see the [macOS/Apple Silicon Setup Guide](macos-setup.md).
 
 ## Data Pipeline
 
 The first thing we want to be able to do is running the whole data pipeline. The data pipeline comprehends the following phases:
+
 - Data Collection
 - Preprocessing
 - Chunking
@@ -54,17 +57,21 @@ The first thing we want to be able to do is running the whole data pipeline. The
 So starting from the identification of the data sources(e.g. Jenkins Official Documentation) the data pipeline will collect it, process it, and finally store it in a vector database(FAISS) to later perform semantic search.
 
 To run the following pipeline you can use the `run-data-pipeline` target:
+
 ```bash
 make run-data-pipeline
 ```
 
 > **Note:** for more details on the scripts and on the single processes you can visit the docs under `docs/chatbot-core/data/` and `docs/chatbot-core/rag/`.
 
+For the plugin dependency graph and its Update Center integration, see the [GraphRAG guide](chatbot-core/rag/graph.md).
+
 ## API
 
 Another key component in this repo is the backend, that allows to run the API that serves the chatbot functionalities. Also for the API there is a specific target in the `Makefile`, that does all the setup, installing the correct dependencies in the virtual environment, and runs the API.
 
 To run it you can use the `api` target:
+
 ```bash
 make api
 ```
@@ -76,6 +83,7 @@ make api
 For the UI the project relies on a React application, that is then built and injected into the Jenkins UI. A target in the `Makefile` allows to run the flow that builds the React app.
 
 You can do that by running:
+
 ```bash
 make build-frontend
 ```
@@ -89,6 +97,7 @@ After running this command you can run Jenkins (`mvn hpi:run`).
 For both the frontend and the backend we have a suite of unit and integration tests. Also in this case we have a specific target to run all the tests.
 
 To run the tests:
+
 ```bash
 make run-test
 ```

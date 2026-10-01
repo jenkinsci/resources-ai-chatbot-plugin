@@ -2,6 +2,8 @@
 
 The retriever module enables querying the FAISS vector index to find the most semantically relevant document chunks based on a natural language input. This phase is responsible for fetching context-rich results from the indexed embedding space, which are then used to inform the chatbot’s responses.
 
+For supported plugin dependency and conflict questions, the runtime can also append GraphRAG relationship context to the semantic results. See the [GraphRAG plugin dependency graph guide](graph.md) for the graph sources, query planning, evidence, and fallback behavior.
+
 All related scripts are located under: `chatbot-core/rag/retriever/`
 
 ### Script: `retrieve.py`
