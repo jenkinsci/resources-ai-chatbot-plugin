@@ -23,6 +23,10 @@ export const API_BASE_URL = resolveApiBaseUrl(
     : __VITE_API_BASE_URL__,
 );
 
+const runtimeStaticBaseUrl =
+  document.getElementById("chatbot-root")?.dataset.staticBase;
+
+export const STATIC_BASE_URL = (runtimeStaticBaseUrl || "").replace(/\/+$/, "");
 export const CHATBOT_API_TIMEOUTS_MS = {
   CREATE_SESSION: 3000,
   DELETE_SESSION: 3000,
