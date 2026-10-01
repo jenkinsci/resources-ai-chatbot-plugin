@@ -5,6 +5,7 @@ Defines an abstract class for all callable LLMs.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import AsyncGenerator
 
 # pylint: disable=too-few-public-methods
 class LLMProvider(ABC):
@@ -17,4 +18,12 @@ class LLMProvider(ABC):
     def generate(self, prompt: str, max_tokens: int) -> str:
         """
         Generate a response given a prompt.
+        """
+
+    @abstractmethod
+    async def generate_stream(
+        self, prompt: str, max_tokens: int
+    ) -> AsyncGenerator[str, None]:
+        """
+        Generate a response incrementally given a prompt.
         """
