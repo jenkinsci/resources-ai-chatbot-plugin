@@ -116,7 +116,7 @@ Unidecode==1.4.0
 # Web Scraping
 beautifulsoup4==4.15.0
 lxml==6.0.2
-soupsieve==2.7
+soupsieve==2.9
 
 # Visualization
 matplotlib==3.10.3
