@@ -4,6 +4,8 @@ import json
 import uuid
 from threading import Lock, get_ident
 
+from utils import LoggerFactory
+
 
 
 _SESSION_DIRECTORY = os.getenv("SESSION_FILE_PATH", "data/sessions")
@@ -11,6 +13,7 @@ _SESSION_DIRECTORY = os.getenv("SESSION_FILE_PATH", "data/sessions")
 os.makedirs(_SESSION_DIRECTORY,mode = 0o755, exist_ok=True)
 
 _FILE_LOCK = Lock()
+logger = LoggerFactory.instance().get_logger("api")
 
 
 def _get_session_file_path(session_id: str) -> str:
@@ -34,8 +37,26 @@ def _load_session_from_json(session_id: str) -> list:
     if not os.path.exists(path):
         return []
 
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "Failed to load persisted session '%s' from disk: %s",
+            session_id,
+            exc,
+        )
+        return []
+
+    if not isinstance(payload, list):
+        logger.warning(
+            "Ignoring invalid persisted payload for session '%s': expected list, got %s",
+            session_id,
+            type(payload).__name__,
+        )
+        return []
+
+    return payload
 
 
 def _append_message_to_json(session_id: str, messages:list) -> None:
