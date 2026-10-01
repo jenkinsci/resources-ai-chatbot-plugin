@@ -4,13 +4,18 @@ Main entry point for the FastAPI application.
 
 import asyncio
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from api.routes import chatbot
 from api.config.loader import CONFIG
+from api.config.env_sync import sync_provider_env
+from api.config.providers import load_provider_catalog
 from api.services.memory import cleanup_expired_sessions, reload_persisted_sessions
+from rag.graph.build_graph_artifacts import refresh_graph_if_stale
 from utils import LoggerFactory
-from pydantic import BaseModel
 
 logger = LoggerFactory.get_logger(__name__)
 
@@ -19,8 +24,10 @@ async def periodic_session_cleanup():
     """
     Background task that periodically cleans up expired sessions.
     """
-    cleanup_interval = CONFIG.get("session", {}).get("cleanup_interval_seconds", 3600)
-    logger.info("Starting periodic session cleanup task (interval: %ss)", cleanup_interval)
+    cleanup_interval = CONFIG.get("session", {}).get(
+        "cleanup_interval_seconds", 3600)
+    logger.info(
+        "Starting periodic session cleanup task (interval: %ss)", cleanup_interval)
 
     while True:
         await asyncio.sleep(cleanup_interval)
@@ -37,8 +44,11 @@ async def lifespan(app_instance: FastAPI):  # pylint: disable=unused-argument
     """
     Manages the application lifecycle, starting background tasks on startup.
     """
+    sync_provider_env(load_provider_catalog())
     loaded = reload_persisted_sessions()
     logger.info("Restored %s persisted session(s) from disk", loaded)
+
+    refresh_graph_if_stale(logger)
 
     # Startup: Create the cleanup task
     cleanup_task = asyncio.create_task(periodic_session_cleanup())
