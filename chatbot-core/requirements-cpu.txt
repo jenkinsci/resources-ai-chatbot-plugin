@@ -54,7 +54,7 @@ python-dateutil==2.9.0.post0
 setuptools==82.0.1
 typing-extensions>=4.14.1
 diskcache==5.6.3
-filelock==3.18.0
+filelock==3.20.3
 fsspec==2025.5.1
 greenlet==3.2.2
 h11==0.16.0
