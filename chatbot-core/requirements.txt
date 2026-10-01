@@ -16,10 +16,10 @@ starlette==0.46.2
 # =========================
 # LangChain & AI
 # =========================
-langchain==0.3.25
-langchain-core==0.3.61
-langchain-text-splitters==0.3.8
-langsmith==0.3.42
+langchain==0.3.30
+langchain-core==0.3.86
+langchain-text-splitters==0.3.11
+langsmith==0.3.45
 litellm==1.94.1
 
 # =========================
