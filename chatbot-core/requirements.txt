@@ -111,7 +111,7 @@ setuptools==83.0.0
 typing-extensions>=4.14.1
 typing-inspection>=0.4.2
 diskcache==5.6.3
-filelock==3.18.0
+filelock==3.20.3
 fsspec==2025.5.1
 greenlet==3.2.2
 h11==0.16.0
