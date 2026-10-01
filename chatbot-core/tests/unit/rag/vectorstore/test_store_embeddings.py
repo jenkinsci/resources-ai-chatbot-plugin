@@ -1,7 +1,9 @@
 """Unit Tests for store_embeddings module."""
 
-import numpy as np
+import os
+
 import faiss
+import numpy as np
 import pytest
 from rag.vectorstore import store_embeddings
 
@@ -105,10 +107,14 @@ def test_run_indexing_successful(
     store_embeddings.run_indexing(
         nlist=4,
         nprobe=2,
-        logger=mock_logger
+        logger=mock_logger,
+        source_name="plugins"
     )
 
-    mock_embed_chunks.assert_called_once_with(mock_logger)
+    mock_embed_chunks.assert_called_once_with(
+        mock_logger,
+        chunk_files=["chunks_plugin_docs.json"]
+    )
     expected_vectors_np = np.array(vectors).astype("float32")
     mock_build_index.assert_called_once()
     np.testing.assert_array_equal(
@@ -118,14 +124,59 @@ def test_run_indexing_successful(
     assert mock_build_index.call_args[1]["nlist"] == 4
     assert mock_build_index.call_args[1]["nprobe"] == 2
     assert mock_build_index.call_args[1]["logger"] == mock_logger
+    expected_index_path = os.path.join(
+        store_embeddings.VECTOR_STORE_DIR,
+        "plugins_index.idx"
+    )
     mock_save_faiss_index.assert_called_once_with(
         mock_index,
-        store_embeddings.INDEX_PATH,
+        expected_index_path,
         mock_logger
+    )
+    expected_metadata_path = os.path.join(
+        store_embeddings.VECTOR_STORE_DIR,
+        "plugins_metadata.pkl"
     )
     mock_save_metadata.assert_called_once_with(
         metadata,
-        store_embeddings.METADATA_PATH,
+        expected_metadata_path,
         mock_logger
     )
     assert mock_logger.info.call_count >= 1
+
+
+def test_run_indexing_removes_existing_outputs_when_no_vectors(mocker, tmp_path):
+    """Test run_indexing removes stale outputs when no vectors are produced."""
+    mock_logger = mocker.Mock()
+    index_path = tmp_path / "plugins_index.idx"
+    metadata_path = tmp_path / "plugins_metadata.pkl"
+    index_path.write_text("stale index", encoding="utf-8")
+    metadata_path.write_text("stale metadata", encoding="utf-8")
+
+    mocker.patch.object(store_embeddings, "VECTOR_STORE_DIR", str(tmp_path))
+    mocker.patch(
+        "rag.vectorstore.store_embeddings.embed_chunks",
+        return_value=([], [])
+    )
+    mock_build_index = mocker.patch(
+        "rag.vectorstore.store_embeddings.build_faiss_ivf_index"
+    )
+    mock_save_faiss_index = mocker.patch(
+        "rag.vectorstore.store_embeddings.save_faiss_index"
+    )
+    mock_save_metadata = mocker.patch(
+        "rag.vectorstore.store_embeddings.save_metadata"
+    )
+
+    store_embeddings.run_indexing(
+        nlist=4,
+        nprobe=2,
+        logger=mock_logger,
+        source_name="plugins"
+    )
+
+    assert not index_path.exists()
+    assert not metadata_path.exists()
+    mock_build_index.assert_not_called()
+    mock_save_faiss_index.assert_not_called()
+    mock_save_metadata.assert_not_called()
