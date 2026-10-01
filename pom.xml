@@ -64,4 +64,89 @@
       <url>https://repo.jenkins-ci.org/public/</url>
     </pluginRepository>
   </pluginRepositories>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.github.eirslett</groupId>
+        <artifactId>frontend-maven-plugin</artifactId>
+        <version>1.15.4</version>
+        <configuration>
+          <workingDirectory>${project.basedir}/frontend</workingDirectory>
+          <installDirectory>${project.build.directory}/node</installDirectory>
+          <nodeVersion>v22.14.0</nodeVersion>
+          <npmVersion>11.2.0</npmVersion>
+        </configuration>
+        <executions>
+          <execution>
+            <id>install-node-and-npm</id>
+            <goals>
+              <goal>install-node-and-npm</goal>
+            </goals>
+            <phase>generate-resources</phase>
+          </execution>
+          <execution>
+            <id>npm-ci</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <phase>generate-resources</phase>
+            <configuration>
+              <arguments>ci</arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>npm-build</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <phase>compile</phase>
+            <configuration>
+              <arguments>run build</arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>verify-packaged-frontend</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>verify</phase>
+            <configuration>
+              <target>
+                <property location="${project.build.directory}/${project.build.finalName}.hpi" name="hpi.path" />
+                <fail message="Packaged HPI was not generated.">
+                  <condition>
+                    <not>
+                      <available file="${hpi.path}" />
+                    </not>
+                  </condition>
+                </fail>
+                <delete dir="${project.build.directory}/frontend-hpi-check" />
+                <unzip dest="${project.build.directory}/frontend-hpi-check" src="${hpi.path}" />
+                <fail message="Packaged frontend stylesheet is missing.">
+                  <condition>
+                    <not>
+                      <available file="${project.build.directory}/frontend-hpi-check/static/assets/index.css" />
+                    </not>
+                  </condition>
+                </fail>
+                <fail message="Packaged frontend JavaScript bundle is missing.">
+                  <condition>
+                    <not>
+                      <available file="${project.build.directory}/frontend-hpi-check/static/assets/index.js" />
+                    </not>
+                  </condition>
+                </fail>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

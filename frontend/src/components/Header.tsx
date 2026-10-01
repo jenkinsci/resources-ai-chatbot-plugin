@@ -25,12 +25,15 @@ import {
   ChevronDown,
   TriangleAlert,
 } from "lucide-react";
+import { STATIC_BASE_URL } from "../config";
 
 /**
  * Props for the Header component.
  */
 export interface HeaderProps {
   currentSessionId: string | null;
+  isBackendConnected?: boolean;
+  lastBackendCheck?: Date | null;
   clearMessages: (chatSessionId: string) => void;
   openSideBar: () => void;
   messages: Message[];
@@ -40,39 +43,24 @@ export interface HeaderProps {
 }
 
 const PROVIDER_LOGOS: Record<string, string> = {
-  anthropic: "/icons/providers/anthropic.svg",
-  gemini: "/icons/providers/gemini.svg",
-  groq: "/icons/providers/groq.svg",
-  local: "/icons/providers/mistral.svg",
-  mistral: "/icons/providers/mistral.svg",
-  mistralai: "/icons/providers/mistral.svg",
-  openai: "/icons/providers/chatgpt.svg",
-  openrouter: "/icons/providers/openrouter.svg",
+  anthropic: `${STATIC_BASE_URL}/icons/providers/anthropic.svg`,
+  gemini: `${STATIC_BASE_URL}/icons/providers/gemini.svg`,
+  groq: `${STATIC_BASE_URL}/icons/providers/groq.svg`,
+  local: `${STATIC_BASE_URL}/icons/providers/mistral.svg`,
+  mistral: `${STATIC_BASE_URL}/icons/providers/mistral.svg`,
+  mistralai: `${STATIC_BASE_URL}/icons/providers/mistral.svg`,
+  openai: `${STATIC_BASE_URL}/icons/providers/chatgpt.svg`,
+  openrouter: `${STATIC_BASE_URL}/icons/providers/openrouter.svg`,
 };
+const DEFAULT_PROVIDER_LOGO = `${STATIC_BASE_URL}/icons/providers/default.svg`;
 
-const getProviderInitial = (label: string, providerId: string): string => {
-  const providerName = label.trim() || providerId.trim();
-  return providerName.charAt(0).toUpperCase() || "?";
-};
-
-const ProviderIcon = ({
-  providerId,
-  label,
-}: {
-  providerId: string;
-  label: string;
-}) => {
-  const logoSource = PROVIDER_LOGOS[providerId.toLowerCase()];
+const ProviderIcon = ({ providerId }: { providerId: string }) => {
+  const logoSource =
+    PROVIDER_LOGOS[providerId.toLowerCase()] || DEFAULT_PROVIDER_LOGO;
 
   return (
     <span style={chatbotStyles.providerOptionIcon} aria-hidden="true">
-      {logoSource ? (
-        <img src={logoSource} alt="" style={chatbotStyles.providerOptionLogo} />
-      ) : (
-        <span style={chatbotStyles.providerOptionInitial}>
-          {getProviderInitial(label, providerId)}
-        </span>
-      )}
+      <img src={logoSource} alt="" style={chatbotStyles.providerOptionLogo} />
     </span>
   );
 };
@@ -84,6 +72,8 @@ const ProviderIcon = ({
  */
 export const Header = ({
   currentSessionId,
+  isBackendConnected = false,
+  lastBackendCheck = null,
   clearMessages,
   openSideBar,
   messages,
@@ -92,7 +82,12 @@ export const Header = ({
   onProviderChange,
 }: HeaderProps) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showBackendStatusTooltip, setShowBackendStatusTooltip] =
+    useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
+  const lastCheckedLabel = lastBackendCheck
+    ? `${getChatbotText("lastChecked")} ${lastBackendCheck.toLocaleTimeString()}`
+    : getChatbotText("lastCheckPending");
   const providerMenuRef = useRef<HTMLDivElement | null>(null);
   const [showProviderMenu, setShowProviderMenu] = useState(false);
 
@@ -190,13 +185,40 @@ export const Header = ({
 
   return (
     <div style={chatbotStyles.chatbotHeader}>
-      <button
-        onClick={openSideBar}
-        style={chatbotStyles.openSidebarButton}
-        aria-label="Toggle sidebar"
-      >
-        {getChatbotText("sidebarLabel")}
-      </button>
+      <div style={chatbotStyles.headerLeading}>
+        <button
+          onClick={openSideBar}
+          style={chatbotStyles.openSidebarButton}
+          aria-label="Toggle sidebar"
+        >
+          {getChatbotText("sidebarLabel")}
+        </button>
+        <span
+          style={chatbotStyles.backendStatusContainer}
+          onMouseEnter={() => setShowBackendStatusTooltip(true)}
+          onMouseLeave={() => setShowBackendStatusTooltip(false)}
+          onFocus={() => setShowBackendStatusTooltip(true)}
+          onBlur={() => setShowBackendStatusTooltip(false)}
+          tabIndex={0}
+          aria-label={
+            isBackendConnected
+              ? getChatbotText("backendConnected")
+              : getChatbotText("backendNotConnected")
+          }
+        >
+          <span style={chatbotStyles.backendStatusDot(isBackendConnected)} />
+          {showBackendStatusTooltip && (
+            <span role="tooltip" style={chatbotStyles.backendStatusTooltip}>
+              <span>
+                {isBackendConnected
+                  ? getChatbotText("backendConnected")
+                  : getChatbotText("backendNotConnected")}
+              </span>
+              <span>{lastCheckedLabel}</span>
+            </span>
+          )}
+        </span>
+      </div>
       {providers.length > 0 && (
         <div
           ref={providerMenuRef}
@@ -272,10 +294,7 @@ export const Header = ({
                       }
                     }}
                   >
-                    <ProviderIcon
-                      providerId={provider.id}
-                      label={provider.label}
-                    />
+                    <ProviderIcon providerId={provider.id} />
                     <span style={chatbotStyles.providerOptionText}>
                       <span style={chatbotStyles.providerOptionLabel}>
                         {provider.label}
