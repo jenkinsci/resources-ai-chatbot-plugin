@@ -20,7 +20,7 @@ langchain==0.3.30
 langchain-core==0.3.86
 langchain-text-splitters==0.3.11
 langsmith==0.8.18
-litellm==1.94.1
+litellm==1.94.3
 
 # =========================
 # ML & Transformers
