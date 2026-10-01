@@ -20,7 +20,7 @@ tokenizers==0.21.1
 
 # PyTorch (CPU-only)
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.12.1+cpu
+torch==2.14.1+cpu
 torchaudio==2.7.1
 torchvision==0.22.1
 
