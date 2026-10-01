@@ -14,7 +14,11 @@ flowchart TD
     H --> |Docs Case| I2[Docs search tool]
     H --> |Threads Case| J3[Threads search Tool]
 
-    J1 --> J4[Combine context results]
+    J1 --> G{Supported graph query?}
+    G -->|Yes| G1[Graph query parser and traversal]
+    G1 --> G2[Append graph relationships and evidence]
+    G2 --> J4[Combine context results]
+    G -->|No| J4
     J4 --> J2{Check relevance}
 
     I2 --> J4

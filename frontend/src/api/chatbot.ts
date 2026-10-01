@@ -14,6 +14,64 @@ export interface SupportedExtensions {
   max_image_size_mb: number;
 }
 
+interface LogPreviewResponse {
+  preview: string;
+}
+
+/**
+ * Extracts and sanitizes Jenkins console output for display before analysis.
+ *
+ * @param logText - Raw Jenkins console output
+ * @returns A sanitized relevant log excerpt, or an empty string on failure
+ */
+export const fetchLogPreview = async (logText: string): Promise<string> => {
+  const data = await callChatbotApi<LogPreviewResponse>(
+    "log-preview",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ log_text: logText }),
+    },
+    { preview: "" },
+    CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION,
+  );
+
+  return data.preview;
+};
+
+/**
+ * Checks whether the chatbot backend is reachable.
+ *
+ * @returns A Promise resolving to true when the backend health endpoint responds successfully
+ */
+export const checkBackendHealth = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: "GET",
+      signal: AbortSignal.timeout(CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION),
+    });
+
+    return response.ok;
+  } catch (error: unknown) {
+    console.error("Failed to check chatbot backend health:", error);
+    return false;
+  }
+};
+
+/**
+ * Safe provider metadata returned by the backend.
+ */
+export interface ProviderMetadata {
+  id: string;
+  label: string;
+  model: string;
+  configured: boolean;
+}
+
+interface ProvidersResponse {
+  providers: ProviderMetadata[];
+}
+
 /**
  * Send a request to the backend to create a new chat session and returns the id of the
  * chat session created.
@@ -50,13 +108,18 @@ export const fetchChatbotReply = async (
   sessionId: string,
   userMessage: string,
   signal?: AbortSignal,
+  providerId = "local",
 ): Promise<Message> => {
+  const requestBody = {
+    message: userMessage,
+    ...(providerId !== "local" ? { provider: providerId } : {}),
+  };
   const data = await callChatbotApi<{ reply?: string }>(
     `sessions/${sessionId}/message`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMessage }),
+      body: JSON.stringify(requestBody),
       signal,
     },
     {},
@@ -82,6 +145,7 @@ export const fetchChatbotReplyWithFiles = async (
   userMessage: string,
   files: File[],
   signal: AbortSignal,
+  providerId = "local",
 ): Promise<Message> => {
   // Combine external signal with timeout using AbortSignal.any()
   const timeoutSignal = AbortSignal.timeout(
@@ -92,6 +156,9 @@ export const fetchChatbotReplyWithFiles = async (
   try {
     const formData = new FormData();
     formData.append("message", userMessage);
+    if (providerId !== "local") {
+      formData.append("provider", providerId);
+    }
 
     files.forEach((file) => {
       formData.append("files", file);
@@ -152,6 +219,23 @@ export const fetchSupportedExtensions =
       return null;
     }
   };
+
+/**
+ * Fetches the provider catalog exposed by the backend.
+ *
+ * @returns A Promise resolving to provider metadata, or an empty list if the
+ * request fails
+ */
+export const fetchProviders = async (): Promise<ProviderMetadata[]> => {
+  const data = await callChatbotApi<ProvidersResponse>(
+    "providers",
+    { method: "GET" },
+    { providers: [] },
+    CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION,
+  );
+
+  return data.providers;
+};
 
 /**
  * Sends a request to the backend to delete the chat session with session id sessionId.

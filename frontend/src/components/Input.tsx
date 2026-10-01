@@ -1,6 +1,14 @@
 import { useRef } from "react";
 import { getChatbotText } from "../data/chatbotTexts";
 import { chatbotStyles } from "../styles/styles";
+import {
+  Paperclip,
+  Image as ImageIcon,
+  File,
+  Send,
+  CircleStop,
+  Wrench,
+} from "lucide-react";
 
 /**
  * Props for the Input component.
@@ -23,6 +31,10 @@ export interface InputProps {
   isLoading?: boolean;
   /** Optional: cancel the in-flight message */
   onCancel?: () => void;
+  /** Optional: show the build-failure analysis action above the composer */
+  showBuildFailureAction?: boolean;
+  /** Optional: start analysis for the current Jenkins build */
+  onAnalyzeBuild?: () => void;
 }
 
 /**
@@ -41,6 +53,8 @@ export const Input = ({
   validateFile,
   isLoading = false,
   onCancel,
+  showBuildFailureAction = false,
+  onAnalyzeBuild,
 }: InputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,6 +122,40 @@ export const Input = ({
 
   return (
     <div style={chatbotStyles.inputWrapper}>
+      {showBuildFailureAction && onAnalyzeBuild && (
+        <div style={chatbotStyles.buildFailureActionBar}>
+          <button
+            type="button"
+            style={chatbotStyles.analyzeBuildButton}
+            onClick={onAnalyzeBuild}
+            onFocus={(event) => {
+              event.currentTarget.style.outline =
+                "2px solid rgba(11, 102, 212, 0.3)";
+              event.currentTarget.style.outlineOffset = "2px";
+            }}
+            onBlur={(event) => {
+              event.currentTarget.style.outline = "none";
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.style.backgroundColor = "#e2edf9";
+            }}
+            onMouseDown={(event) => {
+              event.currentTarget.style.transform = "translateY(1px)";
+            }}
+            onMouseUp={(event) => {
+              event.currentTarget.style.transform = "translateY(0)";
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = "#eef4fb";
+              event.currentTarget.style.transform = "translateY(0)";
+            }}
+            title={getChatbotText("analyzeCurrentBuild")}
+          >
+            <Wrench size={15} strokeWidth={2} aria-hidden="true" />
+            <span>{getChatbotText("analyzeCurrentBuild")}</span>
+          </button>
+        </div>
+      )}
       {/* Attached files preview */}
       {attachedFiles.length > 0 && (
         <div style={chatbotStyles.attachedFilesContainer}>
@@ -118,9 +166,19 @@ export const Input = ({
             >
               <span style={chatbotStyles.attachedFileName}>
                 {file.type.startsWith("image/") ? (
-                  <span data-testid="file-icon-image">🖼️</span>
+                  <span
+                    data-testid="file-icon-image"
+                    style={chatbotStyles.attachedFilePreviewIcon}
+                  >
+                    <ImageIcon size={14} />
+                  </span>
                 ) : (
-                  <span data-testid="file-icon-document">📄</span>
+                  <span
+                    data-testid="file-icon-document"
+                    style={chatbotStyles.attachedFilePreviewIcon}
+                  >
+                    <File size={14} />
+                  </span>
                 )}{" "}
                 {file.name}
               </span>
@@ -162,7 +220,7 @@ export const Input = ({
             style={chatbotStyles.attachButton}
             title="Attach files"
           >
-            📎
+            <Paperclip size={16} />
           </button>
         )}
 
@@ -181,17 +239,19 @@ export const Input = ({
             type="button"
             onClick={onCancel}
             style={chatbotStyles.sendButton("x")}
-            aria-label="Cancel message"
+            aria-label="Cancel"
+            title="Cancel message"
           >
-            Cancel
+            <CircleStop size={20} />
           </button>
         ) : (
           <button
             onClick={onSend}
             disabled={!canSend}
+            aria-label="Send"
             style={chatbotStyles.sendButton(canSend ? "x" : "")}
           >
-            {getChatbotText("sendMessage")}
+            <Send size={20} />
           </button>
         )}
       </div>
