@@ -1,3 +1,41 @@
+/* Provider selector theme tokens follow Jenkins' light/dark page theme. */
+:root {
+  --chatbot-provider-surface: #ffffff;
+  --chatbot-provider-menu-surface: #ffffff;
+  --chatbot-provider-border: #e5e7eb;
+  --chatbot-provider-hover-surface: #f7f8fa;
+  --chatbot-provider-selected-surface: #eff6ff;
+  --chatbot-provider-selected-border: #dbeafe;
+  --chatbot-provider-icon-surface: #ffffff;
+  --chatbot-provider-icon-border: #e5e7eb;
+  --chatbot-provider-model: #6b7280;
+  --chatbot-provider-warning: #d97706;
+  --chatbot-provider-control-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --chatbot-provider-menu-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.1);
+}
+
+:root.dark,
+:root[data-theme="dark"],
+body.dark,
+body[data-theme="dark"] {
+  --chatbot-provider-surface: #181b22;
+  --chatbot-provider-menu-surface: #181b22;
+  --chatbot-provider-border: #343943;
+  --chatbot-provider-hover-surface: #22262f;
+  --chatbot-provider-selected-surface: #1d3558;
+  --chatbot-provider-selected-border: #315a8e;
+  --chatbot-provider-icon-surface: #ffffff;
+  --chatbot-provider-icon-border: #414754;
+  --chatbot-provider-model: #a5adbb;
+  --chatbot-provider-warning: #f2a93b;
+  --chatbot-provider-control-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.24), 0 4px 12px rgba(0, 0, 0, 0.18);
+  --chatbot-provider-menu-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.28), 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
 @keyframes blink {
   0% {
     opacity: 0.2;
@@ -31,11 +69,9 @@
 }
 
 .chatbot-provider-control:hover {
-  background-color: #fafafa !important;
-  border-color: #d9dde3 !important;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.05),
-    0 5px 14px rgba(15, 23, 42, 0.06) !important;
+  background-color: var(--chatbot-provider-hover-surface) !important;
+  border-color: var(--chatbot-provider-border) !important;
+  box-shadow: var(--chatbot-provider-control-shadow) !important;
 }
 
 .chatbot-provider-control svg {
@@ -70,7 +106,7 @@
 
 .chatbot-provider-option:hover:not(.is-unavailable),
 .chatbot-provider-option:focus-visible:not(.is-unavailable) {
-  background-color: #f7f8fa !important;
+  background-color: var(--chatbot-provider-hover-surface) !important;
 }
 
 .chatbot-provider-option.is-unavailable {
@@ -93,7 +129,7 @@
   position: relative;
   display: inline-flex;
   flex: 0 0 auto;
-  color: #d97706;
+  color: var(--chatbot-provider-warning);
   cursor: help;
   outline: none;
 }
