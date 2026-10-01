@@ -40,6 +40,25 @@ export const fetchLogPreview = async (logText: string): Promise<string> => {
 };
 
 /**
+ * Checks whether the chatbot backend is reachable.
+ *
+ * @returns A Promise resolving to true when the backend health endpoint responds successfully
+ */
+export const checkBackendHealth = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: "GET",
+      signal: AbortSignal.timeout(CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION),
+    });
+
+    return response.ok;
+  } catch (error: unknown) {
+    console.error("Failed to check chatbot backend health:", error);
+    return false;
+  }
+};
+
+/**
  * Safe provider metadata returned by the backend.
  */
 export interface ProviderMetadata {
