@@ -104,6 +104,21 @@ class ChatResponse(BaseModel):
     reply: str
 
 
+class ProviderMetadata(BaseModel):
+    """Safe provider metadata exposed to clients."""
+
+    id: str
+    label: str
+    model: str
+    configured: bool
+
+
+class ProvidersResponse(BaseModel):
+    """Response containing the available provider metadata."""
+
+    providers: List[ProviderMetadata]
+
+
 class ChatResponseWithFiles(BaseModel):
     """
     Represents the chatbot's reply with information about processed files.

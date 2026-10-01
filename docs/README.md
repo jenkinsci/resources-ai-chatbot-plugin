@@ -17,6 +17,7 @@ Below is a brief explanation of the key subdirectories:
     - `embedding/`: Scripts to embed the chunks.
     - `vectorstore/`: Scripts to store the embeddings into a vector database.
     - `retriever/`: Scripts to perform the semantic search across the vector database.
+    - `graph/`: GraphRAG dependency graph construction and runtime retrieval.
   - `api/`: FastAPI application that exposes the chatbot via a REST API.
     - `main.py`: Entry point to run the FastAPI app.
     - `routes/`: Defines the HTTP endpoints.
@@ -62,6 +63,8 @@ make run-data-pipeline
 ```
 
 > **Note:** for more details on the scripts and on the single processes you can visit the docs under `docs/chatbot-core/data/` and `docs/chatbot-core/rag/`.
+
+For the plugin dependency graph and its Update Center integration, see the [GraphRAG guide](chatbot-core/rag/graph.md).
 
 ## API
 

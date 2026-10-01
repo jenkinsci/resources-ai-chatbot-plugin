@@ -310,6 +310,8 @@ def test_run_graph_build_merges_update_center_into_one_graph(tmp_path):
     graph = load_graph(str(paths.graph_path), mock_logger)
 
     assert report["triple_count"] == 1
+    assert report["graph_source"] == "plugin_documentation_and_jenkins_update_center"
+    assert report["dependency_metadata"] == "jenkins_update_center"
     assert graph.number_of_edges("source-plugin", "target-plugin") == 1
     edges = graph.get_edge_data("source-plugin", "target-plugin")
     edge = next(iter(edges.values()))

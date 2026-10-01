@@ -7,8 +7,10 @@ import pytest
 from api.models.provider_manager import (
     HostedProviderConfig,
     ProviderManager,
+    build_provider_manager,
     get_current_provider,
 )
+from api.config.providers import ProviderDefinition
 
 
 class FakeProvider:
@@ -56,12 +58,48 @@ def test_resolve_builds_hosted_provider_from_configuration():
     assert created_configs == [config]
 
 
+def test_build_manager_uses_catalog_and_environment():
+    """Catalog models and matching environment keys build hosted providers."""
+    catalog = (
+        ProviderDefinition(
+            id="local",
+            label="Local",
+            model="llama.cpp",
+        ),
+        ProviderDefinition(
+            id="groq",
+            label="Groq",
+            model="groq/model",
+        ),
+    )
+    manager = build_provider_manager(
+        FakeProvider(),
+        catalog,
+        {"GROQ_API_KEY": "test-key"},
+    )
+    provider = manager.resolve("groq")
+
+    assert provider.model == "groq/model"
+    assert provider.api_key == "test-key"
+
+
 def test_resolve_rejects_unknown_provider():
     """Provider selection never silently falls back to the local model."""
     manager = ProviderManager(FakeProvider())
 
     with pytest.raises(ValueError, match="Unsupported LLM provider: unknown"):
         manager.resolve("unknown")
+
+
+def test_resolve_rejects_missing_api_key():
+    """Hosted selection reports missing environment credentials clearly."""
+    manager = ProviderManager(
+        FakeProvider(),
+        {"groq": HostedProviderConfig(model="groq/model")},
+    )
+
+    with pytest.raises(ValueError, match="Set GROQ_API_KEY"):
+        manager.resolve("groq")
 
 
 def test_activate_restores_previous_provider():
@@ -81,7 +119,7 @@ def test_activate_restores_previous_provider():
     assert get_current_provider() is None
 
 
-def test_hosted_configuration_requires_api_key():
-    """Hosted providers cannot be created without request credentials."""
-    with pytest.raises(ValueError, match="API key is required"):
-        HostedProviderConfig(model="test/model", api_key="")
+def test_hosted_configuration_requires_model():
+    """Hosted provider configurations always require a model path."""
+    with pytest.raises(ValueError, match="model is required"):
+        HostedProviderConfig(model="")

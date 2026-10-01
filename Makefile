@@ -1,6 +1,6 @@
 .PHONY: all api setup-backend build-frontend test run-data-pipeline clean \
 	run-data-storage run-data-storage-plugins run-data-storage-docs run-data-storage-discourse \
-	run-data-graph run-data-graph-plugins
+	run-data-graph run-data-graph-plugins sync-provider-env
 
 BACKEND_SHELL = cd chatbot-core && . ./venv/bin/activate && export PYTHONPATH=$$(pwd)
 
@@ -33,6 +33,9 @@ run-api:
 	@$(BACKEND_SHELL) && uvicorn api.main:app --reload
 
 api: setup-backend run-api
+
+sync-provider-env: setup-backend
+	@$(BACKEND_SHELL) && python3 -m api.config.env_sync
 
 dev-lite: setup-backend
 	@echo "Starting API in lite mode..."
@@ -133,7 +136,8 @@ run-data-chunking: run-data-chunking-docs run-data-chunking-plugins run-data-chu
 run-data-graph-plugins: setup-backend
 	@$(BACKEND_SHELL) && \
 	echo "### BUILDING GRAPHRAG PLUGIN GRAPH ARTIFACTS ###" && \
-	python3 rag/graph/build_graph_artifacts.py
+	python3 rag/graph/build_graph_artifacts.py \
+	  --update-center-path data/raw/update-center.actual.json
 
 run-data-graph: run-data-graph-plugins
 

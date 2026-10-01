@@ -2,7 +2,7 @@
 
 import json
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +15,7 @@ from rag.graph.models import Triple
 DEFAULT_TRIPLES_PATH = GRAPH_STORE_DIR / "triples.jsonl"
 DEFAULT_EXTRACTION_REPORT_PATH = GRAPH_STORE_DIR / "extraction_report.json"
 GRAPH_SOURCE = "plugin_documentation"
+COMBINED_GRAPH_SOURCE = "plugin_documentation_and_jenkins_update_center"
 DEPENDENCY_METADATA_SOURCE = "not_used"
 
 
@@ -32,6 +33,22 @@ class GraphArtifactPaths:
     graph_path: Path = DEFAULT_PLUGIN_GRAPH_PATH
     triples_path: Path = DEFAULT_TRIPLES_PATH
     report_path: Path = DEFAULT_EXTRACTION_REPORT_PATH
+
+
+@dataclass(frozen=True)
+class GraphArtifactConfig:
+    """
+    Configure graph artifact destinations and report metadata.
+
+    Args:
+        paths (GraphArtifactPaths): Destination artifact paths.
+        graph_source (str): Graph relationship sources used for the build.
+        dependency_metadata_source (str): Dependency metadata source.
+    """
+
+    paths: GraphArtifactPaths = field(default_factory=GraphArtifactPaths)
+    graph_source: str = GRAPH_SOURCE
+    dependency_metadata_source: str = DEPENDENCY_METADATA_SOURCE
 
 
 def triple_to_record(triple: Triple) -> dict[str, Any]:
@@ -99,6 +116,8 @@ def build_extraction_report(
     chunks: list[dict],
     triples: list[Triple],
     graph: nx.MultiDiGraph,
+    graph_source: str = GRAPH_SOURCE,
+    dependency_metadata_source: str = DEPENDENCY_METADATA_SOURCE,
 ) -> dict[str, Any]:
     """
     Build summary counters for graph extraction artifacts.
@@ -107,6 +126,8 @@ def build_extraction_report(
         chunks (list[dict]): Source plugin chunks used for extraction.
         triples (list[Triple]): Extracted triples.
         graph (nx.MultiDiGraph): Built graph artifact.
+        graph_source (str): Graph relationship sources used for the build.
+        dependency_metadata_source (str): Dependency metadata source used for the build.
 
     Returns:
         dict[str, Any]: Extraction summary counters.
@@ -114,8 +135,8 @@ def build_extraction_report(
     relation_counts = Counter(triple.relation for triple in triples)
 
     return {
-        "graph_source": GRAPH_SOURCE,
-        "dependency_metadata": DEPENDENCY_METADATA_SOURCE,
+        "graph_source": graph_source,
+        "dependency_metadata": dependency_metadata_source,
         "chunk_count": len(chunks),
         "triple_count": len(triples),
         "node_count": graph.number_of_nodes(),
@@ -146,7 +167,7 @@ def write_graph_artifacts(
     triples: list[Triple],
     chunks: list[dict],
     logger,
-    paths: GraphArtifactPaths = GraphArtifactPaths(),
+    config: GraphArtifactConfig = GraphArtifactConfig(),
 ) -> dict[str, Any]:
     """
     Write graph, triples, and extraction report artifacts.
@@ -156,15 +177,21 @@ def write_graph_artifacts(
         triples (list[Triple]): Extracted triples used to build the graph.
         chunks (list[dict]): Source chunks used for extraction.
         logger (logging.Logger): Logger for artifact status or errors.
-        paths (GraphArtifactPaths): Destination artifact paths.
+        config (GraphArtifactConfig): Artifact paths and report metadata.
 
     Returns:
         dict[str, Any]: Extraction report payload.
     """
-    report = build_extraction_report(chunks, triples, graph)
+    report = build_extraction_report(
+        chunks,
+        triples,
+        graph,
+        graph_source=config.graph_source,
+        dependency_metadata_source=config.dependency_metadata_source,
+    )
 
-    save_graph(graph, str(paths.graph_path), logger)
-    write_triples(triples, paths.triples_path, logger)
-    write_json(paths.report_path, report, logger)
+    save_graph(graph, str(config.paths.graph_path), logger)
+    write_triples(triples, config.paths.triples_path, logger)
+    write_json(config.paths.report_path, report, logger)
 
     return report
