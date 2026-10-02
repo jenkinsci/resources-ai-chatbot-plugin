@@ -35,7 +35,7 @@ This will:
 - Build a FAISS IVF index (with `nlist=256`, `nprobe=20`)
 - Save:
   - `faiss_index.idx` to `data/embeddings/`
-  - `faiss_metadata.pkl` to `data/embeddings/`
+  - `faiss_metadata.json` to `data/embeddings/`
 
 ## Script: `vectorstore_utils.py`
 
