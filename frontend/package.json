@@ -22,7 +22,7 @@
     "uuid": "^14.0.2"
   },
   "devDependencies": {
-    "@babel/preset-env": "^8.0.2",
+    "@babel/preset-env": "^8.0.6",
     "@babel/preset-react": "^8.0.1",
     "@babel/preset-typescript": "^8.0.1",
     "@eslint/js": "^10.0.1",
@@ -32,18 +32,18 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.1.1",
-    "eslint": "^10.9.1",
+    "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.5",
+    "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.11.0",
     "jest": "^30.5.0",
     "jest-axe": "^11.0.0",
-    "jest-environment-jsdom": "^30.5.0",
+    "jest-environment-jsdom": "^30.5.2",
     "jest-fetch-mock": "^4.2.0",
     "prettier": "^3.9.6",
     "ts-node": "^10.9.2",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.68.0",
+    "typescript-eslint": "^8.70.1",
     "vite": "^8.2.2"
   }
 }
