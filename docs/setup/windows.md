@@ -140,9 +140,20 @@ cd resources-ai-chatbot-plugin
 > ⚠️ Do NOT clone into `/mnt/c/...` (your Windows drive). Always work inside
 > the WSL home directory (`~`) to avoid filesystem permission and performance issues.
 
-## Step 7 — Run the Jenkins Plugin
+## Step 7 — Start the Backend
 
-Start Jenkins with the plugin loaded:
+From the repository root, start the FastAPI backend in the first Ubuntu
+terminal:
+
+```bash
+make api
+```
+
+The default backend URL is `http://localhost:8000`.
+
+## Step 8 — Run the Jenkins Plugin
+
+Open a second Ubuntu terminal and start Jenkins with the plugin loaded:
 ```bash
 mvn hpi:run -Dchangelist=-SNAPSHOT -Dhost=0.0.0.0
 ```
@@ -153,9 +164,9 @@ mvn hpi:run -Dchangelist=-SNAPSHOT -Dhost=0.0.0.0
 Wait for this line before opening the browser:
 Jenkins is fully up and running
 
-## Step 8 — Open Jenkins in Browser
+## Step 9 — Open Jenkins in Browser
 
-Open a **second Ubuntu terminal** (leave the first one running Jenkins), then run:
+Open a third Ubuntu terminal (leave the backend and Jenkins terminals running), then run:
 ```bash
 explorer.exe "http://localhost:8080/jenkins"
 ```
