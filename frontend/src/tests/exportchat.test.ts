@@ -129,6 +129,18 @@ describe("exportchat", () => {
       expect(anchor.download).toBe("chat.docx");
     });
 
+    it("downloads the blob produced by Packer", async () => {
+      const docxBlob = new Blob(["docx"], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      (Packer.toBlob as jest.Mock).mockResolvedValueOnce(docxBlob);
+
+      await exportAsDocx(messages);
+
+      expect(createObjectURLMock).toHaveBeenCalledWith(docxBlob);
+      expect(anchor.href).toBe("blob:mockurl");
+    });
+
     it("handles empty messages", async () => {
       await exportAsDocx([]);
 
