@@ -2,7 +2,7 @@
 
 This guide provides installation instructions for Linux and Windows, along with automated setup using the Makefile.
 
-For macOS/Apple Silicon contributors, see the [macOS/Apple Silicon Setup Guide](macos-setup.md).
+For macOS/Apple Silicon contributors, see the [macOS/Apple Silicon Setup Guide](macos.md).
 
 ## Choose Your Setup Method
 
