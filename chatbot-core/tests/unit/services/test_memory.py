@@ -74,6 +74,21 @@ def test_delete_session_returns_false_if_not_exists():
 
     assert deleted is False
 
+
+def test_delete_session_removes_persisted_disk_only_session(mocker):
+    """Test deleting a session that exists only on disk returns True and removes file."""
+    session_id = str(uuid.uuid4())
+    mocker.patch("api.services.memory.session_exists_in_json", return_value=True)
+    mocked_delete_session_file = mocker.patch(
+        "api.services.memory.delete_session_file",
+        return_value=True,
+    )
+
+    deleted = memory.delete_session(session_id)
+
+    assert deleted is True
+    mocked_delete_session_file.assert_called_once_with(session_id)
+
 def test_session_exists_returns_true_for_existing_session():
     """Test that session_exists returns True for a valid, initialized session."""
     session_id = memory.init_session()
