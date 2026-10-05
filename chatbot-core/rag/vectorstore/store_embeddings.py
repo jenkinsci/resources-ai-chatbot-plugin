@@ -54,7 +54,7 @@ def build_faiss_ivf_index(vectors, nlist, nprobe, logger):
 def run_indexing(nlist, nprobe, logger, source_name):
     """
     Main pipeline: embed documents for one source, build FAISS index,
-    and save index + metadata under {source_name}_index.idx / _metadata.pkl
+    and save index + metadata under {source_name}_index.idx / _metadata.json
     so the retriever (which keys files by source_name) can load them.
 
     Args:
@@ -70,7 +70,7 @@ def run_indexing(nlist, nprobe, logger, source_name):
 
     chunk_file = SOURCE_CHUNK_FILES[source_name]
     index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
-    metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+    metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.json")
 
     logger.info("Starting document embedding for source '%s'...", source_name)
     vectors, metadata = embed_chunks(logger, chunk_files=[chunk_file])

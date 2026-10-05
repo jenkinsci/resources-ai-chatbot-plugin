@@ -4,7 +4,7 @@ Handles persistence and logging for vector search storage.
 """
 
 import os
-import pickle
+import json
 import faiss
 
 VECTOR_STORE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "embeddings")
@@ -47,7 +47,7 @@ def load_faiss_index(path, logger):
 
 def save_metadata(metadata, path, logger):
     """
-    Save metadata to a pickle file.
+    Save metadata to a JSON file.
 
     Args:
         metadata (Any): Metadata object to serialize.
@@ -55,15 +55,15 @@ def save_metadata(metadata, path, logger):
         logger (logging.Logger): Logger for status or error messages.
     """
     try:
-        with open(path, "wb") as f:
-            pickle.dump(metadata, f)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f)
         logger.info("Metadata saved to %s", path)
-    except (OSError, pickle.PickleError) as e:
+    except (OSError, TypeError, ValueError) as e:
         logger.error("Failed to save metadata to %s: %s", path, e)
 
 def load_metadata(path, logger):
     """
-    Load metadata from a pickle file.
+    Load metadata from a JSON file.
 
     Args:
         path (str): File path to load the metadata from.
@@ -74,12 +74,12 @@ def load_metadata(path, logger):
     """
     try:
         logger.info("Loading metadata from %s...", path)
-        with open(path, "rb") as f:
-            metadata = pickle.load(f)
+        with open(path, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
         logger.info("Metadata loaded successfully.")
         return metadata
     except FileNotFoundError as e:
         logger.error("Metadata file not found: %s - %s", path, e)
-    except (OSError, pickle.UnpicklingError) as e:
+    except (OSError, json.JSONDecodeError) as e:
         logger.error("Failed to load metadata from %s - %s", path, e)
     return None

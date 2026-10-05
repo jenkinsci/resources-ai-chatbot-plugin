@@ -23,7 +23,7 @@ def test_load_vector_index_returns_index_and_metadata(mocker):
     index, metadata = load_vector_index(mock_logger, source_name)
 
     expected_index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
-    expected_metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+    expected_metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.json")
 
     mock_load_index.assert_called_once_with(expected_index_path, mock_logger)
     mock_load_metadata.assert_called_once_with(expected_metadata_path, mock_logger)
