@@ -206,3 +206,19 @@ def sanitize_logs(log_text: str) -> str:
         sanitized_text = pattern.sub(replacement, sanitized_text)
 
     return sanitized_text
+
+
+def sanitize_log_payload(payload: object) -> str:
+    """
+    Convert a payload to a string and redact common secrets before logging it.
+
+    Args:
+        payload (object): Any value that is about to be written to the logs.
+
+    Returns:
+        str: The sanitized string form of the payload, or an empty string.
+    """
+    if payload is None:
+        return ""
+
+    return sanitize_logs(str(payload))

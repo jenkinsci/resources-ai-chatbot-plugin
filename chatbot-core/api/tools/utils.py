@@ -9,12 +9,12 @@ import heapq
 from types import MappingProxyType
 from typing import List, Tuple, Dict, Optional
 from api.config.loader import CONFIG
+from api.constants import CODE_BLOCK_PLACEHOLDER_PATTERN
 from rag.retriever.retrieve import get_relevant_documents
 from rag.retriever.retriever_bm25 import perform_keyword_search_from_source
 
 
 retrieval_config = CONFIG.get("retrieval", {})
-CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
 
 TOOL_SIGNATURES = MappingProxyType({
     "search_plugin_docs": {"plugin_name": str, "query": str},

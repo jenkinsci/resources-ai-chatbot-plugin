@@ -1,35 +1,37 @@
-"""Chat service layer responsible for processing the requests forwarded by the controller."""
+"""Chat service layer responsible for processing the requests forwarded by the controller.
 
-import ast
-import json
-import re
-import inspect
+This module is pure orchestration. The individual steps live in focused
+siblings and are wired together here:
+
+* :mod:`api.services.query_classifier` — classifying and splitting queries
+* :mod:`api.services.tool_dispatcher` — choosing and running retrieval tools
+* :mod:`api.services.context_retriever` — retrieving and scoring context
+
+Collaborators such as :func:`get_relevant_documents`, ``build_graph_runtime_context``
+and ``llm_provider`` are imported here and passed down to those modules, so they
+stay patchable on ``api.services.chat_service`` and none of the siblings ever
+imports this module back.
+"""
+
 from typing import AsyncGenerator, List, Optional
 
 from api.config.loader import CONFIG
-from api.models.embedding_model import EMBEDDING_MODEL
 from api.models.llama_cpp_provider import llm_provider
-from api.models.provider_manager import build_provider_manager, get_current_provider
-from api.models.schemas import ChatResponse, QueryType, try_str_to_query_type, FileAttachment
+from api.models.provider_manager import build_provider_manager
+from api.models.schemas import ChatResponse, QueryType, FileAttachment
 from api.prompts.prompt_builder import build_prompt
-from api.prompts.prompts import (
-    CONTEXT_RELEVANCE_PROMPT,
-    QUERY_CLASSIFIER_PROMPT,
-    RETRIEVER_AGENT_PROMPT,
-    SPLIT_QUERY_PROMPT,
-    LOG_SUMMARY_PROMPT,
+from api.prompts.prompts import LOG_SUMMARY_PROMPT
+from api.services import (
+    answer_generator,
+    context_retriever,
+    query_classifier,
+    tool_dispatcher,
 )
-
 from api.services.memory import get_session, get_session_async
 from api.services.file_service import format_file_context
 from api.tools.log_parser import extract_relevant_log_lines
-from api.tools.sanitizer import sanitize_logs
-from api.tools.tools import TOOL_REGISTRY
-from api.tools.utils import (
-    get_default_tools_call,
-    make_placeholder_replacer,
-    validate_tool_calls,
-)
+from api.tools.sanitizer import sanitize_log_payload, sanitize_logs
+
 try:
     from rag.graph.runtime_context import build_graph_runtime_context
 except ImportError:
@@ -40,23 +42,7 @@ from utils import LoggerFactory
 
 logger = LoggerFactory.instance().get_logger("api")
 llm_config = CONFIG["llm"]
-retrieval_config = CONFIG["retrieval"]
 provider_manager = build_provider_manager(llm_provider)
-CODE_BLOCK_PLACEHOLDER_PATTERN = r"\[\[(?:CODE_BLOCK|CODE_SNIPPET)_(\d+)\]\]"
-SOURCE_TOP_K_CONFIG_KEYS = {
-    "plugins": "top_k_plugins",
-    "docs": "top_k_docs",
-    "discourse": "top_k_discourse",
-}
-
-def _sanitize_log_payload(payload: object) -> str:
-    """
-    Convert payloads to strings and redact common secrets before logging them.
-    """
-    if payload is None:
-        return ""
-
-    return sanitize_logs(str(payload))
 
 
 def prepare_log_context(log_text: str) -> str:
@@ -82,6 +68,26 @@ def prepare_log_context(log_text: str) -> str:
     return sanitized_log
 
 
+def retrieve_context(user_input: str) -> str:
+    """
+    Retrieves the most relevant document chunks for a user query across every
+    configured source (plugins, jenkins docs, community threads, ...) and
+    reconstructs them by replacing placeholder tokens with actual code blocks.
+
+    Args:
+        user_input (str): The input query string.
+
+    Returns:
+        str: Combined, reconstructed context text, or the configured empty-context
+        message when nothing relevant was retrieved.
+    """
+    return context_retriever.retrieve_context(
+        user_input,
+        get_documents=get_relevant_documents,
+        build_graph_context=build_graph_runtime_context,
+    )
+
+
 def get_chatbot_reply(
     session_id: str,
     user_input: str,
@@ -101,7 +107,7 @@ def get_chatbot_reply(
     """
     logger.info("New message from session '%s'", session_id)
     logger.debug("Handling the user query: %s",
-                 _sanitize_log_payload(user_input))
+                 sanitize_log_payload(user_input))
 
     memory = get_session(session_id)
     if memory is None:
@@ -109,7 +115,7 @@ def get_chatbot_reply(
             f"Session '{session_id}' not found in the memory store.")
 
     context = retrieve_context(user_input)
-    logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
+    logger.debug("Context retrieved: %s", sanitize_log_payload(context))
 
     # Process file context if files are provided
     context = _process_file_context(context, files)
@@ -117,7 +123,7 @@ def get_chatbot_reply(
     prompt = build_prompt(user_input, context, memory)
 
     logger.debug("Generating answer with prompt: %s",
-                 _sanitize_log_payload(prompt))
+                 sanitize_log_payload(prompt))
     reply = generate_answer(prompt)
 
     # Format user message with file info for memory
@@ -163,8 +169,8 @@ def get_chatbot_reply_new_architecture(
         session_id: str,
         user_input: str) -> ChatResponse:
     """
-    Main chatbot entry point. Retrieves context, constructs a prompt with memory,
-    and generates an LLM response. Also updates the memory with the latest exchange.
+    Agentic chatbot entry point. Classifies the query, answers it (splitting it
+    first when it carries several tasks) and updates the memory with the exchange.
 
     Args:
         session_id (str): The unique ID for the chat session.
@@ -175,14 +181,14 @@ def get_chatbot_reply_new_architecture(
     """
     logger.info("New message from session '%s'", session_id)
     logger.debug("Handling the user query: %s",
-                 _sanitize_log_payload(user_input))
+                 sanitize_log_payload(user_input))
 
     memory = get_session(session_id)
     if memory is None:
         raise RuntimeError(
             f"Session '{session_id}' not found in the memory store.")
 
-    query_type = _get_query_type(user_input)
+    query_type = query_classifier.get_query_type(user_input, generate_answer)
 
     logger.info("The provided user query is of type %s.", query_type)
 
@@ -194,307 +200,38 @@ def get_chatbot_reply_new_architecture(
     return ChatResponse(reply=reply)
 
 
-def _get_query_type(query: str) -> QueryType:
-    """
-    Gets the query type that can be either 'SIMPLE', if it contains one task, or
-    'MULTI' if it contains 2 or more sub-queries inside. In case the LLM produces
-    a not valid output it sets by default to MULTI, since in case it of a false
-    positive it won't split up the query.
-
-    Args:
-        query (str): The user query.
-
-    Returns:
-        QueryType: the query type, either 'SIMPLE' or 'MULTI'
-    """
-    prompt = QUERY_CLASSIFIER_PROMPT.format(user_query=query)
-    response = generate_answer(
-        prompt, llm_config["max_tokens_query_classifier"])
-    query_type = _extract_query_type(response)
-
-    return try_str_to_query_type(query_type, logger)
-
-
 def _handle_query_type(query: str, query_type: QueryType, memory) -> str:
     """
     Handles the query generation based on the query type. If SIMPLE it will call
     the simple pipeline, otherwise it will decompose into many queries and
     call the simple pipeline for each one.
-
-    Args:
-        query (str): The user query.
-        query_type (QueryType): The query type('SIMPLE' or 'MULTI').
-        memory: The conversational memory of the involved chat.
-
-    Returns:
-        str: The final reply of the chatbot.
     """
-    if query_type == QueryType.MULTI:
-        sub_queries = _get_sub_queries(query)
+    if query_type != QueryType.MULTI:
+        return context_retriever.get_reply_simple_query_pipeline(
+            query, memory, generate_answer)
 
-        answers = []
-        for sub_query in sub_queries:
-            logger.debug("Handling sub-query: %s.",
-                         _sanitize_log_payload(sub_query))
-            answers.append(_get_reply_simple_query_pipeline(sub_query, memory))
+    sub_queries = query_classifier.get_sub_queries(query, generate_answer)
 
-        reply = _assemble_response(answers)
-        logger.debug("Final response: %s", _sanitize_log_payload(reply))
-    else:
-        reply = _get_reply_simple_query_pipeline(query, memory)
+    answers = []
+    for sub_query in sub_queries:
+        logger.debug("Handling sub-query: %s.", sanitize_log_payload(sub_query))
+        answers.append(context_retriever.get_reply_simple_query_pipeline(
+            sub_query, memory, generate_answer))
+
+    reply = query_classifier.assemble_response(answers)
+    logger.debug("Final response: %s", sanitize_log_payload(reply))
 
     return reply
 
 
-def _get_sub_queries(query: str) -> List[str]:
-    """
-    Splits a complex user query into a list of single-task sub-queries.
-
-    Args:
-        query (str): The original user query.
-
-    Returns:
-        List[str]: A list of sub-queries.
-    """
-    prompt = SPLIT_QUERY_PROMPT.format(user_query=query)
-
-    queries_string = generate_answer(prompt, max_tokens=len(query) * 2)
-
-    try:
-        queries = ast.literal_eval(queries_string)
-    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
-        logger.warning(
-            "Error in parsing sub-queries. Falling back to single query mode.")
-        logger.debug("Failed sub-query payload: %s",
-                     _sanitize_log_payload(queries_string))
-        queries = [query]
-
-    queries = [q.strip() for q in queries]
-
-    return queries
-
-
-def _assemble_response(answers: List[str]):
-    """
-    Joins multiple answers into a single formatted response.
-
-    Args:
-        answers (List[str]): A list of answer strings.
-
-    Returns:
-        str: A single string containing all answers separated by line breaks.
-    """
-    return "\n\n".join(answer for answer in answers)
-
-
-def _get_reply_simple_query_pipeline(query: str, memory) -> str:
-    """
-    Executes the pipeline to answer a simple query using retrieval and generation.
-
-    Args:
-        query (str): The user query to answer.
-        memory: Memory context used in prompt construction.
-
-    Returns:
-        str: The generated answer or a fallback message if relevance is too low.
-    """
-    iterations, relevance = -1, 0
-    while iterations < retrieval_config["max_reformulate_iterations"] and relevance != 1:
-        tool_calls = _get_agent_tool_calls(query)
-
-        retrieved_context = _execute_search_tools(tool_calls)
-
-        logger.debug("Retrieved context: %s",
-                     _sanitize_log_payload(retrieved_context))
-
-        relevance = _get_query_context_relevance(query, retrieved_context)
-        logger.info("Query context relevance %s", relevance)
-        iterations += 1
-
-    if relevance != 1:
-        return f"Unfortunately we are not able to respond to your question about {query}."
-
-    prompt = build_prompt(query, retrieved_context, memory)
-
-    return generate_answer(prompt)
-
-
 def _get_agent_tool_calls(query: str):
-    """
-    Uses a prompt to determine which tools should be used for information retrieval.
-
-    Args:
-        query (str): The user query.
-
-    Returns:
-        Any: A parsed representation of tool calls, validated or defaulted.
-    """
-    retriever_agent_prompt = RETRIEVER_AGENT_PROMPT.format(user_query=query)
-
-    tool_calls = generate_answer(
-        retriever_agent_prompt, llm_config["max_tokens_retriever_agent"] + (len(query) * 3))
-
-    logger.debug("Tool calls: %s", _sanitize_log_payload(tool_calls))
-    try:
-        tool_calls_parsed = json.loads(tool_calls)
-        if not validate_tool_calls(tool_calls_parsed, logger):
-            logger.warning("Tool calls are not respecting the signatures."
-                           "Going for the default config")
-            tool_calls_parsed = get_default_tools_call(query)
-    except json.JSONDecodeError:
-        logger.warning("Invalid JSON syntax in the tools output.")
-        logger.debug("Raw tool calls payload: %s",
-                     _sanitize_log_payload(tool_calls))
-        logger.warning("Calling all the search tools with default settings.")
-        tool_calls_parsed = get_default_tools_call(query)
-    except (KeyError, ValueError, TypeError, AttributeError) as e:
-        logger.warning(
-            "JSON structure or value error(%s %s) in the tools output.",
-            type(e).__name__,
-            e)
-        logger.debug("Raw tool calls payload: %s",
-                     _sanitize_log_payload(tool_calls))
-        logger.warning("Calling all the search tools with default settings.")
-        tool_calls_parsed = get_default_tools_call(query)
-
-    return tool_calls_parsed
+    """Thin wrapper kept so external callers can reach the tool dispatcher here."""
+    return tool_dispatcher.get_agent_tool_calls(query, generate_answer)
 
 
 def _execute_search_tools(tool_calls) -> str:
-    """
-    Executes the tool calls to retrieve relevant context information.
-
-    Args:
-        tool_calls: A list of tool call specifications with tool names and parameters.
-
-    Returns:
-        str: Combined output from all retrieval tools.
-    """
-    retrieved_results = []
-    for call in tool_calls:
-        tool_name = call.get("tool")
-        params = call.get("params") or {}
-
-        tool_fn = TOOL_REGISTRY.get(tool_name)
-
-        if tool_fn is None:
-            logger.warning("Unknown tool '%s' — skipping.", tool_name)
-            continue
-
-        # Check if the tool actually expects a logger before injecting it
-        if "logger" in inspect.signature(tool_fn).parameters:
-            params.setdefault("logger", logger)
-
-        result = tool_fn(**params)
-        retrieved_results.append({
-            "tool": tool_name,
-            "output": result
-        })
-
-    return "\n\n".join(
-        f"[Result of the search tool {res['tool']}]:\n{res.get('output', '')}".strip(
-        )
-        for res in retrieved_results
-    )
-
-
-def _get_query_context_relevance(query: str, context: str) -> int:
-    """
-    Returns the relevance of the retrieved context to the original query.
-
-    Args:
-        query (str): The user query.
-        context (str): The retrieved context.
-
-    Returns:
-        int: A relevance score (1 for relevant, 0 for not relevant).
-    """
-    prompt = CONTEXT_RELEVANCE_PROMPT.format(query=query, context=context)
-
-    output = generate_answer(
-        prompt, llm_config["max_tokens_query_context_relevance"])
-
-    relevance_score = _extract_relevance_score(output)
-
-    return relevance_score
-
-
-# pylint: disable=duplicate-code
-def retrieve_context(user_input: str) -> str:
-    """
-    Retrieves the most relevant document chunks for a user query across every
-    configured source (plugins, jenkins docs, community threads, ...) and
-    reconstructs them by replacing placeholder tokens with actual code blocks.
-
-    Args:
-        user_input (str): The input query string.
-
-    Returns:
-        str: Combined, reconstructed context text. Returns retrieval_config["empty_context_message"]
-        if any context have been retrieved.
-    """
-    # Dev mode: bypass RAG when indices are not built
-    if CONFIG.get("dev_mode", False):
-        logger.info(
-            "Dev mode enabled - skipping RAG retrieval. Build indices to enable full RAG.")
-        return "Dev mode: RAG indices not built. This is a placeholder context for testing."
-
-    # Pull the same set of sources the new-architecture tools use.
-    tool_names = CONFIG.get("tool_names")
-    if not isinstance(tool_names, dict) or not tool_names:
-        raise ValueError("tool_names missing from config")
-
-    source_names = list(tool_names.values())
-
-    context_texts = []
-    for source_name in source_names:
-        top_k_config_key = SOURCE_TOP_K_CONFIG_KEYS.get(
-            source_name, "top_k")
-        top_k = retrieval_config[top_k_config_key]
-        data_retrieved, _ = get_relevant_documents(
-            user_input,
-            EMBEDDING_MODEL,
-            logger=logger,
-            source_name=source_name,
-            top_k=top_k,
-        )
-        if not data_retrieved:
-            logger.info("No relevant chunks from source '%s'.", source_name)
-            continue
-
-        for item in data_retrieved:
-            item_id = item.get("id", "")
-            if not item_id:
-                logger.warning(
-                    "Id of retrieved context not found in source '%s'. Skipping element.",
-                    source_name,
-                )
-                continue
-            text = item.get("chunk_text", "")
-            if not text:
-                logger.warning(
-                    "Text of chunk with ID %s (source '%s') is missing",
-                    item_id, source_name,
-                )
-                continue
-
-            code_iter = iter(item.get("code_blocks", []))
-            replace = make_placeholder_replacer(code_iter, item_id, logger)
-            text = re.sub(CODE_BLOCK_PLACEHOLDER_PATTERN, replace, text)
-            context_texts.append(f"[Source: {source_name}]\n{text}")
-
-    if build_graph_runtime_context is None:
-        logger.warning("GraphRAG is unavailable; using semantic retrieval only.")
-    else:
-        graph_context = build_graph_runtime_context(user_input, logger)
-        if graph_context:
-            context_texts.append(graph_context)
-
-    if not context_texts:
-        logger.warning(retrieval_config["empty_context_message"])
-        return retrieval_config["empty_context_message"]
-
-    return "\n\n".join(context_texts)
+    """Thin wrapper kept so external callers can reach the tool dispatcher here."""
+    return tool_dispatcher.execute_search_tools(tool_calls)
 
 
 def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
@@ -503,37 +240,13 @@ def generate_answer(prompt: str, max_tokens: Optional[int] = None) -> str:
 
     Args:
         prompt (str): The full prompt to send to the LLM.
+        max_tokens (Optional[int]): Token generation limit, falling back to the config default.
 
     Returns:
         str: The model's generated text response.
     """
-    provider = get_current_provider() or llm_provider
-    if provider is None:
-        logger.warning(
-            "LLM provider not available - returning fallback response")
-        return "LLM is not available. Please install llama-cpp-python and configure a model."
-    try:
-        sanitized_prompt = sanitize_logs(prompt)
-        return provider.generate(
-            prompt=sanitized_prompt,
-            max_tokens=max_tokens or llm_config["max_tokens"])
-    except (ImportError, AttributeError) as e:
-        logger.error("LLM provider unavailable: %s", e)
-        return "LLM is not available. Please install llama-cpp-python and configure a model."
-    except (ValueError, RuntimeError) as exc:
-        logger.error("LLM generation failed: %s",
-                     _sanitize_log_payload(repr(exc)))
-        logger.debug("Failed prompt payload: %s",
-                     _sanitize_log_payload(prompt))
-        return "Sorry, I'm having trouble generating a response right now."
-    except Exception as exc:  # pylint: disable=broad-except
-        logger.error(
-            "Unexpected error during LLM generation: %s",
-            _sanitize_log_payload(repr(exc))
-        )
-        logger.debug("Failed prompt payload: %s",
-                     _sanitize_log_payload(prompt))
-        return "Sorry, an unexpected error occurred. Please contact support."
+    return answer_generator.generate_answer(
+        prompt, max_tokens, fallback_provider=llm_provider)
 
 
 async def generate_answer_stream(
@@ -546,28 +259,9 @@ async def generate_answer_stream(
     Yields:
         str: Individual tokens
     """
-    provider = get_current_provider() or llm_provider
-    if provider is None:
-        logger.warning(
-            "LLM provider not available - returning fallback response")
-        yield "LLM is not available. Please install llama-cpp-python and configure a model."
-        return
-    try:
-        sanitized_prompt = sanitize_logs(prompt)
-        async for token in provider.generate_stream(
-            prompt=sanitized_prompt,
-            max_tokens=max_tokens or llm_config["max_tokens"]
-        ):
-            yield token
-    except (ImportError, AttributeError) as e:
-        logger.error("LLM provider unavailable: %s", e)
-        yield "LLM is not available. Please install llama-cpp-python and configure a model."
-    except (ValueError, RuntimeError) as exc:
-        logger.error("LLM streaming generation failed: %r", exc, exc_info=True)
-        yield "Sorry, I'm having trouble generating a response right now."
-    except Exception:  # pylint: disable=broad-except
-        logger.exception("Unexpected error during LLM streaming generation")
-        yield "Sorry, an unexpected error occurred. Please contact support."
+    async for token in answer_generator.generate_answer_stream(
+            prompt, max_tokens, fallback_provider=llm_provider):
+        yield token
 
 
 async def get_chatbot_reply_stream(
@@ -585,7 +279,7 @@ async def get_chatbot_reply_stream(
         str: Individual tokens from LLM response
     """
     logger.info("Streaming message from session '%s'", session_id)
-    logger.debug("Handling user query: %s", _sanitize_log_payload(user_input))
+    logger.debug("Handling user query: %s", sanitize_log_payload(user_input))
 
     memory = await get_session_async(session_id)
 
@@ -594,12 +288,12 @@ async def get_chatbot_reply_stream(
             f"Session '{session_id}' not found in memory store.")
 
     context = retrieve_context(user_input)
-    logger.debug("Context retrieved: %s", _sanitize_log_payload(context))
+    logger.debug("Context retrieved: %s", sanitize_log_payload(context))
 
     prompt = build_prompt(user_input, context, memory)
     logger.debug(
         "Generating streaming answer with prompt: %s",
-        _sanitize_log_payload(prompt)
+        sanitize_log_payload(prompt)
     )
 
     full_reply = ""
@@ -611,44 +305,11 @@ async def get_chatbot_reply_stream(
     memory.chat_memory.add_ai_message(full_reply)
 
 
-def _extract_query_type(response: str) -> str:
-    """
-    Extracts 'SIMPLE' or 'MULTI' from the response if present, else returns an empty string.
-    The search is case-insensitive, and the result is returned in uppercase.
-    """
-    match = re.search(r"\b(SIMPLE|MULTI)\b", response, re.IGNORECASE)
-    if match:
-        return match.group(1).upper()
-
-    return ""
-
-
-def _extract_relevance_score(response: str) -> int:
-    """
-    Extracts relevance score (0 or 1) from a response labeled with 'Label: N'; defaults to 0.
-    The search is case-insensitive.
-
-    Args:
-        response (str): The LLM output containing a 'Label: N' pattern.
-
-    Returns:
-        int: 1 if the response is relevant, 0 otherwise.
-    """
-    match = re.search(r"Label:\s*([01])", response, re.IGNORECASE)
-    if match:
-        return int(match.group(1))
-    return 0
-
-
 def _generate_search_query_from_logs(log_text: str) -> str:
     """
     Uses the LLM to extract a concise error signature from the logs
     to use as a search query for the vector database.
     """
-    # Use .format() directly since we are using generate_answer
     prompt = LOG_SUMMARY_PROMPT.format(log_data=log_text)
 
-    # Generate response using the existing function in this file
-    search_query = generate_answer(prompt)
-
-    return search_query.strip()
+    return generate_answer(prompt).strip()
