@@ -3,6 +3,9 @@ fastapi==0.115.12
 pydantic==2.13.5
 uvicorn[standard]==0.34.3
 starlette==0.46.2
+# Required by FastAPI for the Form/File endpoints in api/routes/chatbot.py;
+# without it FastAPI raises at import time, before any test can run.
+python-multipart==0.0.31
 
 # LangChain & AI
 langchain==0.3.30
