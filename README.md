@@ -6,7 +6,7 @@ Beginners often struggle to take their first steps with Jenkins’ documentation
 
 The plugin is designed to reduce the learning curve for newcomers while also improving accessibility and productivity for experienced users.
 
-This plugin was developed as part of a Google Summer of Code 2025 project.
+This plugin was developed as part of a Google Summer of Code 2025 and 2026 project. 
 
 ## Prerequisites
 
@@ -22,9 +22,14 @@ sudo apt install -y make cmake gcc g++ python3.11 python3.11-venv python3.11-dev
 
 # macOS
 brew install cmake python@3.11 && xcode-select --install
+
 ```
 
 ## Getting Started
+
+The plugin can be installed from **Manage Jenkins > Plugins**. The plugin provides the chatbot interface, while the FastAPI service runs separately.
+For a local installation, clone this repository, start the backend with `make api`, and configure the backend URL under **Manage Jenkins > System**.
+See the [plugin installation guide](docs/plugin-installation.md) for the complete setup and deployment instructions.
 
 There are two ways to run the API locally, depending on your use case:
 
@@ -57,7 +62,7 @@ curl -X POST http://127.0.0.1:8000/api/chatbot/sessions
 
 Use this if you need to test the chatbot with real LLM responses or work on model-specific features.
 
-First, complete the full setup in [docs/setup.md](docs/setup.md). This includes installing llama-cpp-python and downloading the 4GB model.
+First, complete the full setup in the [setup guides](docs/setup/README.md). This includes installing llama-cpp-python and downloading the 4GB model.
 
 Then run:
 
@@ -69,9 +74,9 @@ The API will be available at `http://127.0.0.1:8000`.
 
 **What works:** Everything, including actual chat completions with the local LLM
 
----
-
 See [docs/README.md](docs/README.md) for detailed explanations.
+
+---
 
 ## 🎥 Setup Video Tutorial
 
@@ -86,6 +91,9 @@ The tutorial shows how to fork the repo, set up the backend, download the LLM mo
 - **Symptom**: The application appears "stuck" or frozen during the first run of the data pipeline or API.
 - **Cause**: The system is downloading the embedding model (`all-MiniLM-L6-v2`, ~80MB) or initializing the LLM.
 - **Solution**: This is normal behavior for the first run. Please wait for a few minutes. Ensure you have a stable internet connection.
+- **Installed plugin cannot connect**: Confirm that the FastAPI service is
+  running with `make api`, then check the backend URL under **Manage Jenkins >
+  System**. The configured URL must be reachable from the Jenkins instance.
 
 ### Python Version Mismatches
 
@@ -104,7 +112,7 @@ The tutorial shows how to fork the repo, set up the backend, download the LLM mo
   ```bash
   pip install -r chatbot-core/requirements.txt
   ```
-- **llama-cpp-python installation fails**: Ensure build tools (gcc, cmake) are installed. See [docs/setup.md](docs/setup.md) for platform-specific instructions.
+- **llama-cpp-python installation fails**: Ensure build tools (gcc, cmake) are installed. See the [setup guides](docs/setup/README.md) for platform-specific instructions.
 
 ### Verification Steps
 
@@ -114,15 +122,15 @@ To confirm your local setup is correct:
 2. **Lite Mode Check**: Run `make dev-lite`. It should start without errors.
 3. **API Check**: Run `curl -X POST http://127.0.0.1:8000/api/chatbot/sessions`. It should return a default session response.
 
-For more details, see [docs/setup.md](docs/setup.md).
+For more details, see the [setup guides](docs/setup/README.md).
 
 ## Developer Documentation
 
 Development-related documentation can be found in the [`docs/`](docs/) directory.
 
-- [Setup Guide](docs/setup.md)
-- [Windows/WSL2 Setup Guide](docs/windows-setup.md) — for contributors on Windows machines
-- [macOS/Apple Silicon Setup Guide](docs/macos-setup.md) — for contributors on Mac M1/M2/M3
+- [Setup Guides](docs/setup/README.md)
+- [Windows/WSL2 Setup Guide](docs/setup/windows.md) — for contributors on Windows machines
+- [macOS/Apple Silicon Setup Guide](docs/setup/macos.md) — for contributors on Mac M1/M2/M3
 
 ## Contributing
 
