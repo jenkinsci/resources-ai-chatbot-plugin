@@ -4,36 +4,33 @@ This section documents the API component of the chatbot. It exposes the function
 
 ## Starting the server
 
-Before launching the FastAPI server, you must first install the required GGUF model:
+Start the FastAPI service from the repository root with the Makefile targets. The targets create the Python environment and install dependencies when they are not already available.
 
-1. Download the **Mistral 7B Instruct (v0.2 Q4_K_M)** model from Hugging Face:
-   [https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF)
+For API, backend, or data-pipeline development, use lite mode:
 
-2. Place the downloaded `.gguf` file in:
-   ```
-   api/models/mistral/
-   ```
+```bash
+make dev-lite
+```
 
-Once the model is in place:
+Lite mode starts the service without loading a local LLM. Use full mode when you need local model responses:
 
-3. Navigate to the project root:
-   ```bash
-   cd chatbot-core
-   ```
+```bash
+make api
+```
 
-4. Activate the virtual environment:
-   ```bash
-   source venv/bin/activate
-   ```
+Full mode requires the GGUF model described in the [setup guide](../../setup/README.md).
+The API is available at `http://127.0.0.1:8000` by default.
 
-5. Start the server with Uvicorn:
-   ```bash
-   uvicorn api.main:app --reload
-   ```
+If you do not want to download the local model, configure a hosted provider and its API key for LiteLLM, then start the backend in lite mode. The selected provider is used for chat requests through the same API, so local model inference is not required for hosted-provider usage. Provider configuration is documented in the [third-party provider integration guide](../litellm.md).
 
-By default, the API will be available at `http://127.0.0.1:8000`.
+For local plugin development, keep the backend running in one terminal and start Jenkins with the bundled frontend in another:
 
-> **Note**: Adding `--host 0.0.0.0` makes the server accessible from other devices on the network. If you only need local access, you can omit this parameter.
+```text
+Terminal 1: make api
+Terminal 2: mvn hpi:run
+```
+
+The plugin installation and backend URL configuration are documented in the [plugin installation guide](../../plugin-installation.md).
 
 ## Available Endpoints
 
@@ -209,7 +206,7 @@ Health check endpoint for container orchestration (Kubernetes, Docker, etc.).
 }
 ```
 
-The `llm_available` field indicates whether the local LLM model is loaded and ready to generate responses. In lite/test mode, this will be `false`.
+The `llm_available` field indicates whether the local LLM model is loaded and ready to generate responses. It is `false` in lite mode, including when lite mode is being used with a hosted provider. Hosted-provider availability depends on the selected provider configuration and API key.
 
 ## Architecture Overview
 
@@ -231,11 +228,6 @@ This allows the assistant to maintain conversation history across multiple chats
 
 The API uses an abstract base class (`LLMProvider`) to decouple the chatbot logic from the underlying language model.
 
-Currently, it is implemented by `llama_cpp_provider` that runs a local GGUF model (Mistral 7B Instruct).
+The provider abstraction supports both the local `llama_cpp_provider`, which runs a GGUF model, and hosted providers routed through LiteLLM.
 
-**Future provider options could include:**
-- OpenAI's `gpt-3.5` or `gpt-4` via API
-- Google's Gemini via API
-- Any model served over an external endpoint
-
-This is useful to give users with computing resources constraints the possibility to eventually use their API keys.
+Hosted-provider API keys are supplied through the local environment configuration and are not returned by the provider API. See the [third-party provider integration guide](../litellm.md) for provider setup and model selection.
