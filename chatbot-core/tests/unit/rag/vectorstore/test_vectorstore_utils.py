@@ -1,6 +1,6 @@
 """Unit Tests for vectorstore_utils."""
 
-import pickle
+import json
 from rag.vectorstore.vectorstore_utils import (
     save_faiss_index,
     load_faiss_index,
@@ -75,10 +75,10 @@ def test_load_faiss_index_oserror(mocker, tmp_path):
 
 
 def test_save_metadata_success(mocker, tmp_path):
-    """Test that metadata is pickled successfully."""
+    """Test that metadata is saved as JSON successfully."""
     metadata = [{"chunk_text": "Jenkins on the moon"}]
     mock_logger = mocker.Mock()
-    path = tmp_path / "metadata.pkl"
+    path = tmp_path / "metadata.json"
 
     save_metadata(metadata, str(path), mock_logger)
 
@@ -86,11 +86,11 @@ def test_save_metadata_success(mocker, tmp_path):
     mock_logger.info.assert_called_once_with("Metadata saved to %s", str(path))
 
 def test_save_metadata_logs_error_on_exception(mocker, tmp_path):
-    """Test that error during pickle dumping."""
+    """Test that error during JSON dumping is logged."""
     metadata = [{"chunk_text": "bad_text"}]
     mock_logger = mocker.Mock()
     mocker.patch("builtins.open", side_effect=OSError("permission denied"))
-    path = tmp_path / "metadata.pkl"
+    path = tmp_path / "metadata.json"
 
     save_metadata(metadata, str(path), mock_logger)
 
@@ -101,9 +101,9 @@ def test_save_metadata_logs_error_on_exception(mocker, tmp_path):
 def test_load_metadata_success(mocker, tmp_path):
     """Test loading metadata successfully, returning the metadata."""
     data = [{"chunk_text": "Jenkins on the moon"}]
-    path = tmp_path / "metadata.pkl"
-    with open(path, "wb") as f:
-        pickle.dump(data, f)
+    path = tmp_path / "metadata.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f)
 
     mock_logger = mocker.Mock()
 
@@ -117,7 +117,7 @@ def test_load_metadata_success(mocker, tmp_path):
 def test_load_metadata_file_not_found(mocker, tmp_path):
     """Testing FileNotFoundError during metadata load."""
     mock_logger = mocker.Mock()
-    path = tmp_path / "no_metadata.pkl"
+    path = tmp_path / "no_metadata.json"
 
     result = load_metadata(str(path), mock_logger)
 
@@ -127,10 +127,10 @@ def test_load_metadata_file_not_found(mocker, tmp_path):
 
 
 def test_load_metadata_deserializing_error(mocker, tmp_path):
-    """Test unpickling error during metadata load."""
-    path = tmp_path / "corrupt_metadata.pkl"
-    with open(path, "wb") as f:
-        f.write(b"not a pickle")
+    """Test JSON decode error during metadata load."""
+    path = tmp_path / "corrupt_metadata.json"
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("not valid json {{{")
     mock_logger = mocker.Mock()
 
     result = load_metadata(str(path), mock_logger)

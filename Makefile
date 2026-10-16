@@ -142,7 +142,7 @@ run-data-graph-plugins: setup-backend
 run-data-graph: run-data-graph-plugins
 
 ## EMBEDDING & STORAGE
-# One FAISS index per source — file naming ({source}_index.idx / {source}_metadata.pkl)
+# One FAISS index per source — file naming ({source}_index.idx / {source}_metadata.json)
 # matches what rag/retriever/retriever_utils.load_vector_index expects and the
 # tool_names values in api/config/config.yml.
 
