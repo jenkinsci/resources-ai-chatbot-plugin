@@ -26,7 +26,7 @@ litellm==1.94.3
 # ML & Transformers
 # =========================
 sentence-transformers==4.1.0
-transformers==4.54.1
+transformers==5.17.0
 tokenizers==0.21.1
 
 # Optional LLM binding (skip if build toolchain unavailable)
