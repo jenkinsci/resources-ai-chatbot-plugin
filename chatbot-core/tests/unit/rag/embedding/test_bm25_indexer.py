@@ -219,8 +219,11 @@ def test_get_loads_missing_index_from_disk_and_caches_it(mocker):
     sparse_cls.load.return_value = loaded
     indexer = _make_indexer(mocker)
 
-    assert indexer.get("plugins") is loaded
-    assert indexer.get("plugins") is loaded
+    first = indexer.get("plugins")  # cache miss: loads from disk
+    second = indexer.get("plugins")  # cache hit: must not load again
+
+    assert first is loaded
+    assert second is loaded
 
     sparse_cls.load.assert_called_once_with("plugins")
     assert indexer.retrievers["plugins"] is loaded
@@ -246,9 +249,11 @@ def test_get_does_not_cache_failed_load(mocker):
     sparse_cls.load.side_effect = FileNotFoundError("index not found")
     indexer = _make_indexer(mocker)
 
-    assert indexer.get("plugins") is None
-    assert indexer.get("plugins") is None
+    first = indexer.get("plugins")  # load fails
+    second = indexer.get("plugins")  # failure was not cached, so load is retried
 
+    assert first is None
+    assert second is None
     assert sparse_cls.load.call_count == 2
     assert "plugins" not in indexer.retrievers
 
