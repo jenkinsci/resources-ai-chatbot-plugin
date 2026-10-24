@@ -60,7 +60,7 @@ Jenkins then starts the backend on startup and stops it on shutdown. If a
 backend is already running at the configured URL, it is used instead. Output
 goes to `$JENKINS_HOME/logs/resources-ai-chatbot-backend.log`, and startup
 problems are shown in **Manage Jenkins**. This requires a local backend URL
-such as `http://localhost:8000`.
+with a port, such as `http://localhost:8000`.
 
 ## Configure the Backend URL
 

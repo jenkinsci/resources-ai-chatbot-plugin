@@ -53,6 +53,16 @@ class BackendConfigurationTest {
         assertEquals("backendUrl", exception.getFormField());
     }
 
+    @Test
+    void rejectsAutoStartForBackendUrlWithoutPort(JenkinsRule jenkins, @TempDir File directory) throws IOException {
+        BackendProcessTest.createBackendDirectory(directory);
+
+        Descriptor.FormException exception =
+                assertThrows(Descriptor.FormException.class, () -> save("http://localhost", true, directory.getPath()));
+
+        assertEquals("backendUrl", exception.getFormField());
+    }
+
     static void save(String backendUrl, boolean autoStart, String directory) throws Descriptor.FormException {
         JSONObject json = new JSONObject()
                 .element("backendUrl", backendUrl)

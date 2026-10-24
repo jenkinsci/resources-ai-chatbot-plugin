@@ -71,9 +71,10 @@ public class BackendConfiguration extends GlobalConfiguration {
             if (error != null) {
                 throw new Descriptor.FormException(error, "backendDirectory");
             }
-            if (!isLocalHttpUrl(url)) {
+            if (!isLocalUrlWithPort(url)) {
                 throw new Descriptor.FormException(
-                        "Auto-start only works with a local backend URL, such as http://localhost:8000.", "backendUrl");
+                        "Auto-start only works with a local backend URL that includes a port, such as http://localhost:8000.",
+                        "backendUrl");
             }
         }
 
@@ -95,10 +96,11 @@ public class BackendConfiguration extends GlobalConfiguration {
         return error == null ? FormValidation.ok() : FormValidation.error(error);
     }
 
-    private static boolean isLocalHttpUrl(String url) {
+    private static boolean isLocalUrlWithPort(String url) {
         URI uri = URI.create(url);
         return "http".equalsIgnoreCase(uri.getScheme())
-                && ("localhost".equalsIgnoreCase(uri.getHost()) || "127.0.0.1".equals(uri.getHost()));
+                && ("localhost".equalsIgnoreCase(uri.getHost()) || "127.0.0.1".equals(uri.getHost()))
+                && uri.getPort() != -1;
     }
 
     private static String normalizeBackendUrl(String value) {

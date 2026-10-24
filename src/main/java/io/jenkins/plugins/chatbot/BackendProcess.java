@@ -164,7 +164,6 @@ public class BackendProcess extends AdministrativeMonitor {
         File logFile = new File(Jenkins.get().getRootDir(), "logs/resources-ai-chatbot-backend.log");
 
         URI uri = URI.create(backendUrl);
-        int port = uri.getPort() == -1 ? 80 : uri.getPort();
         ProcessBuilder builder = new ProcessBuilder(
                         findPython(directory).getPath(),
                         "-m",
@@ -173,7 +172,7 @@ public class BackendProcess extends AdministrativeMonitor {
                         "--host",
                         uri.getHost(),
                         "--port",
-                        String.valueOf(port))
+                        String.valueOf(uri.getPort()))
                 .directory(directory)
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
