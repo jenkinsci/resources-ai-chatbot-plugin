@@ -155,3 +155,24 @@ def test_is_idempotent():
     sanitized = sanitize_logs(raw)
 
     assert sanitize_logs(sanitized) == sanitized
+
+def test_sanitize_logs_empty_and_none():
+    """Ensure empty or None inputs return empty string safely."""
+    assert sanitize_logs("") == ""
+    assert sanitize_logs(None) == ""
+
+
+def test_sanitize_logs_combined_multiline_secrets():
+    """Ensure multiple different secret patterns are redacted in a single log payload."""
+    raw_log = (
+        "BUILD SUCCESS\n"
+        "export API_KEY=secret_key_12345\n"
+        "docker login -u user -p my_password registry.com\n"
+        "Authorization: Bearer secret_token\n"
+        "Finished: SUCCESS"
+    )
+    sanitized = sanitize_logs(raw_log)
+    assert "[REDACTED]" in sanitized
+    assert "secret_key_12345" not in sanitized
+    assert "my_password" not in sanitized
+    assert "secret_token" not in sanitized
