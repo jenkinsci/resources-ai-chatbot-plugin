@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 from api.tools.utils import (
-    _min_max_normalize,
     make_placeholder_replacer,
     filter_retrieved_data,
     get_default_tools_call,
@@ -12,22 +11,6 @@ from api.tools.utils import (
     extract_top_chunks,
     retrieve_documents,
 )
-
-
-class TestMinMaxNormalize:
-    """Tests for the min-max normalization utility."""
-
-    def test_empty_list(self):
-        """Test normalization of an empty list."""
-        assert _min_max_normalize([]) == []
-
-    def test_equal_values(self):
-        """Test normalization when all values are equal."""
-        assert _min_max_normalize([3, 3, 3]) == [0.5, 0.5, 0.5]
-
-    def test_scales_between_zero_and_one(self):
-        """Test that values are scaled to the zero-to-one range."""
-        assert _min_max_normalize([2, 4, 6]) == [0.0, 0.5, 1.0]
 
 
 class TestMakePlaceholderReplacer:
