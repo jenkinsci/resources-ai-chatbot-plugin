@@ -20,7 +20,10 @@ from api.tools.sanitizer import sanitize_logs
         ("PASSWORD=my secret password", "PASSWORD=[REDACTED]"),
         ('TOKEN="abc123"', 'TOKEN="[REDACTED]"'),
         ("PASSWORD='abc123'", "PASSWORD='[REDACTED]'"),
-        ('"api_key": "abc", "status": "failed"', '"api_key": "[REDACTED]", "status": "failed"'),
+        (
+            '"api_key": "abc", "status": "failed"',
+            '"api_key": "[REDACTED]", "status": "failed"',
+        ),
         (
             '"api_key": "abc", "client_secret": "def", "status": "failed"',
             '"api_key": "[REDACTED]", "client_secret": "[REDACTED]", '
@@ -160,7 +163,7 @@ def test_is_idempotent():
 
 
 def test_sanitize_logs_combined_multiline_secrets():
-    """Ensure multiple different secret patterns are redacted in a single log payload."""
+    """Ensure multiple secret patterns are redacted in a single payload."""
     raw_log = (
         "BUILD SUCCESS\n"
         "export API_KEY=secret_key_12345\n"
@@ -171,7 +174,7 @@ def test_sanitize_logs_combined_multiline_secrets():
     expected_log = (
         "BUILD SUCCESS\n"
         "export API_KEY=[REDACTED]\n"
-        'docker login -u user -p "[REDACTED]" registry.com\n'
+        "docker login -u user -p [REDACTED] registry.com\n"
         "Authorization: [REDACTED]\n"
         "Finished: SUCCESS"
     )
