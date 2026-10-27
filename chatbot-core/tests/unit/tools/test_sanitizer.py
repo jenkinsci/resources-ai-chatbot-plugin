@@ -8,6 +8,8 @@ from api.tools.sanitizer import sanitize_logs
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
+        ("", ""),
+        (None, ""),
         ("TOKEN=abc123", "TOKEN=[REDACTED]"),
         ("export TOKEN=abc123", "export TOKEN=[REDACTED]"),
         ("+ TOKEN=abc123", "+ TOKEN=[REDACTED]"),
@@ -156,11 +158,6 @@ def test_is_idempotent():
 
     assert sanitize_logs(sanitized) == sanitized
 
-def test_sanitize_logs_empty_and_none():
-    """Ensure empty or None inputs return empty string safely."""
-    assert sanitize_logs("") == ""
-    assert sanitize_logs(None) == ""
-
 
 def test_sanitize_logs_combined_multiline_secrets():
     """Ensure multiple different secret patterns are redacted in a single log payload."""
@@ -171,8 +168,11 @@ def test_sanitize_logs_combined_multiline_secrets():
         "Authorization: Bearer secret_token\n"
         "Finished: SUCCESS"
     )
-    sanitized = sanitize_logs(raw_log)
-    assert "[REDACTED]" in sanitized
-    assert "secret_key_12345" not in sanitized
-    assert "my_password" not in sanitized
-    assert "secret_token" not in sanitized
+    expected_log = (
+        "BUILD SUCCESS\n"
+        "export API_KEY=[REDACTED]\n"
+        'docker login -u user -p "[REDACTED]" registry.com\n'
+        "Authorization: [REDACTED]\n"
+        "Finished: SUCCESS"
+    )
+    assert sanitize_logs(raw_log) == expected_log
