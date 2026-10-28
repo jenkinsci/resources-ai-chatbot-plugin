@@ -3,7 +3,7 @@ Constructs the prompt used for querying the LLM, including system-level instruct
 chat history, context retrieved from the knowledge base, and the user's question.
 """
 from typing import Optional
-from langchain.memory import ConversationBufferMemory
+from api.services.memory import ChatMemory
 from api.prompts.prompts import (
     GRAPH_QUERY_INSTRUCTION,
     LOG_ANALYSIS_INSTRUCTION,
@@ -13,7 +13,7 @@ from api.prompts.prompts import (
 def build_prompt(
     user_query: str,
     context: str,
-    memory: ConversationBufferMemory,
+    memory: ChatMemory,
     log_context: Optional[str] = None
 ) -> str:
     """
@@ -23,7 +23,7 @@ def build_prompt(
     Args:
         user_query (str): The raw question from the user.
         context (str): The relevant retrieved chunks to ground the answer.
-        memory (ConversationBufferMemory): LangChain memory holding prior chat turns.
+        memory (ChatMemory): Session memory holding prior chat turns.
         log_context (Optional[str]): Sanitized build log excerpt.
 
     Returns:

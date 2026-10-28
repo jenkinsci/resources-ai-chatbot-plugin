@@ -220,7 +220,7 @@ The API is organized with a clean separation of concerns:
 
 ## Session Memory Management
 
-Chat memory is managed **in-memory** using LangChain's `ConversationBufferMemory`, stored in a module-level dictionary keyed by `session_id`.
+Chat memory is managed **in-memory** using LangChain's `InMemoryChatMessageHistory`, stored in a module-level dictionary keyed by `session_id`.
 
 This allows the assistant to maintain conversation history across multiple chats. Sessions are also persisted to disk as JSON files, enabling recovery across server restarts. A background task periodically cleans up expired sessions based on the configured timeout.
 
