@@ -15,7 +15,7 @@ import json
 import uuid
 
 import pytest
-from langchain.schema import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from api.services import memory
 
