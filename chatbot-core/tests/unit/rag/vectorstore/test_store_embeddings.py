@@ -135,7 +135,7 @@ def test_run_indexing_successful(
     )
     expected_metadata_path = os.path.join(
         store_embeddings.VECTOR_STORE_DIR,
-        "plugins_metadata.pkl"
+        "plugins_metadata.json"
     )
     mock_save_metadata.assert_called_once_with(
         metadata,
@@ -149,7 +149,7 @@ def test_run_indexing_removes_existing_outputs_when_no_vectors(mocker, tmp_path)
     """Test run_indexing removes stale outputs when no vectors are produced."""
     mock_logger = mocker.Mock()
     index_path = tmp_path / "plugins_index.idx"
-    metadata_path = tmp_path / "plugins_metadata.pkl"
+    metadata_path = tmp_path / "plugins_metadata.json"
     index_path.write_text("stale index", encoding="utf-8")
     metadata_path.write_text("stale metadata", encoding="utf-8")
 
