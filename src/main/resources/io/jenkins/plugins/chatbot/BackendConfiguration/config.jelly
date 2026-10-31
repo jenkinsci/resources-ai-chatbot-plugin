@@ -4,5 +4,12 @@
     <f:entry title="FastAPI backend URL" field="backendUrl">
       <f:textbox />
     </f:entry>
+    <f:entry field="autoStartBackend">
+      <f:checkbox title="Start the backend automatically" />
+    </f:entry>
+    <f:entry title="Backend directory" field="backendDirectory"
+             description="Path to the chatbot-core folder on this Jenkins machine. Run make setup-backend there first.">
+      <f:textbox />
+    </f:entry>
   </f:section>
 </j:jelly>
