@@ -8,6 +8,8 @@ from api.tools.sanitizer import sanitize_logs
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
+        ("", ""),
+        (None, ""),
         ("TOKEN=abc123", "TOKEN=[REDACTED]"),
         ("export TOKEN=abc123", "export TOKEN=[REDACTED]"),
         ("+ TOKEN=abc123", "+ TOKEN=[REDACTED]"),
@@ -18,7 +20,10 @@ from api.tools.sanitizer import sanitize_logs
         ("PASSWORD=my secret password", "PASSWORD=[REDACTED]"),
         ('TOKEN="abc123"', 'TOKEN="[REDACTED]"'),
         ("PASSWORD='abc123'", "PASSWORD='[REDACTED]'"),
-        ('"api_key": "abc", "status": "failed"', '"api_key": "[REDACTED]", "status": "failed"'),
+        (
+            '"api_key": "abc", "status": "failed"',
+            '"api_key": "[REDACTED]", "status": "failed"',
+        ),
         (
             '"api_key": "abc", "client_secret": "def", "status": "failed"',
             '"api_key": "[REDACTED]", "client_secret": "[REDACTED]", '
@@ -155,3 +160,22 @@ def test_is_idempotent():
     sanitized = sanitize_logs(raw)
 
     assert sanitize_logs(sanitized) == sanitized
+
+
+def test_sanitize_logs_combined_multiline_secrets():
+    """Ensure multiple secret patterns are redacted in a single payload."""
+    raw_log = (
+        "BUILD SUCCESS\n"
+        "export API_KEY=secret_key_12345\n"
+        "docker login -u user -p my_password registry.com\n"
+        "Authorization: Bearer secret_token\n"
+        "Finished: SUCCESS"
+    )
+    expected_log = (
+        "BUILD SUCCESS\n"
+        "export API_KEY=[REDACTED]\n"
+        "docker login -u user -p [REDACTED] registry.com\n"
+        "Authorization: [REDACTED]\n"
+        "Finished: SUCCESS"
+    )
+    assert sanitize_logs(raw_log) == expected_log
