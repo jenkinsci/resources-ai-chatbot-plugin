@@ -33,11 +33,10 @@ cd chatbot-core
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements-cpu.txt
-pip install python-multipart
 pip install llama-cpp-python
 ```
 
-> **Note:** `llama-cpp-python` and `python-multipart` are required but not listed in `requirements-cpu.txt`. They must be installed manually before running the API.
+> **Note:** `llama-cpp-python` is required but not listed in `requirements-cpu.txt`. It must be installed manually before running the API.
 
 ### 4. Download the LLM Model (~4GB)
 
