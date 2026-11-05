@@ -36,9 +36,16 @@ def load_faiss_index(path, logger):
     Returns:
         faiss.Index | None: The loaded FAISS index, or None if loading fails.
     """
+    if not os.path.exists(path):
+        logger.warning(
+            "FAISS index not found at %s. Run 'make build-data' to generate it.",
+            path,
+        )
+        return None
     try:
         logger.info("Loading FAISS index from %s...", path)
         index = faiss.read_index(path)
+
         logger.info("FAISS index loaded successfully.")
         return index
     except (OSError, FileNotFoundError) as e:
