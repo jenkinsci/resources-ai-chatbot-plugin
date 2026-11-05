@@ -24,7 +24,7 @@ def load_vector_index(logger, source_name):
         logger.warning("No source name provided. Returning empty results.")
         return [], []
     index_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_index.idx")
-    metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.pkl")
+    metadata_path = os.path.join(VECTOR_STORE_DIR, f"{source_name}_metadata.json")
 
     index = load_faiss_index(index_path, logger)
     metadata = load_metadata(metadata_path, logger)

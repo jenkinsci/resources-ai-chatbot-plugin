@@ -80,7 +80,7 @@ jobs:
           set -euo pipefail
           for source in docs plugins discourse; do
             test -s "chatbot-core/data/embeddings/${source}_index.idx"
-            test -s "chatbot-core/data/embeddings/${source}_metadata.pkl"
+            test -s "chatbot-core/data/embeddings/${source}_metadata.json"
           done
 
       - name: Write cache manifest
