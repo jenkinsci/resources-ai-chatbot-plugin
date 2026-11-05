@@ -112,7 +112,7 @@ typing-extensions>=4.14.1
 typing-inspection>=0.4.2
 diskcache==5.6.3
 filelock==3.20.3
-fsspec==2025.5.1
+fsspec==2026.6.0
 greenlet==3.2.2
 h11==0.16.0
 hf-xet==1.1.5
