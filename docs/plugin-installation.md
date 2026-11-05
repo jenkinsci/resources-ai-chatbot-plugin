@@ -50,6 +50,18 @@ The default backend URL is:
 http://localhost:8000
 ```
 
+### Start the Backend Automatically
+
+If the backend runs on the same machine as Jenkins, run `make setup-backend`
+once, then check **Start the backend automatically** under **Manage Jenkins >
+System** and enter the full path to the `chatbot-core` folder.
+
+Jenkins then starts the backend on startup and stops it on shutdown. If a
+backend is already running at the configured URL, it is used instead. Output
+goes to `$JENKINS_HOME/logs/resources-ai-chatbot-backend.log`, and startup
+problems are shown in **Manage Jenkins**. This requires a local backend URL
+with a port, such as `http://localhost:8000`.
+
 ## Configure the Backend URL
 
 To connect the plugin to a different backend:
@@ -66,8 +78,8 @@ http://localhost:8000
 https://chatbot.example.com
 ```
 
-The plugin stores only this URL. API keys are not entered or returned through
-this Jenkins configuration.
+The plugin stores only this URL and the auto-start settings. API keys are not
+entered or returned through this Jenkins configuration.
 
 ## Local Plugin Development
 
