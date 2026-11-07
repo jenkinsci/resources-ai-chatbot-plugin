@@ -203,16 +203,33 @@ def is_valid_plugin(plugin_name: str) -> bool:
     Returns:
         bool: True if the plugin exists in the list, False otherwise.
     """
+    if not plugin_name or not isinstance(plugin_name, str):
+        return False
+
     def tokenize(item: str) -> str:
         item = item.replace('-', '')
         return item.replace(' ', '').lower()
-    list_plugin_names_path = os.path.join(os.path.abspath(__file__),
-                                          "..", "..", "data", "raw", "plugin_names.json")
-    with open(list_plugin_names_path, "r", encoding="utf-8") as f:
-        list_plugin_names = json.load(f)
 
+    list_plugin_names_path = os.path.normpath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "data",
+            "raw",
+            "plugin_names.json",
+        )
+    )
+
+    try:
+        with open(list_plugin_names_path, "r", encoding="utf-8") as f:
+            list_plugin_names = json.load(f)
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return False
+
+    target = tokenize(plugin_name)
     for name in list_plugin_names:
-        if tokenize(plugin_name) == tokenize(name):
+        if isinstance(name, str) and target == tokenize(name):
             return True
 
     return False
