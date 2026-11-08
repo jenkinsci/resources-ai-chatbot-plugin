@@ -320,7 +320,11 @@ class TestRetrieveDocuments:
 class TestIsValidPlugin:
     """Tests for validating plugin names against the catalog."""
 
-    @patch("builtins.open", new_callable=mock_open, read_data='["git", "slack", "workflow-aggregator"]')
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data='["git", "slack", "workflow-aggregator"]',
+    )
     def test_valid_plugin_returns_true(self, _mock_file):
         """Test that a matching plugin returns True regardless of hyphenation or case."""
         assert is_valid_plugin("Git") is True
@@ -347,4 +351,3 @@ class TestIsValidPlugin:
     def test_corrupted_catalog_file_returns_false(self, _mock_file):
         """Test that corrupted JSON in catalog returns False gracefully."""
         assert is_valid_plugin("git") is False
-
