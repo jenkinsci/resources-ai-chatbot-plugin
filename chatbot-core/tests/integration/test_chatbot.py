@@ -199,3 +199,116 @@ def get_relevant_documents_output():
             "id": "docid",
             "chunk_text": "Relevant chunk text."
         }],[0.84])
+
+
+def test_upload_nonexistent_session(client):
+    """Should return 404 when uploading to a non-existent session."""
+    files = {"files": ("sample.txt", b"Hello", "text/plain")}
+    data = {"message": "Test message"}
+
+    response = client.post(
+        "/sessions/nonexistent-session/message/upload",
+        files=files,
+        data=data,
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Session not found."}
+
+
+def test_upload_empty_payload(client):
+    """Should return 422 when sending an empty upload payload."""
+    session_id = client.post("/sessions").json()["session_id"]
+
+    response = client.post(
+        f"/sessions/{session_id}/message/upload",
+        data={},
+    )
+
+    assert response.status_code == 422
+    errors = response.json()["detail"]
+    assert any("Field required" in e["msg"] for e in errors)
+
+
+def test_upload_unsupported_file_type(client):
+    """Should return 400 when uploading a file with an unsupported extension."""
+    session_id = client.post("/sessions").json()["session_id"]
+    files = {"files": ("archive.zip", b"PK\x03\x04", "application/zip")}
+    data = {"message": "Process this zip file"}
+
+    response = client.post(
+        f"/sessions/{session_id}/message/upload",
+        files=files,
+        data=data,
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Unable to process uploaded file."}
+
+
+@pytest.mark.parametrize(
+    "file_info",
+    [
+        ("sample.txt", b"Hello text file content", "text/plain"),
+        ("image.png", b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR", "image/png"),
+    ],
+)
+def test_upload_valid_file_success(
+    client, mock_llm_provider, mock_get_relevant_documents, file_info
+):
+    """Should return 200 and LLM response when uploading valid text and image files."""
+    filename, content, content_type = file_info
+    create_resp = client.post("/sessions")
+    session_id = create_resp.json()["session_id"]
+
+    mock_llm_provider.generate.return_value = "Mocked LLM reply for file upload."
+    mock_get_relevant_documents.return_value = get_relevant_documents_output()
+
+    files = {"files": (filename, content, content_type)}
+    data = {"message": "Please analyze this file."}
+
+    response = client.post(
+        f"/sessions/{session_id}/message/upload",
+        files=files,
+        data=data,
+    )
+
+    assert response.status_code == 200
+    res_json = response.json()
+    assert "reply" in res_json
+    assert res_json["reply"] == "Mocked LLM reply for file upload."
+
+
+def test_full_file_upload_lifecycle(
+    client, mock_llm_provider, mock_get_relevant_documents
+):
+    """Should handle full lifecycle: upload file, delete session, then verify upload fails."""
+    create_resp = client.post("/sessions")
+    session_id = create_resp.json()["session_id"]
+
+    mock_llm_provider.generate.return_value = "Mocked LLM reply for file upload."
+    mock_get_relevant_documents.return_value = get_relevant_documents_output()
+
+    files = {"files": ("sample.txt", b"Hello text file content", "text/plain")}
+    data = {"message": "Please analyze this file."}
+
+    upload_resp = client.post(
+        f"/sessions/{session_id}/message/upload",
+        files=files,
+        data=data,
+    )
+    assert upload_resp.status_code == 200
+    res_json = upload_resp.json()
+    assert "reply" in res_json
+    assert res_json["reply"] == "Mocked LLM reply for file upload."
+
+    delete_resp = client.delete(f"/sessions/{session_id}")
+    assert delete_resp.status_code == 200
+
+    failed_upload_resp = client.post(
+        f"/sessions/{session_id}/message/upload",
+        files=files,
+        data=data,
+    )
+    assert failed_upload_resp.status_code == 404
+    assert failed_upload_resp.json() == {"detail": "Session not found."}
