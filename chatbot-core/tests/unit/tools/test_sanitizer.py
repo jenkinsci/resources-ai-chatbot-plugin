@@ -179,3 +179,76 @@ def test_sanitize_logs_combined_multiline_secrets():
         "Finished: SUCCESS"
     )
     assert sanitize_logs(raw_log) == expected_log
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (
+            "+ mysql --user=root --password=hunter2 mydb",
+            "+ mysql --user=root --password=[REDACTED] mydb",
+        ),
+        (
+            "+ ./deploy.sh --token abc123 --verbose",
+            "+ ./deploy.sh --token [REDACTED] --verbose",
+        ),
+        (
+            '+ ./deploy.sh --api-key "abc 123" --verbose',
+            '+ ./deploy.sh --api-key "[REDACTED]" --verbose',
+        ),
+        (
+            "+ twine upload --password 'actual-secret' dist/*",
+            "+ twine upload --password '[REDACTED]' dist/*",
+        ),
+        (
+            "+ tool --client-secret=abc123",
+            "+ tool --client-secret=[REDACTED]",
+        ),
+    ],
+)
+def test_redacts_secret_command_line_options(raw, expected):
+    """Redact values passed to secret-related long command-line options."""
+    assert sanitize_logs(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "docker login -u user --password-stdin registry.example.com",
+        "+ tool --token-file /tmp/token.txt run",
+        "+ tool --no-password host",
+        "+ tool --password-prompt host",
+        "+ tool --credentials-id my-credentials run",
+        "+ tool --token --verbose",
+        "+ mvn --batch-mode --update-snapshots verify",
+    ],
+)
+def test_keeps_command_line_options_without_secret_values(raw):
+    """Leave options alone when they only name a secret or hold no value."""
+    assert sanitize_logs(raw) == raw
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (
+            "+ curl -u admin:s3cretpass https://example.com/api",
+            "+ curl -u admin:[REDACTED] https://example.com/api",
+        ),
+        (
+            "+ curl --user admin:s3cretpass https://example.com/api",
+            "+ curl --user admin:[REDACTED] https://example.com/api",
+        ),
+        (
+            "+ curl -u 'admin:s3cretpass' https://example.com/api",
+            "+ curl -u 'admin:[REDACTED]' https://example.com/api",
+        ),
+        (
+            "+ curl -u admin https://example.com/api",
+            "+ curl -u admin https://example.com/api",
+        ),
+    ],
+)
+def test_redacts_curl_basic_auth_credentials(raw, expected):
+    """Redact the password in curl -u user:password while keeping the user."""
+    assert sanitize_logs(raw) == expected

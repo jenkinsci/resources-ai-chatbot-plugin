@@ -39,6 +39,47 @@ DOCKER_PASSWORD_PATTERN = re.compile(
     re.IGNORECASE | re.VERBOSE,
 )
 
+# Secret values passed to a command as a long option, for example
+# "--password=value" or "--token value".
+CLI_SECRET_OPTION_PATTERN = re.compile(
+    r"""
+    (?P<prefix>
+        (?<![\w-])--
+        (?P<name>[A-Za-z][A-Za-z0-9_.-]*)
+        (?:[ \t]*=[ \t]*|[ \t]+)
+    )
+    (?P<value>
+        "(?:\\.|[^"\\\r\n])*"
+        |
+        '(?:\\.|[^'\\\r\n])*'
+        |
+        [^\s;&|'"-][^\s;&|]*
+    )
+    """,
+    re.VERBOSE,
+)
+
+# Options that name a secret but do not carry its value, for example
+# "--password-stdin" or "--token-file path".
+CLI_NON_SECRET_OPTION_RE = re.compile(
+    r"^no[-_]|[-_](?:stdin|file|path|env|name|prompt|type|url|id)$",
+    re.IGNORECASE,
+)
+
+# Basic-auth credentials passed to curl, for example "-u user:password".
+CURL_USER_PATTERN = re.compile(
+    r"""
+    (?P<prefix>
+        (?<![\w-])(?:-u|--user|--proxy-user)
+        (?:[ \t]*=[ \t]*|[ \t]+)
+        (?P<quote>["']?)
+        [^\s:"']+:
+    )
+    (?P<value>[^\s"']+)
+    """,
+    re.VERBOSE,
+)
+
 # Assignments in shell, Jenkins echo, JSON-like, and config-like output.
 SECRET_ASSIGNMENT_PATTERN = re.compile(
     r"""
@@ -160,6 +201,30 @@ def _redact_assignment(match: re.Match[str]) -> str:
     return f"{prefix}[REDACTED]"
 
 
+def _redact_cli_option(match: re.Match[str]) -> str:
+    """
+    Redact the value of a secret-related long command-line option.
+
+    Args:
+        match (re.Match[str]): Regex match for a long option and its value.
+
+    Returns:
+        str: Option with its value redacted, or the original text if the
+            option does not look secret-related.
+    """
+    name = match.group("name")
+    if CLI_NON_SECRET_OPTION_RE.search(name) or not _is_secret_assignment_name(name):
+        return match.group(0)
+
+    prefix = match.group("prefix")
+    value = match.group("value")
+    if value.startswith('"') and value.endswith('"'):
+        return f'{prefix}"[REDACTED]"'
+    if value.startswith("'") and value.endswith("'"):
+        return f"{prefix}'[REDACTED]'"
+    return f"{prefix}[REDACTED]"
+
+
 def _redact_docker_password(match: re.Match[str]) -> str:
     """
     Redact a Docker login password while preserving its quote style.
@@ -199,6 +264,14 @@ def sanitize_logs(log_text: str) -> str:
     )
     sanitized_text = DOCKER_PASSWORD_PATTERN.sub(
         _redact_docker_password,
+        sanitized_text,
+    )
+    sanitized_text = CLI_SECRET_OPTION_PATTERN.sub(
+        _redact_cli_option,
+        sanitized_text,
+    )
+    sanitized_text = CURL_USER_PATTERN.sub(
+        lambda match: f"{match.group('prefix')}[REDACTED]",
         sanitized_text,
     )
 
