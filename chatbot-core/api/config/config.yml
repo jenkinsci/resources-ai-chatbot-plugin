@@ -30,6 +30,8 @@ retrieval:
   keyword_threshold: 2
   empty_context_message: "No context available."
   max_reformulate_iterations: 1
+  fusion_method: "rrf"
+  rrf_k: 60
 
 tool_names:
   plugins: "plugins"

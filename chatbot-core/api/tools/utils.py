@@ -160,6 +160,82 @@ def _min_max_normalize(values: List[float]) -> List[float]:
     rng = vmax - vmin
     return [(v - vmin) / rng for v in values]
 
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-positional-arguments
+# pylint: disable=too-many-locals
+def reciprocal_rank_fusion(
+    semantic_chunk_ids: List[str],
+    keyword_chunk_ids: List[str],
+    semantic_scores: Optional[List[float]] = None,
+    keyword_scores: Optional[List[float]] = None,
+    semantic_weight: Optional[float] = 0.5,
+    rrf_k: Optional[int] = 60,
+) -> List[Tuple[float, str]]:
+    """
+    Combines dense semantic and sparse keyword rankings using Reciprocal Rank Fusion (RRF).
+
+    Formula:
+        RRF_Score(d) = (w_sem / (k + rank_sem(d))) + (w_kw / (k + rank_kw(d)))
+
+    Ranks are 1-based (1 is top rank). Missing items contribute 0 to the score sum.
+    Scores are returned as negative floats (-RRF_Score) so the highest RRF score
+    has the lowest numerical value, matching min-heap conventions.
+
+    Args:
+        semantic_chunk_ids (List[str]): Chunk IDs from semantic search.
+        keyword_chunk_ids (List[str]): Chunk IDs from keyword search.
+        semantic_scores (Optional[List[float]]): Distance scores (lower is better).
+        keyword_scores (Optional[List[float]]): BM25 scores (higher is better).
+        semantic_weight (Optional[float]): Weight for semantic rank in [0, 1]. Defaults to 0.5.
+        rrf_k (Optional[int]): Smoothing constant. Defaults to 60.
+
+    Returns:
+        List[Tuple[float, str]]: List of [-rrf_score, chunk_id].
+    """
+    if semantic_weight is None or not 0.0 <= semantic_weight <= 1.0:
+        semantic_weight = 0.5
+
+    k = rrf_k if (rrf_k is not None and rrf_k > 0) else 60
+
+    if semantic_scores and len(semantic_scores) == len(semantic_chunk_ids):
+        sem_pairs = sorted(zip(semantic_chunk_ids, semantic_scores), key=lambda x: x[1])
+        ordered_sem = [cid for cid, _ in sem_pairs]
+    else:
+        ordered_sem = list(semantic_chunk_ids)
+
+    if keyword_scores and len(keyword_scores) == len(keyword_chunk_ids):
+        kw_pairs = sorted(zip(keyword_chunk_ids, keyword_scores),
+                          key=lambda x: x[1], reverse=True)
+        ordered_kw = [cid for cid, _ in kw_pairs]
+    else:
+        ordered_kw = list(keyword_chunk_ids)
+
+    sem_ranks: Dict[str, int] = {}
+    for idx, cid in enumerate(ordered_sem):
+        if cid not in sem_ranks:
+            sem_ranks[cid] = idx + 1
+
+    kw_ranks: Dict[str, int] = {}
+    for idx, cid in enumerate(ordered_kw):
+        if cid not in kw_ranks:
+            kw_ranks[cid] = idx + 1
+
+    w_sem = float(semantic_weight)
+    w_kw = float(1.0 - semantic_weight)
+
+    all_chunk_ids = list(dict.fromkeys(ordered_sem + ordered_kw))
+
+    rrf_scores = []
+    for cid in all_chunk_ids:
+        score = 0.0
+        if cid in sem_ranks:
+            score += w_sem / (k + sem_ranks[cid])
+        if cid in kw_ranks:
+            score += w_kw / (k + kw_ranks[cid])
+        rrf_scores.append([-float(score), cid])
+
+    return rrf_scores
+
 def extract_chunks_content(chunks: List[Dict], logger) -> str:
     """
     Builds a single context string from a list of chunks by replacing code block
@@ -309,7 +385,9 @@ def extract_top_chunks(
     scores_keyword,
     top_k: int,
     logger,
-    semantic_weight: Optional[float] = 0.5
+    semantic_weight: Optional[float] = 0.5,
+    fusion_method: Optional[str] = None,
+    rrf_k: Optional[int] = None,
 ) -> str:
     """
     Combine semantic and keyword results, sort by scores, and extract top chunks.
@@ -322,15 +400,30 @@ def extract_top_chunks(
         top_k (int): Number of top results to extract.
         logger: Logger object.
         semantic_weight (float): Importance weight assigned to the semantic score.
+        fusion_method (Optional[str]): Fusion strategy ('rrf' or 'min_max').
+        rrf_k (Optional[int]): Smoothing constant for RRF.
 
     Returns:
         str: Extracted content from top chunks.
     """
-    scores = get_inverted_scores(
-        [c["id"] for c in data_retrieved_semantic], scores_semantic,
-        [c["id"] for c in data_retrieved_keyword], scores_keyword,
-        semantic_weight
-    )
+    method = fusion_method or retrieval_config.get("fusion_method", "rrf")
+    k_val = rrf_k if rrf_k is not None else retrieval_config.get("rrf_k", 60)
+
+    if method == "min_max":
+        scores = get_inverted_scores(
+            [c["id"] for c in data_retrieved_semantic], scores_semantic,
+            [c["id"] for c in data_retrieved_keyword], scores_keyword,
+            semantic_weight
+        )
+    else:
+        scores = reciprocal_rank_fusion(
+            [c["id"] for c in data_retrieved_semantic],
+            [c["id"] for c in data_retrieved_keyword],
+            scores_semantic,
+            scores_keyword,
+            semantic_weight,
+            k_val
+        )
 
     combined_results = data_retrieved_semantic + data_retrieved_keyword
     lookup_by_id = {item["id"]: item for item in combined_results}
