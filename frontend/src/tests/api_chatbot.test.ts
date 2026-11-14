@@ -5,6 +5,7 @@ import {
   deleteChatSession,
   fetchChatbotReplyWithFiles,
   fetchProviders,
+  validatePipeline,
 } from "../api/chatbot";
 
 import { callChatbotApi } from "../utils/callChatbotApi";
@@ -401,6 +402,36 @@ describe("chatbotApi", () => {
       expect(fetchCall[1]?.body).toBeInstanceOf(FormData);
       expect((fetchCall[1]?.body as FormData).get("log_context")).toBeNull();
       expect((fetchCall[1]?.body as FormData).get("files")).toBe(files[0]);
+    });
+  });
+
+  describe("validatePipeline", () => {
+    it("calls pipeline/validate endpoint with pipeline content", async () => {
+      const mockResult = {
+        is_valid: true,
+        pipeline_type: "declarative",
+        errors: [],
+        warnings: [],
+        suggestions: [],
+        stages: ["Build"],
+      };
+      (callChatbotApi as jest.Mock).mockResolvedValueOnce(mockResult);
+
+      const result = await validatePipeline("pipeline { agent any stages {} }");
+
+      expect(result).toEqual(mockResult);
+      expect(callChatbotApi).toHaveBeenCalledWith(
+        "pipeline/validate",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pipeline_content: "pipeline { agent any stages {} }",
+          }),
+        },
+        expect.any(Object),
+        expect.any(Number),
+      );
     });
   });
 });

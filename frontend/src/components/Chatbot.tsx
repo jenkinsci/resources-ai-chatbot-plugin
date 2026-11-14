@@ -527,29 +527,41 @@ export const Chatbot = () => {
 
   const getDeletePopup = () => {
     return (
-      <div style={chatbotStyles.popupContainer}>
-        <h2 style={chatbotStyles.popupTitle}>{getChatbotText("popupTitle")}</h2>
-        <p style={chatbotStyles.popupMessage}>
-          {getChatbotText("popupMessage")}
-        </p>
-        <div style={chatbotStyles.popupButtonsContainer}>
-          <button
-            style={chatbotStyles.popupDeleteButton}
-            onClick={handleDeleteChat}
-          >
-            {getChatbotText("popupDeleteButton")}
-          </button>
-          <button
-            style={chatbotStyles.popupCancelButton}
-            onClick={() => {
-              setIsPopupOpen(false);
-              setSessionIdToDelete(null);
-            }}
-          >
-            {getChatbotText("popupCancelButton")}
-          </button>
+      <>
+        <div
+          style={chatbotStyles.popupBackdrop}
+          onClick={() => {
+            setIsPopupOpen(false);
+            setSessionIdToDelete(null);
+          }}
+          aria-hidden="true"
+        />
+        <div style={chatbotStyles.popupContainer}>
+          <h2 style={chatbotStyles.popupTitle}>
+            {getChatbotText("popupTitle")}
+          </h2>
+          <p style={chatbotStyles.popupMessage}>
+            {getChatbotText("popupMessage")}
+          </p>
+          <div style={chatbotStyles.popupButtonsContainer}>
+            <button
+              style={chatbotStyles.popupDeleteButton}
+              onClick={handleDeleteChat}
+            >
+              {getChatbotText("popupDeleteButton")}
+            </button>
+            <button
+              style={chatbotStyles.popupCancelButton}
+              onClick={() => {
+                setIsPopupOpen(false);
+                setSessionIdToDelete(null);
+              }}
+            >
+              {getChatbotText("popupCancelButton")}
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   };
 
@@ -560,6 +572,7 @@ export const Chatbot = () => {
           setIsOpen(!isOpen);
           setShowBuildAnalysisAction(false);
         }}
+        className="chatbot-toggle-button"
         style={chatbotStyles.toggleButton}
       >
         {getChatbotText("toggleButtonLabel")}
@@ -574,6 +587,7 @@ export const Chatbot = () => {
 
       {isOpen && (
         <div
+          className="chatbot-main-container"
           style={{
             ...chatbotStyles.container,
             pointerEvents: isPopupOpen ? "none" : "auto",
