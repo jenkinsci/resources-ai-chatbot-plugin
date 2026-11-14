@@ -1,6 +1,6 @@
 """Unit tests for api/tools/utils.py."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, mock_open
 
 from api.tools.utils import (
     make_placeholder_replacer,
@@ -10,6 +10,7 @@ from api.tools.utils import (
     get_inverted_scores,
     extract_top_chunks,
     retrieve_documents,
+    is_valid_plugin,
 )
 
 
@@ -314,3 +315,39 @@ class TestRetrieveDocuments:
         result = retrieve_documents("query", "keywords", MagicMock(), "docs", MagicMock())
 
         assert result == ([], [], [], [])
+
+
+class TestIsValidPlugin:
+    """Tests for validating plugin names against the catalog."""
+
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data='["git", "slack", "workflow-aggregator"]',
+    )
+    def test_valid_plugin_returns_true(self, _mock_file):
+        """Test that a matching plugin returns True regardless of hyphenation or case."""
+        assert is_valid_plugin("Git") is True
+        assert is_valid_plugin("workflow aggregator") is True
+        assert is_valid_plugin("workflow-aggregator") is True
+
+    @patch("builtins.open", new_callable=mock_open, read_data='["git", "slack"]')
+    def test_invalid_plugin_returns_false(self, _mock_file):
+        """Test that an unknown plugin returns False."""
+        assert is_valid_plugin("unknown-plugin") is False
+
+    def test_empty_or_invalid_input_returns_false(self):
+        """Test that empty or non-string inputs safely return False without error."""
+        assert is_valid_plugin("") is False
+        assert is_valid_plugin(None) is False
+        assert is_valid_plugin(123) is False
+
+    @patch("builtins.open", side_effect=FileNotFoundError)
+    def test_missing_catalog_file_returns_false(self, _mock_file):
+        """Test that missing catalog file returns False gracefully without raising."""
+        assert is_valid_plugin("git") is False
+
+    @patch("builtins.open", new_callable=mock_open, read_data="invalid json")
+    def test_corrupted_catalog_file_returns_false(self, _mock_file):
+        """Test that corrupted JSON in catalog returns False gracefully."""
+        assert is_valid_plugin("git") is False
