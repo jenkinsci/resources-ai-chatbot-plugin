@@ -39,6 +39,8 @@ from api.models.schemas import (
     ChatResponse,
     LogPreviewRequest,
     LogPreviewResponse,
+    PipelineValidateRequest,
+    PipelineValidateResponse,
     DeleteResponse,
     MessageHistoryResponse,
     SessionResponse,
@@ -66,6 +68,7 @@ from api.services.file_service import (
     get_supported_extensions,
     FileProcessingError,
 )
+from api.tools.pipeline_validator import validate_pipeline_syntax
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -137,6 +140,20 @@ async def _process_uploaded_files(
 def log_preview(request: LogPreviewRequest) -> LogPreviewResponse:
     """Extract and sanitize Jenkins output without invoking the LLM."""
     return LogPreviewResponse(preview=prepare_log_context(request.log_text))
+
+
+@router.post("/pipeline/validate", response_model=PipelineValidateResponse)
+def validate_pipeline(request: PipelineValidateRequest) -> PipelineValidateResponse:
+    """Validate a Jenkins declarative or scripted pipeline script."""
+    result = validate_pipeline_syntax(request.pipeline_content)
+    return PipelineValidateResponse(
+        is_valid=result.is_valid,
+        pipeline_type=result.pipeline_type,
+        errors=result.errors,
+        warnings=result.warnings,
+        suggestions=result.suggestions,
+        stages=result.stages,
+    )
 
 
 @router.get("/providers", response_model=ProvidersResponse)

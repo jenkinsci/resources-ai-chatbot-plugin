@@ -196,6 +196,31 @@ class MessageHistoryResponse(BaseModel):
     session_id: str
     messages: List[MessageItem]
 
+class PipelineValidateRequest(BaseModel):
+    """Request containing a Jenkins pipeline script to validate."""
+
+    pipeline_content: str
+
+    @field_validator("pipeline_content")
+    @classmethod
+    def content_must_not_be_empty(cls, v):
+        """Validate that pipeline content is not empty."""
+        if not v.strip():
+            raise ValueError("Pipeline content cannot be empty.")
+        return v
+
+
+class PipelineValidateResponse(BaseModel):
+    """Structured report returned by the pipeline validation endpoint."""
+
+    is_valid: bool
+    pipeline_type: str
+    errors: List[str]
+    warnings: List[str]
+    suggestions: List[str]
+    stages: List[str]
+
+
 class QueryType(Enum):
     """
     Enum that represents the possible query types:

@@ -229,10 +229,7 @@ export const Input = ({
           placeholder={getChatbotText("placeholder")}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          style={{
-            ...chatbotStyles.input,
-            width: enableFileUpload && onFilesAttached ? "75%" : "85%",
-          }}
+          style={chatbotStyles.input}
         />
         {isLoading && onCancel ? (
           <button

@@ -6,6 +6,47 @@ import {
 } from "../model/Message";
 import { chatbotStyles } from "../styles/styles";
 import { LoadingDots } from "./LoadingDots";
+import { CodeBlock } from "./CodeBlock";
+
+/**
+ * Splits message text into plain text and fenced code blocks.
+ */
+interface MessageSegment {
+  type: "text" | "code";
+  content: string;
+  language?: string;
+}
+
+const parseMessageSegments = (text: string): MessageSegment[] => {
+  const segments: MessageSegment[] = [];
+  const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({
+        type: "text",
+        content: text.slice(lastIndex, match.index),
+      });
+    }
+    segments.push({
+      type: "code",
+      language: match[1]?.trim() || "",
+      content: match[2]?.trimEnd() || "",
+    });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({
+      type: "text",
+      content: text.slice(lastIndex),
+    });
+  }
+
+  return segments.length > 0 ? segments : [{ type: "text", content: text }];
+};
 
 /**
  * Props for the Messages component.
@@ -98,13 +139,25 @@ export const Messages = ({
             ))}
           </div>
         )}
-        {/* Render text content */}
-        {text.split("\n").map((line, i) => (
-          <React.Fragment key={i}>
-            {line}
-            <br />
-          </React.Fragment>
-        ))}
+        {/* Render message content with code block support */}
+        {parseMessageSegments(text).map((segment, segIdx) => {
+          if (segment.type === "code") {
+            return (
+              <CodeBlock
+                key={`code-${segIdx}`}
+                language={segment.language || ""}
+                code={segment.content}
+              />
+            );
+          }
+
+          return segment.content.split("\n").map((line, i) => (
+            <React.Fragment key={`text-${segIdx}-${i}`}>
+              {line}
+              <br />
+            </React.Fragment>
+          ));
+        })}
       </span>
     </div>
   );

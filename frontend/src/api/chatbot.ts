@@ -19,6 +19,46 @@ interface LogPreviewResponse {
 }
 
 /**
+ * Structured pipeline validation report returned by the backend.
+ */
+export interface PipelineValidationResponse {
+  is_valid: boolean;
+  pipeline_type: string;
+  errors: string[];
+  warnings: string[];
+  suggestions: string[];
+  stages: string[];
+}
+
+/**
+ * Validate a Jenkins pipeline script against Declarative syntax rules.
+ *
+ * @param pipelineContent - Full Jenkinsfile or pipeline code snippet
+ * @returns Structured validation outcome
+ */
+export const validatePipeline = async (
+  pipelineContent: string,
+): Promise<PipelineValidationResponse> => {
+  return await callChatbotApi<PipelineValidationResponse>(
+    "pipeline/validate",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pipeline_content: pipelineContent }),
+    },
+    {
+      is_valid: false,
+      pipeline_type: "unknown",
+      errors: ["Validation service unavailable."],
+      warnings: [],
+      suggestions: [],
+      stages: [],
+    },
+    CHATBOT_API_TIMEOUTS_MS.CREATE_SESSION,
+  );
+};
+
+/**
  * Extracts and sanitizes Jenkins console output for display before analysis.
  *
  * @param logText - Raw Jenkins console output
