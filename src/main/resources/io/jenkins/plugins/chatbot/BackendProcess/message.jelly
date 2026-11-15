@@ -1,0 +1,6 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+  <div class="jenkins-alert jenkins-alert-warning">
+    <strong>Resources AI Chatbot:</strong> ${it.problem}
+  </div>
+</j:jelly>
