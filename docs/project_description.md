@@ -230,7 +230,7 @@ These endpoints provide a comprehensive interface for managing conversations, wi
 
 ### Session Memory Management
 
-Conversation context is maintained using **LangChain's ConversationBufferMemory**:
+Conversation context is maintained using LangChain's `InMemoryChatMessageHistory`:
 - Stored per session with file-based persistence
 - Each session preserves chat history across server restarts
 - Ensures coherent and context-aware responses

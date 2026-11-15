@@ -49,7 +49,7 @@ This script performs chunking on the Jenkins documentation using a recursive spl
 python data/chunking/extract_chunk_docs.py
 ```
 > **Note**:
-> Ensure `langchain` and the other dependencies in the `requirements.txt` are met in your environment.
+> Ensure `langchain-text-splitters` and the other dependencies in the `requirements.txt` are met in your environment.
 
 ## Jenkins Plugin Documentation
 

@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from data.chunking.chunking_utils import (
     save_chunks,
     read_json_file,
