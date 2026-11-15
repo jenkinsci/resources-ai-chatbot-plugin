@@ -141,7 +141,8 @@ def validate_file_size(content: bytes, filename: str) -> None:
     Raises:
         FileProcessingError: If the file exceeds size limits.
     """
-    max_size = MAX_IMAGE_FILE_SIZE if is_image_file(filename) else MAX_TEXT_FILE_SIZE
+    max_size = MAX_IMAGE_FILE_SIZE if is_image_file(
+        filename) else MAX_TEXT_FILE_SIZE
 
     if len(content) > max_size:
         max_mb = max_size / (1024 * 1024)
@@ -194,14 +195,14 @@ def validate_file_content_type(content: bytes, filename: str) -> None:
     Validates that file content matches its claimed extension.
 
     This is a security measure to prevent malicious files from being
-    disguised with fake extensions.
+    disguised with fake extensions and polluting the LLM context.
 
     Args:
         content: The file content as bytes.
         filename: The name of the file.
 
     Raises:
-        FileProcessingError: If content doesn't match extension.
+        FileProcessingError: If content doesn't match extension or contains binary data.
     """
     if is_image_file(filename):
         # For images, verify magic bytes match expected image type
@@ -235,8 +236,22 @@ def validate_file_content_type(content: bytes, filename: str) -> None:
                     f"File '{filename}' content does not match its extension. "
                     f"Expected {expected_mime}, detected {detected_mime}."
                 )
+
     elif is_text_file(filename):
-        # For text files, verify it's not actually a binary/executable
+        # 1. Strict Byte-Level Validation (The Null Byte Check)
+        # Standard text files rarely contain null bytes. Compiled binaries and images do.
+        if b'\x00' in content:
+            logger.warning(
+                "Security Check Failed: File '%s' claims to be text "
+                "but contains binary null bytes.",
+                filename
+            )
+            raise FileProcessingError(
+                f"File validation failed: '{filename}' appears to be "
+                "a binary file, not valid text."
+            )
+
+        # 2. MIME-Type Whitelist/Blacklist Validation
         detected_mime = detect_mime_type_from_content(content)
 
         # List of dangerous MIME types that should never be accepted as text
@@ -248,14 +263,20 @@ def validate_file_content_type(content: bytes, filename: str) -> None:
             'application/x-pie-executable',
         }
 
-        if detected_mime in dangerous_mimes:
-            logger.warning(
-                "Dangerous file disguised as text: '%s' (detected: %s)",
-                filename, detected_mime
-            )
-            raise FileProcessingError(
-                f"File '{filename}' appears to be an executable, not a text file."
-            )
+        if detected_mime:
+            is_executable = detected_mime in dangerous_mimes
+            # Catch disguised images, video, and audio that bypassed the extension check
+            is_media = detected_mime.startswith(('image/', 'video/', 'audio/'))
+
+            if is_executable or is_media:
+                logger.warning(
+                    "Content Type Mismatch: '%s' disguised as text (detected: %s)",
+                    filename, detected_mime
+                )
+                raise FileProcessingError(
+                    f"File '{filename}' validation failed. "
+                    f"Detected as {detected_mime}, not a text file."
+                )
 
 
 def process_text_file(content: bytes, filename: str) -> str:
@@ -294,7 +315,8 @@ def process_text_file(content: bytes, filename: str) -> str:
             "File '%s' content truncated from %d to %d characters",
             filename, len(text_content), MAX_TEXT_CONTENT_LENGTH
         )
-        text_content = text_content[:MAX_TEXT_CONTENT_LENGTH] + "\n... [truncated]"
+        text_content = text_content[:MAX_TEXT_CONTENT_LENGTH] + \
+            "\n... [truncated]"
 
     return text_content
 
@@ -355,7 +377,8 @@ def process_uploaded_file(content: bytes, filename: str) -> dict:
     Raises:
         FileProcessingError: If the file type is not supported or processing fails.
     """
-    logger.info("Processing uploaded file: %s (%d bytes)", filename, len(content))
+    logger.info("Processing uploaded file: %s (%d bytes)",
+                filename, len(content))
 
     if not is_supported_file(filename):
         raise FileProcessingError(
