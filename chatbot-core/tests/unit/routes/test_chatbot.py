@@ -287,6 +287,35 @@ def test_websocket_provider_error_hides_exception_details(
         assert "provider secret" not in str(error)
 
 
+def test_websocket_unexpected_generation_error_recovers_and_stays_alive(
+    client, mock_session_exists, mock_get_chatbot_reply_stream
+):
+    """Unexpected generation errors return an error JSON without closing the socket."""
+    mock_session_exists.return_value = True
+
+    call_count = 0
+
+    async def fake_stream(_session_id, _message):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise RuntimeError("retriever failure")
+        yield "recovered response"
+
+    mock_get_chatbot_reply_stream.side_effect = fake_stream
+
+    with client.websocket_connect("/sessions/test-session-id/stream") as ws:
+        ws.send_json({"message": "Trigger failure"})
+        error_response = ws.receive_json()
+        assert error_response == {"error": "An unexpected error occurred."}
+
+        ws.send_json({"message": "Retry message"})
+        token_response = ws.receive_json()
+        assert token_response == {"token": "recovered response"}
+        end_response = ws.receive_json()
+        assert end_response == {"end": True}
+
+
 def test_websocket_activates_selected_provider(
     client, mock_session_exists, mock_get_chatbot_reply_stream, mocker
 ):
